@@ -506,17 +506,13 @@ export const eliminarVenta = async (req, res) => {
         );
       }
     }
-    if (result.affectedRows === 0) {
-  await conn.rollback();
-  return res.status(404).json({ error: "Borrador no encontrado o no es borrador" });
-}
 
     // 4) Borrar items de la venta
     await conn.query("DELETE FROM ventas_items WHERE venta_id = ?", [id]);
 
     // 5) Borrar venta
     const [result] = await conn.query(
-  "DELETE FROM ventas WHERE id = ? AND estado = 'borrador'",
+  "DELETE FROM ventas WHERE id = ?",
   [id]
 );
 
@@ -745,6 +741,11 @@ const guardarSaldoFavor = Boolean(req.body.guardarSaldoFavor);
   [id]
 );
 
+if (!ventaRows.length) {
+  await conn.rollback();
+  return res.status(404).json({ error: "Venta no encontrada" });
+}
+
 const ventaAnterior = ventaRows[0];
 const ventaAnteriorEraCotizacion =
   Number(ventaAnterior.es_cotizacion) === 1 ||
@@ -944,38 +945,34 @@ const ventaAnteriorEraCotizacion =
     // ===============================
 // ✅ VALIDACIONES CONTRA totalACobrar (no totalFinal)
 // ===============================
-const tipoPago = String(req.body.tipoPago || "").trim();
-const efectivoN = Number(req.body.efectivo || 0);
-const tarjetaN = Number(req.body.tarjeta || 0);
-const recibidoN = Number(req.body.recibido || 0);
+const efectivoN = Number(efectivo || 0);
+const tarjetaN = Number(tarjeta || 0);
 
 // Mixto: efectivo + tarjeta = totalACobrar
 if (tipoPago === "mixto") {
   const suma = Number((efectivoN + tarjetaN).toFixed(2));
-  const esperado = Number(totalACobrar.toFixed(2));
+  const esperado = Number(totalConIVA.toFixed(2));
   if (suma !== esperado) {
     return res.status(400).json({
-      error: "En pago mixto: efectivo + tarjeta debe ser igual al total a cobrar (con saldo aplicado).",
+      error: "En pago mixto: efectivo + tarjeta debe ser igual al total final.",
     });
   }
 }
 
-// Tarjeta: tarjeta = totalACobrar
 if (tipoPago === "tarjeta_credito" || tipoPago === "tarjeta_debito") {
-  const esperado = Number(totalACobrar.toFixed(2));
+  const esperado = Number(totalConIVA.toFixed(2));
   const t = Number(tarjetaN.toFixed(2));
   if (t !== esperado) {
     return res.status(400).json({
-      error: "En pago con tarjeta: el monto debe ser igual al total a cobrar (con saldo aplicado).",
+      error: "En pago con tarjeta: el monto debe ser igual al total final.",
     });
   }
 }
 
-// Efectivo: recibido debe cubrir totalACobrar
-if (tipoPago === "efectivo") {
-  if (recibidoN < totalACobrar) {
+if (!esCotizacionFinal && tipoPago === "efectivo") {
+  if (recibidoN < totalConIVA) {
     return res.status(400).json({
-      error: "Recibido insuficiente (considerando saldo aplicado).",
+      error: "Recibido insuficiente.",
     });
   }
 }
@@ -1086,10 +1083,21 @@ export const actualizarItemsBorrador = async (req, res) => {
   try {
     await conn.beginTransaction();
 
-    const [v] = await conn.query(
-      `SELECT id, estado FROM ventas WHERE id=?`,
-      [id]
-    );
+// 1) Verificar que exista la venta
+const [ventaRows] = await conn.query(
+  `SELECT id, es_cotizacion, es_cotizacion_pedido FROM ventas WHERE id=? FOR UPDATE`,
+  [id]
+);
+
+if (!ventaRows.length) {
+  await conn.rollback();
+  return res.status(404).json({ error: "Venta no encontrada" });
+}
+
+const ventaAnterior = ventaRows[0];
+const ventaAnteriorEraCotizacion =
+  Number(ventaAnterior.es_cotizacion) === 1 ||
+  Number(ventaAnterior.es_cotizacion_pedido) === 1;
     if (!v.length) return res.status(404).json({ error: "Venta no existe" });
     if (v[0].estado !== "borrador") {
       return res.status(400).json({ error: "Solo se puede editar un borrador" });

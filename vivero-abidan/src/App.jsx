@@ -360,19 +360,9 @@ async function buscarSugerenciasProductos(texto) {
   try {
     setLoadingSugerencias(true);
 
-    const res = await fetch(
-      `${API_URL}/productos/buscar?q=${encodeURIComponent(q)}`,
-      {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-        cache: "no-store",
-      }
-    );
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      throw new Error(data?.error || "Error buscando productos");
-    }
+    const data = await apiFetch(`/productos?q=${encodeURIComponent(q)}&limit=20`, {
+      cache: "no-store",
+    });
 
     setSugerencias(Array.isArray(data.data) ? data.data : []);
     setShowSugerencias(true);
@@ -900,23 +890,25 @@ function obtenerPrecioPorCategoria(producto, categoria) {
   try {
     setScanLoading(true);
 
-    const res = await fetch(`${API_URL}/productos/codigo/${encodeURIComponent(codigo)}`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-      cache: "no-store",
-    });
+    const data = await apiFetch(
+      `/productos?q=${encodeURIComponent(codigo)}&limit=20`,
+      { cache: "no-store" }
+    );
 
-    const data = await res.json();
+    const lista = Array.isArray(data.data) ? data.data : [];
 
-    if (!res.ok) {
-      throw new Error(data?.error || "No se encontró el producto");
+    const p =
+      lista.find(
+        (item) =>
+          String(item.codigo_cat || item.codigo || "").toLowerCase() ===
+          codigo.toLowerCase()
+      ) || lista[0];
+
+    if (!p) {
+      throw new Error("No se encontró el producto");
     }
 
-    const p = data.data;
-
-    // 🔁 ADAPTA esta parte a tu estructura del carrito
-    // Si ya tienes una función tipo agregarItem / agregarProducto / addToCart, úsala aquí:
     agregarProductoEscaneadoAlCarrito(p);
-
     setCodigoScan("");
   } catch (err) {
     console.error("Error escaneando código:", err);
@@ -2364,7 +2356,7 @@ if (view === "movimientos") {
               {p.nombre}
             </div>
             <div style={{ fontSize: 12, color: "#5b6f67" }}>
-              {p.codigo} • ${Number(p.precio || 0).toFixed(2)}
+              {p.codigo_cat || p.codigo} • ${Number(p.precio_publico ?? p.precio ?? 0).toFixed(2)}
             </div>
           </button>
         ))
