@@ -1,0 +1,10 @@
+node_modules
+.env
+*.log
+dist
+build
+coverage
+
+vivero-abidan/node_modules
+vivero-abidan/dist
+vivero-abidan/.env
