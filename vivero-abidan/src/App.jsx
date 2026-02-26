@@ -4,7 +4,7 @@ import Drawer from "./components/Drawer";
 import Clientes from "./pages/Clientes";
 import ReporteProductos from "./pages/ReporteProductos";
 
-const API_URL = "http://localhost:4000/api";
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000/api";
 const CATEGORIAS_PLANTA = [
   "sombra","sol","follage","arboles","palmas","frutales","arbustos",
   "suculentas","plantas_exoticas","maceta","insumos_jardineria",
