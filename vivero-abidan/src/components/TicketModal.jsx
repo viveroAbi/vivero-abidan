@@ -451,7 +451,7 @@ breakInside: "avoid",
               const imp =
                 it.importe != null ? Number(it.importe) : Number(cant * pu);
 
-              const nombre = String(it.producto_nombre || it.nombre || it.codigo || "SIN NOMBRE");
+              const nombre = String(it.nombre || it.producto_nombre || "SIN NOMBRE");
 
               return (
                 <div
@@ -468,9 +468,8 @@ breakInside: "avoid",
                   <span style={{ flex: 1, lineHeight: 1.15 }}>
                     {nombre}
                     <div style={{ color: "#666", fontSize: 11 }}>
-                      {it.codigo ? `(${it.codigo}) ` : ""}
-                      {money(pu)}
-                    </div>
+  {money(pu)}
+</div>
                   </span>
                   <span style={{ width: 62, textAlign: "right" }}>
                     {money(imp)}
