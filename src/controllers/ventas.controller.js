@@ -220,10 +220,10 @@ if (!isCotizacion && !isCotizacionPedido && categoria === "publico" && tipoPago 
     categoria,
     clienteId,
     tipoPago,
-    0, // total temporal
-    0, // descuento temporal
-    0, // total_iva temporal
-    0, // total_final temporal
+    0,
+    0,
+    0,
+    0,
     Number(efectivo || 0),
     Number(tarjeta || 0),
     recibidoN,
@@ -1061,10 +1061,11 @@ export const crearBorrador = async (req, res) => {
     const { categoria = "publico", cliente_id = null } = req.body;
 
     const [r] = await pool.query(
-      `INSERT INTO ventas (categoria, estado, cliente_id, es_cotizacion, total, descuento, total_final, total_iva)
-       VALUES (?, 'borrador', ?, 0, 0, 0, 0, 0)`,
-      [categoria, cliente_id]
-    );
+  `INSERT INTO ventas
+   (categoria, estado, cliente_id, tipo_pago, es_cotizacion, total, descuento, total_final, total_iva, efectivo, tarjeta, recibido, cambio)
+   VALUES (?, 'borrador', ?, 'efectivo', 0, 0, 0, 0, 0, 0, 0, 0, 0)`,
+  [categoria, cliente_id]
+);
 
     return res.json({ mensaje: "Borrador creado", data: { id: r.insertId } });
   } catch (err) {
