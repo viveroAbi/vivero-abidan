@@ -198,21 +198,40 @@ if (!isCotizacion && !isCotizacionPedido && categoria === "publico" && tipoPago 
     
 
     const [result] = await conn.query(
-  `INSERT INTO ventas 
-   (categoria, cliente_id, tipo_pago, efectivo, tarjeta, recibido, cambio, es_cotizacion, es_cotizacion_pedido, requiere_factura) 
-   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  `INSERT INTO ventas
+   (
+     categoria,
+     cliente_id,
+     tipo_pago,
+     total,
+     descuento,
+     total_iva,
+     total_final,
+     efectivo,
+     tarjeta,
+     recibido,
+     cambio,
+     es_cotizacion,
+     es_cotizacion_pedido,
+     requiere_factura
+   )
+   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   [
-  categoria,
-  clienteId,
-  tipoPago,
-  Number(efectivo || 0),
-  Number(tarjeta || 0),
-  recibidoN,
-  cambioN,
-  isCotizacion ? 1 : 0,
-  isCotizacionPedido ? 1 : 0,
-  requiereFactura ? 1 : 0,
-]
+    categoria,
+    clienteId,
+    tipoPago,
+    0, // total temporal
+    0, // descuento temporal
+    0, // total_iva temporal
+    0, // total_final temporal
+    Number(efectivo || 0),
+    Number(tarjeta || 0),
+    recibidoN,
+    cambioN,
+    isCotizacion ? 1 : 0,
+    isCotizacionPedido ? 1 : 0,
+    requiereFactura ? 1 : 0,
+  ]
 );
 
 const ventaId = result.insertId;
