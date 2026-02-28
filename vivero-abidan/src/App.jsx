@@ -4,8 +4,7 @@ import Drawer from "./components/Drawer";
 import Clientes from "./pages/Clientes";
 import ReporteProductos from "./pages/ReporteProductos";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000/api";
-const CATEGORIAS_PLANTA = [
+const API_URL = "https://tu-backend.onrender.com/api";const CATEGORIAS_PLANTA = [
   "sombra","sol","follage","arboles","palmas","frutales","arbustos",
   "suculentas","plantas_exoticas","maceta","insumos_jardineria",
   "flete","hierbas_de_olor","mano_de_obra",
