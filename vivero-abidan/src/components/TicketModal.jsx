@@ -455,12 +455,17 @@ return (
     }}
   >
     <img
-      src={`https://api.qrserver.com/v1/create-qr-code/?size=110x110&data=${encodeURIComponent(
-        "https://wa.me/528181167587?text=Hola,%20quiero%20solicitar%20mi%20factura.%20Adjunto%20mis%20datos."
-      )}`}
-      alt="QR WhatsApp Facturación"
-      style={{ width: 90, height: 90, objectFit: "contain" }}
-    />
+  src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(
+    "https://wa.me/528181167587?text=Hola,%20quiero%20solicitar%20mi%20factura.%20Adjunto%20mis%20datos."
+  )}`}
+  alt="QR WhatsApp Facturación"
+  style={{
+    width: 130,
+    height: 130,
+    objectFit: "contain",
+    imageRendering: "pixelated",
+  }}
+/>
 
     <div style={{ marginTop: 6, fontWeight: "bold", fontSize: 11 }}>
       ESCANEAR PARA FACTURAR
