@@ -14,6 +14,48 @@ console.log("VENTA EN TICKET:", venta);
 console.log("es_cotizacion_pedido:", venta.es_cotizacion_pedido);
 console.log("es_cotizacion:", venta.es_cotizacion);
   const items = Array.isArray(data?.items) ? data.items : [];
+  const printStyles = (
+  <style>{`
+    @page {
+      size: 80mm auto;
+      margin: 0;
+    }
+
+    @media print {
+      html, body {
+        margin: 0 !important;
+        padding: 0 !important;
+        background: white !important;
+      }
+
+      body * {
+        visibility: hidden;
+      }
+
+      #ticket, #ticket * {
+        visibility: visible;
+      }
+
+      #ticket {
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 72mm !important;
+        max-width: 72mm !important;
+        margin: 0 !important;
+        padding: 3mm !important;
+        box-sizing: border-box !important;
+        overflow: hidden !important;
+        background: white !important;
+        color: black !important;
+      }
+
+      .no-print {
+        display: none !important;
+      }
+    }
+  `}</style>
+);
 
     // ✅ SI ES CORTE, MOSTRAR SOLO TEXTO (ticket de corte)
   if (data?.tipo === "corte") {
@@ -28,22 +70,28 @@ console.log("es_cotizacion:", venta.es_cotizacion);
           zIndex: 1000,
         }}
       >
+         {printStyles}
         <div
+        
           id="ticket"
           style={{
-            width: 320,
-            background: "white",
-            color: "black",
-            padding: 16,
-            fontFamily: "monospace",
+            width: "72mm",
+maxWidth: "72mm",
+background: "white",
+color: "black",
+padding: "3mm",
+fontFamily: "monospace",
+fontSize: 11,
+lineHeight: 1.2,
+boxSizing: "border-box",
+overflow: "hidden",
           }}
         >
           <pre style={{ fontFamily: "monospace", fontSize: 12, whiteSpace: "pre-wrap" }}>
             {data.texto}
           </pre>
 
-          <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-            <button style={{ flex: 1 }} onClick={() => window.print()}>
+<div className="no-print" style={{ display: "flex", gap: 8, marginTop: 10 }}>            <button style={{ flex: 1 }} onClick={() => window.print()}>
               🖨️ Imprimir
             </button>
             <button style={{ flex: 1 }} onClick={onClose}>
@@ -125,6 +173,7 @@ if (esCotizacionPedido) {
         zIndex: 1000,
       }}
     >
+       {printStyles}
       <div
         id="ticket"
         style={{
@@ -236,8 +285,7 @@ if (esCotizacionPedido) {
             </div>
           </div>
 
-          <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-            <button style={{ flex: 1 }} onClick={() => window.print()}>
+<div className="no-print" style={{ display: "flex", gap: 8, marginTop: 12 }}>            <button style={{ flex: 1 }} onClick={() => window.print()}>
               🖨️ Imprimir
             </button>
             <button style={{ flex: 1 }} onClick={onClose}>
@@ -261,6 +309,7 @@ return (
         zIndex: 1000,
       }}
     >
+       {printStyles}
       <div
         id="ticket"
         style={{
@@ -319,9 +368,9 @@ return (
         {/* LISTADO DE PRODUCTOS */}
         <div style={{ fontSize: 12 }}>
           <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
-            <b style={{ width: 40 }}>Cant.</b>
-            <b style={{ flex: 1 }}>Producto</b>
-            <b style={{ width: 90, textAlign: "right" }}>Importe</b>
+            <b style={{ width: 28 }}>Cant.</b>
+<b style={{ flex: 1 }}>Producto</b>
+<b style={{ width: 62, textAlign: "right" }}>Impporte</b>
           </div>
 
           {items.length === 0 ? (
@@ -350,7 +399,7 @@ return (
                     alignItems: "flex-start",
                   }}
                 >
-                  <span style={{ width: 40 }}>{cant}</span>
+                  <span style={{ width: 28 }}>{cant}</span>
                   <span style={{ flex: 1, lineHeight: 1.15 }}>
                     {nombre}
                     <div style={{ color: "#666", fontSize: 11 }}>
@@ -358,7 +407,7 @@ return (
                       {money(pu)}
                     </div>
                   </span>
-                  <span style={{ width: 90, textAlign: "right" }}>
+                  <span style={{ width: 62, textAlign: "right" }}>
                     {money(imp)}
                   </span>
                 </div>
@@ -450,8 +499,7 @@ return (
           SIN EXCEPCION ALGUNA
         </p>
 
-        <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-          <button style={{ flex: 1 }} onClick={() => window.print()}>
+<div className="no-print" style={{ display: "flex", gap: 8, marginTop: 10 }}>          <button style={{ flex: 1 }} onClick={() => window.print()}>
             🖨️ Imprimir
           </button>
           <button style={{ flex: 1 }} onClick={onClose}>
