@@ -4,8 +4,9 @@ import Drawer from "./components/Drawer";
 import Clientes from "./pages/Clientes";
 import ReporteProductos from "./pages/ReporteProductos";
 
-const API_URL = "https://tu-backend.onrender.com/api";const CATEGORIAS_PLANTA = [
-  "sombra","sol","follage","arboles","palmas","frutales","arbustos",
+const API_URL = import.meta.env.VITE_API_URL || "https://vivero-abidan.onrender.com/api";
+
+const CATEGORIAS_PLANTA = [  "sombra","sol","follage","arboles","palmas","frutales","arbustos",
   "suculentas","plantas_exoticas","maceta","insumos_jardineria",
   "flete","hierbas_de_olor","mano_de_obra",
   "sin_categoria"
@@ -3487,7 +3488,7 @@ if (view === "movimientos") {
         <td style={{ ...tdStyle, textAlign: "center" }}>
           {p.imagen_url ? (
             <img
-              src={`http://localhost:4000${p.imagen_url}`}
+              src={`${API_URL.replace("/api", "")}${p.imagen_url}`}
               alt={p.nombre}
               style={{
                 width: 56,
