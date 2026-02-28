@@ -14,6 +14,67 @@ console.log("VENTA EN TICKET:", venta);
 console.log("es_cotizacion_pedido:", venta.es_cotizacion_pedido);
 console.log("es_cotizacion:", venta.es_cotizacion);
   const items = Array.isArray(data?.items) ? data.items : [];
+
+  function imprimirSoloTicket() {
+  const ticket = document.getElementById("ticket");
+  if (!ticket) return;
+
+  const contenido = ticket.innerHTML;
+
+  const win = window.open("", "_blank", "width=420,height=900");
+  if (!win) return;
+
+  win.document.write(`
+    <!doctype html>
+    <html>
+      <head>
+        <title>Ticket</title>
+        <style>
+          @page {
+            size: 80mm auto;
+            margin: 0;
+          }
+
+          html, body {
+            margin: 0;
+            padding: 0;
+            background: #fff;
+            font-family: monospace;
+          }
+
+          body {
+            width: 72mm;
+            max-width: 72mm;
+            padding: 2mm 3mm;
+            box-sizing: border-box;
+            color: #000;
+          }
+
+          .no-print {
+            display: none !important;
+          }
+
+          #ticket {
+            width: 100%;
+            max-width: 100%;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            page-break-inside: avoid;
+            break-inside: avoid;
+          }
+
+          img {
+            max-width: 100%;
+            height: auto;
+          }
+        </style>
+      </head>
+      <body>
+        <div id="ticket">${contenido}</div>
+      </body>
+    </html>
+  `);
   const printStyles = (
   <style>{`
     @page {
@@ -48,6 +109,14 @@ console.log("es_cotizacion:", venta.es_cotizacion);
   `}</style>
 );
 
+  win.document.close();
+  win.focus();
+
+  setTimeout(() => {
+    win.print();
+    win.close();
+  }, 500);
+}
     // ✅ SI ES CORTE, MOSTRAR SOLO TEXTO (ticket de corte)
   if (data?.tipo === "corte") {
     return (
@@ -83,7 +152,7 @@ console.log("es_cotizacion:", venta.es_cotizacion);
             {data.texto}
           </pre>
 
-<div className="no-print" style={{ display: "flex", gap: 8, marginTop: 10 }}>            <button style={{ flex: 1 }} onClick={() => window.print()}>
+<div className="no-print" style={{ display: "flex", gap: 8, marginTop: 10 }}>            <button style={{ flex: 1 }} onClick={imprimirSoloTicket}>
               🖨️ Imprimir
             </button>
             <button style={{ flex: 1 }} onClick={onClose}>
@@ -279,7 +348,7 @@ breakInside: "avoid",
             </div>
           </div>
 
-<div className="no-print" style={{ display: "flex", gap: 8, marginTop: 12 }}>            <button style={{ flex: 1 }} onClick={() => window.print()}>
+<div className="no-print" style={{ display: "flex", gap: 8, marginTop: 12 }}>            <button style={{ flex: 1 }} onClick={imprimirSoloTicket}>
               🖨️ Imprimir
             </button>
             <button style={{ flex: 1 }} onClick={onClose}>
@@ -501,7 +570,7 @@ breakInside: "avoid",
           SIN EXCEPCION ALGUNA
         </p>
 
-<div className="no-print" style={{ display: "flex", gap: 8, marginTop: 10 }}>          <button style={{ flex: 1 }} onClick={() => window.print()}>
+<div className="no-print" style={{ display: "flex", gap: 8, marginTop: 10 }}>          <button style={{ flex: 1 }} onClick={imprimirSoloTicket}>
             🖨️ Imprimir
           </button>
           <button style={{ flex: 1 }} onClick={onClose}>
