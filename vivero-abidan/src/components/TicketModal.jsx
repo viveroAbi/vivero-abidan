@@ -25,12 +25,16 @@ console.log("es_cotizacion:", venta.es_cotizacion);
       html, body {
         margin: 0 !important;
         padding: 0 !important;
-        width: 80mm !important;
         background: #fff !important;
       }
 
-      body > *:not(#ticket-print-root) {
-        display: none !important;
+      body * {
+        visibility: hidden !important;
+      }
+
+      #ticket-print-root,
+      #ticket-print-root * {
+        visibility: visible !important;
       }
 
       #ticket-print-root {
@@ -38,7 +42,7 @@ console.log("es_cotizacion:", venta.es_cotizacion);
         inset: 0 !important;
         margin: 0 !important;
         padding: 0 !important;
-        background: white !important;
+        background: #fff !important;
         display: block !important;
       }
 
@@ -49,11 +53,11 @@ console.log("es_cotizacion:", venta.es_cotizacion);
         width: 72mm !important;
         max-width: 72mm !important;
         margin: 0 !important;
-        padding: 2mm 3mm 2mm 3mm !important;
+        padding: 2mm 3mm !important;
         box-sizing: border-box !important;
         overflow: visible !important;
-        background: white !important;
-        color: black !important;
+        background: #fff !important;
+        color: #000 !important;
       }
 
       .no-print {
