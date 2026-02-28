@@ -25,15 +25,21 @@ console.log("es_cotizacion:", venta.es_cotizacion);
       html, body {
         margin: 0 !important;
         padding: 0 !important;
+        width: 80mm !important;
+        background: #fff !important;
+      }
+
+      body > *:not(#ticket-print-root) {
+        display: none !important;
+      }
+
+      #ticket-print-root {
+        position: fixed !important;
+        inset: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
         background: white !important;
-      }
-
-      body * {
-        visibility: hidden;
-      }
-
-      #ticket, #ticket * {
-        visibility: visible;
+        display: block !important;
       }
 
       #ticket {
@@ -43,9 +49,9 @@ console.log("es_cotizacion:", venta.es_cotizacion);
         width: 72mm !important;
         max-width: 72mm !important;
         margin: 0 !important;
-        padding: 3mm !important;
+        padding: 2mm 3mm 2mm 3mm !important;
         box-sizing: border-box !important;
-        overflow: hidden !important;
+        overflow: visible !important;
         background: white !important;
         color: black !important;
       }
@@ -61,15 +67,16 @@ console.log("es_cotizacion:", venta.es_cotizacion);
   if (data?.tipo === "corte") {
     return (
       <div
-        style={{
-          position: "fixed",
-          inset: 0,
-          background: "rgba(0,0,0,0.6)",
-          display: "grid",
-          placeItems: "center",
-          zIndex: 1000,
-        }}
-      >
+  id="ticket-print-root"
+  style={{
+    position: "fixed",
+    inset: 0,
+    background: "rgba(0,0,0,0.6)",
+    display: "grid",
+    placeItems: "center",
+    zIndex: 1000,
+  }}
+>
          {printStyles}
         <div
         
