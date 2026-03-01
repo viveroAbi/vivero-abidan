@@ -299,8 +299,12 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
                         alignItems: "flex-start",
                       }}
                     >
-                      <span style={{ width: 70 }}>X{cant}</span>
-                      <span style={{ flex: 1, lineHeight: 1.15 }}>{nombre}</span>
+                      <span style={{ flex: 1, lineHeight: 1.15 }}>
+  {nombre}
+  <div style={{ fontSize: 11 }}>
+    {money(pu)}
+  </div>
+</span>
                     </div>
                   );
                 })
@@ -458,9 +462,9 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
 
                     <span style={{ flex: 1, lineHeight: 1.15 }}>
                       {nombre}
-                      <div style={{ color: "#666", fontSize: 11 }}>
-                        {money(pu)}
-                      </div>
+                      <div style={{ color: "#000", fontSize: 11, fontWeight: "normal" }}>
+  {money(pu)}
+</div>
                     </span>
 
                     <span style={{ width: 62, textAlign: "right" }}>
