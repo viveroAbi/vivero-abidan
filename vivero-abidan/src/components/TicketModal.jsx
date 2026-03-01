@@ -9,73 +9,14 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
   // }
 
   const venta = data?.venta || {};
-  console.log("TICKET DATA:", data);
+console.log("TICKET DATA:", data);
 console.log("VENTA EN TICKET:", venta);
 console.log("es_cotizacion_pedido:", venta.es_cotizacion_pedido);
 console.log("es_cotizacion:", venta.es_cotizacion);
-  const items = Array.isArray(data?.items) ? data.items : [];
 
-  function imprimirSoloTicket() {
-  const ticket = document.getElementById("ticket");
-  if (!ticket) return;
+const items = Array.isArray(data?.items) ? data.items : [];
 
-  const contenido = ticket.innerHTML;
-
-  const win = window.open("", "_blank", "width=420,height=900");
-  if (!win) return;
-
-  win.document.write(`
-    <!doctype html>
-    <html>
-      <head>
-        <title>Ticket</title>
-        <style>
-          @page {
-            size: 80mm auto;
-            margin: 0;
-          }
-
-          html, body {
-            margin: 0;
-            padding: 0;
-            background: #fff;
-            font-family: monospace;
-          }
-
-          body {
-            width: 72mm;
-            max-width: 72mm;
-            padding: 2mm 3mm;
-            box-sizing: border-box;
-            color: #000;
-          }
-
-          .no-print {
-            display: none !important;
-          }
-
-          #ticket {
-            width: 100%;
-            max-width: 100%;
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            page-break-inside: avoid;
-            break-inside: avoid;
-          }
-
-          img {
-            max-width: 100%;
-            height: auto;
-          }
-        </style>
-      </head>
-      <body>
-        <div id="ticket">${contenido}</div>
-      </body>
-    </html>
-  `);
-  const printStyles = (
+const printStyles = (
   <style>{`
     @page {
       size: 80mm auto;
@@ -89,7 +30,16 @@ console.log("es_cotizacion:", venta.es_cotizacion);
         background: #fff !important;
       }
 
+      body {
+        background: #fff !important;
+      }
+
+      .no-print {
+        display: none !important;
+      }
+
       #ticket {
+        position: static !important;
         width: 72mm !important;
         max-width: 72mm !important;
         margin: 0 auto !important;
@@ -98,24 +48,32 @@ console.log("es_cotizacion:", venta.es_cotizacion);
         overflow: visible !important;
         background: #fff !important;
         color: #000 !important;
-        page-break-inside: avoid !important;
-        break-inside: avoid !important;
+        page-break-inside: auto !important;
+        break-inside: auto !important;
+        box-shadow: none !important;
+        border: none !important;
       }
 
-      .no-print {
-        display: none !important;
+      img {
+        max-width: 100% !important;
+        height: auto !important;
+        display: block !important;
+        margin: 0 auto !important;
+      }
+
+      hr {
+        border: none !important;
+        border-top: 1px solid #999 !important;
+        margin: 6px 0 !important;
       }
     }
   `}</style>
 );
 
-  win.document.close();
-  win.focus();
-
+function imprimirSoloTicket() {
   setTimeout(() => {
-    win.print();
-    win.close();
-  }, 500);
+    window.print();
+  }, 150);
 }
     // ✅ SI ES CORTE, MOSTRAR SOLO TEXTO (ticket de corte)
   if (data?.tipo === "corte") {
@@ -152,13 +110,14 @@ console.log("es_cotizacion:", venta.es_cotizacion);
             {data.texto}
           </pre>
 
-<div className="no-print" style={{ display: "flex", gap: 8, marginTop: 10 }}>            <button style={{ flex: 1 }} onClick={imprimirSoloTicket}>
-              🖨️ Imprimir
-            </button>
-            <button style={{ flex: 1 }} onClick={onClose}>
-              ❌ Cerrar
-            </button>
-          </div>
+<div className="no-print" style={{ display: "flex", gap: 8, marginTop: 10 }}>
+  <button style={{ flex: 1 }} onClick={imprimirSoloTicket}>
+    🖨️ Imprimir
+  </button>
+  <button style={{ flex: 1 }} onClick={onClose}>
+    ❌ Cerrar
+  </button>
+</div>
         </div>
       </div>
     );
@@ -236,18 +195,20 @@ if (esCotizacionPedido) {
     >
        {printStyles}
       <div
-        id="ticket"
-        style={{
-          position: "relative",
-          width: 320,
-          background: "white",
-          color: "black",
-          padding: 16,
-          fontFamily: "monospace",
-          pageBreakInside: "avoid",
-breakInside: "avoid",
-        }}
-      >
+  id="ticket"
+  style={{
+    position: "relative",
+    width: "72mm",
+    maxWidth: "72mm",
+    background: "white",
+    color: "black",
+    padding: "3mm",
+    boxSizing: "border-box",
+    fontFamily: "monospace",
+    pageBreakInside: "avoid",
+    breakInside: "avoid",
+  }}
+>
         {/* MARCA DE AGUA PEDIDO */}
         <div
           style={{
@@ -374,18 +335,20 @@ return (
     >
        {printStyles}
       <div
-        id="ticket"
-        style={{
-          position: "relative",
-          width: 320,
-          background: "white",
-          color: "black",
-          padding: 16,
-          fontFamily: "monospace",
-          pageBreakInside: "avoid",
-breakInside: "avoid",
-        }}
-      >
+  id="ticket"
+  style={{
+    position: "relative",
+    width: "72mm",
+    maxWidth: "72mm",
+    background: "white",
+    color: "black",
+    padding: "3mm",
+    boxSizing: "border-box",
+    fontFamily: "monospace",
+    pageBreakInside: "avoid",
+    breakInside: "avoid",
+  }}
+>
         {/* MARCA DE AGUA */}
 {(esCotizacionNormal || esCotizacionPedido) && (
   <div
@@ -435,7 +398,7 @@ breakInside: "avoid",
           <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
             <b style={{ width: 28 }}>Cant.</b>
 <b style={{ flex: 1 }}>Producto</b>
-<b style={{ width: 62, textAlign: "right" }}>Impporte</b>
+<b style={{ width: 62, textAlign: "right" }}>Importe</b>
           </div>
 
           {items.length === 0 ? (
@@ -569,13 +532,14 @@ breakInside: "avoid",
           SIN EXCEPCION ALGUNA
         </p>
 
-<div className="no-print" style={{ display: "flex", gap: 8, marginTop: 10 }}>          <button style={{ flex: 1 }} onClick={imprimirSoloTicket}>
-            🖨️ Imprimir
-          </button>
-          <button style={{ flex: 1 }} onClick={onClose}>
-            ❌ Cerrar
-          </button>
-        </div>
+<div className="no-print" style={{ display: "flex", gap: 8, marginTop: 10 }}>
+  <button style={{ flex: 1 }} onClick={imprimirSoloTicket}>
+    🖨️ Imprimir
+  </button>
+  <button style={{ flex: 1 }} onClick={onClose}>
+    ❌ Cerrar
+  </button>
+</div>
       </div>
     </div>
   );
