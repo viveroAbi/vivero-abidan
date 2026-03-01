@@ -301,7 +301,7 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
                     >
                       <span style={{ flex: 1, lineHeight: 1.15 }}>
   {nombre}
-  <div style={{ fontSize: 11 }}>
+  <div style={{ fontSize: 11, fontWeight: "bold", color: "#000" }}>
     {money(pu)}
   </div>
 </span>
