@@ -630,6 +630,7 @@ async function guardarProductoUI(e) {
   const precio_mayoreo = Number(prodForm.precio_mayoreo);
   const precio_vivero = Number(prodForm.precio_vivero);
   const precio_especial = Number(prodForm.precio_especial);
+  const costo = Number(prodForm.costo);
 
   // ✅ Validación (precio_especial puede ser 0 si quieres, aquí lo pido >0)
   if (
@@ -658,6 +659,7 @@ async function guardarProductoUI(e) {
           precio_mayoreo,
           precio_vivero,
           precio_especial,
+          costo,
         }),
       });
 
@@ -671,6 +673,7 @@ async function guardarProductoUI(e) {
       fd.append("precio_mayoreo", String(precio_mayoreo));
       fd.append("precio_vivero", String(precio_vivero));
       fd.append("precio_especial", String(precio_especial));
+      fd.append("costo", String(costo));
 
       if (imagenProducto) fd.append("imagen", imagenProducto);
 
@@ -3252,53 +3255,78 @@ if (view === "movimientos") {
         </select>
       </label>
 
-      <input
-        name="nombre"
-        value={prodForm.nombre}
-        onChange={onProdChange}
-        placeholder="Nombre"
-        style={{ ...inputStyle, minWidth: 260, marginTop: 0 }}
-      />
+      {/* ===== PRECIOS (con etiqueta abajo) ===== */}
+<div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-start" }}>
+  {/* Público */}
+  <div style={{ display: "grid", gap: 4 }}>
+    <input
+      name="precio_publico"
+      value={prodForm.precio_publico}
+      onChange={onProdChange}
+      type="number"
+      step="0.01"
+      placeholder="0.00"
+      style={{ ...inputStyle, minWidth: 140, marginTop: 0 }}
+    />
+    <div style={{ fontSize: 12, color: theme.muted, textAlign: "center" }}>Público</div>
+  </div>
 
-      <input
-  name="precio_publico"
-  value={prodForm.precio_publico}
-  onChange={onProdChange}
-  placeholder="Público"
-  type="number"
-  step="0.01"
-  style={{ ...inputStyle, maxWidth: 150, marginTop: 0 }}
-/>
+  {/* Mayoreo */}
+  <div style={{ display: "grid", gap: 4 }}>
+    <input
+      name="precio_mayoreo"
+      value={prodForm.precio_mayoreo}
+      onChange={onProdChange}
+      type="number"
+      step="0.01"
+      placeholder="0.00"
+      style={{ ...inputStyle, minWidth: 140, marginTop: 0 }}
+    />
+    <div style={{ fontSize: 12, color: theme.muted, textAlign: "center" }}>Mayoreo</div>
+  </div>
 
-<input
-  name="precio_mayoreo"
-  value={prodForm.precio_mayoreo}
-  onChange={onProdChange}
-  placeholder="Mayoreo"
-  type="number"
-  step="0.01"
-  style={{ ...inputStyle, maxWidth: 160, marginTop: 0 }}
-/>
+  {/* Vivero */}
+  <div style={{ display: "grid", gap: 4 }}>
+    <input
+      name="precio_vivero"
+      value={prodForm.precio_vivero}
+      onChange={onProdChange}
+      type="number"
+      step="0.01"
+      placeholder="0.00"
+      style={{ ...inputStyle, minWidth: 140, marginTop: 0 }}
+    />
+    <div style={{ fontSize: 12, color: theme.muted, textAlign: "center" }}>Vivero</div>
+  </div>
 
-<input
-  name="precio_vivero"
-  value={prodForm.precio_vivero}
-  onChange={onProdChange}
-  placeholder="Vivero"
-  type="number"
-  step="0.01"
-  style={{ ...inputStyle, maxWidth: 160, marginTop: 0 }}
-/>
+  {/* Especial */}
+  <div style={{ display: "grid", gap: 4 }}>
+    <input
+      name="precio_especial"
+      value={prodForm.precio_especial}
+      onChange={onProdChange}
+      type="number"
+      step="0.01"
+      placeholder="0.00"
+      style={{ ...inputStyle, minWidth: 140, marginTop: 0 }}
+    />
+    <div style={{ fontSize: 12, color: theme.muted, textAlign: "center" }}>Especial</div>
+  </div>
 
-<input
-  name="precio_especial"
-  value={prodForm.precio_especial}
-  onChange={onProdChange}
-  placeholder="Especial"
-  type="number"
-  step="0.01"
-  style={{ ...inputStyle, maxWidth: 160, marginTop: 0 }}
-/>
+  {/* Costo (llegada) */}
+  <div style={{ display: "grid", gap: 4 }}>
+    <input
+      name="costo"
+      value={prodForm.costo}
+      onChange={onProdChange}
+      type="number"
+      step="0.01"
+      placeholder="0.00"
+      style={{ ...inputStyle, minWidth: 160, marginTop: 0 }}
+    />
+    <div style={{ fontSize: 12, color: theme.muted, textAlign: "center" }}>Costo (llegada)</div>
+  </div>
+</div>
       <input
   type="file"
   accept="image/*"
