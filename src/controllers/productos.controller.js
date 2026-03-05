@@ -47,7 +47,6 @@ export const getProductos = async (req, res) => {
     }
 
     if (q) {
-      // Buscar por código viejo, código_cat y nombre
       filtros.push("(codigo LIKE ? OR codigo_cat LIKE ? OR nombre LIKE ?)");
       params.push(`%${q}%`, `%${q}%`, `%${q}%`);
     }
@@ -55,23 +54,19 @@ export const getProductos = async (req, res) => {
     const where = filtros.length ? `WHERE ${filtros.join(" AND ")}` : "";
 
     const [rows] = await pool.query(
-  `SELECT id, codigo, codigo_cat, nombre,
-          precio, precio_publico, precio_mayoreo, precio_vivero, precio_especial, costo,
-          categoria_planta, stock
-   FROM productos
-   ${where}
-   ORDER BY nombre ASC
-   LIMIT ?`,
-  [...params, limit]
-);
+      `SELECT id, codigo, codigo_cat, nombre,
+              precio_publico, precio_mayoreo, precio_vivero, precio_especial, costo,
+              categoria_planta, stock, imagen_url
+       FROM productos
+       ${where}
+       ORDER BY nombre ASC
+       LIMIT ?`,
+      [...params, limit]
+    );
+
     return res.json({
       data: rows,
-      meta: {
-        total: rows.length,
-        page: 1,
-        limit,
-        pages: 1,
-      },
+      meta: { total: rows.length, page: 1, limit, pages: 1 },
     });
   } catch (err) {
     console.error("ERROR GET /productos:", err);
@@ -90,70 +85,68 @@ export const crearProducto = async (req, res) => {
     const {
       codigo,
       nombre,
-      precio,
+      precio_publico,
+      precio_mayoreo,
+      precio_vivero,
+      precio_especial,
+      costo,
       categoria_planta = "sin_categoria",
     } = req.body;
 
-    // nombre y precio obligatorios
-    if (!nombre || precio === undefined) {
-      return res.status(400).json({ error: "Falta nombre o precio" });
-    }
+    const nombreL = String(nombre || "").trim();
+    const codigoL = String(codigo || "").trim(); // opcional
+    const cat = String(categoria_planta || "sin_categoria").trim();
 
     const pPub = Number(precio_publico);
-const pMay = Number(precio_mayoreo);
-const pViv = Number(precio_vivero);
-const pEsp = Number(precio_especial);
-const cst  = Number(costo ?? 0);
+    const pMay = Number(precio_mayoreo);
+    const pViv = Number(precio_vivero);
+    const pEsp = Number(precio_especial);
+    const cst = Number(costo ?? 0);
 
-if (!nombreL) return res.status(400).json({ error: "Falta nombre" });
+    if (!nombreL) return res.status(400).json({ error: "Falta nombre" });
 
-if (![pPub, pMay, pViv, pEsp].every((n) => Number.isFinite(n) && n > 0)) {
-  return res.status(400).json({ error: "Precios inválidos" });
-}
+    if (![pPub, pMay, pViv, pEsp].every((n) => Number.isFinite(n) && n > 0)) {
+      return res.status(400).json({ error: "Precios inválidos" });
+    }
 
-if (!Number.isFinite(cst) || cst < 0) {
-  return res.status(400).json({ error: "Costo inválido" });
-}
+    if (!Number.isFinite(cst) || cst < 0) {
+      return res.status(400).json({ error: "Costo inválido" });
+    }
+
+    if (!CATEGORIAS_PLANTA.includes(cat)) {
+      return res.status(400).json({ error: "Categoría inválida" });
+    }
 
     let r;
 
-    // Si mandan codigo lo guarda; si no, inserta sin codigo
     if (codigoL) {
       [r] = await pool.query(
-  `INSERT INTO productos (codigo, nombre, precio_publico, precio_mayoreo, precio_vivero, precio_especial, costo, categoria_planta)
-   VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-  [codigoL, nombreL, pPub, pMay, pViv, pEsp, cst, cat]
-);
+        `INSERT INTO productos
+          (codigo, nombre, precio_publico, precio_mayoreo, precio_vivero, precio_especial, costo, categoria_planta)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [codigoL, nombreL, pPub, pMay, pViv, pEsp, cst, cat]
+      );
     } else {
       [r] = await pool.query(
-        `INSERT INTO productos (nombre, precio, categoria_planta)
-         VALUES (?, ?, ?)`,
-        [nombreL, precioN, cat]
+        `INSERT INTO productos
+          (nombre, precio_publico, precio_mayoreo, precio_vivero, precio_especial, costo, categoria_planta)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [nombreL, pPub, pMay, pViv, pEsp, cst, cat]
       );
     }
 
-    // Traer producto recién creado
-   const [nuevo] = await pool.query(
-  `SELECT id, codigo, codigo_cat, nombre,
-          precio_publico, precio_mayoreo, precio_vivero, precio_especial, costo,
-          categoria_planta, stock
-   FROM productos
-   WHERE id = ?`,
-  [r.insertId]
-);
+    const [nuevo] = await pool.query(
+      `SELECT id, codigo, codigo_cat, nombre,
+              precio_publico, precio_mayoreo, precio_vivero, precio_especial, costo,
+              categoria_planta, stock, imagen_url
+       FROM productos
+       WHERE id = ?`,
+      [r.insertId]
+    );
 
     return res.status(201).json({
       mensaje: "Producto creado",
-      data:
-        nuevo[0] || {
-          id: r.insertId,
-          codigo: codigoL || null,
-          codigo_cat: null,
-          nombre: nombreL,
-          precio: precioN,
-          categoria_planta: cat,
-          stock: 0,
-        },
+      data: nuevo[0] || { id: r.insertId, nombre: nombreL },
     });
   } catch (err) {
     console.error("ERROR POST /productos:", err);
@@ -169,32 +162,41 @@ if (!Number.isFinite(cst) || cst < 0) {
 // ==========================
 export const editarProducto = async (req, res) => {
   try {
+    const { id } = req.params;
+
     const {
-  codigo,
-  nombre,
-  precio_publico,
-  precio_mayoreo,
-  precio_vivero,
-  precio_especial,
-  costo,
-  categoria_planta = "sin_categoria",
-} = req.body;
+      codigo, // opcional
+      nombre,
+      precio_publico,
+      precio_mayoreo,
+      precio_vivero,
+      precio_especial,
+      costo,
+      categoria_planta = "sin_categoria",
+    } = req.body;
 
     const idN = Number(id);
     if (!Number.isInteger(idN) || idN <= 0) {
       return res.status(400).json({ error: "ID inválido" });
     }
 
-    if (!nombre || precio === undefined) {
-      return res.status(400).json({ error: "Falta nombre o precio" });
-    }
-
-    const nombreL = String(nombre).trim();
-    const precioN = Number(precio);
+    const nombreL = String(nombre || "").trim();
     const cat = String(categoria_planta || "sin_categoria").trim();
 
-    if (!nombreL || !Number.isFinite(precioN) || precioN <= 0) {
-      return res.status(400).json({ error: "Datos inválidos" });
+    const pPub = Number(precio_publico);
+    const pMay = Number(precio_mayoreo);
+    const pViv = Number(precio_vivero);
+    const pEsp = Number(precio_especial);
+    const cst = Number(costo ?? 0);
+
+    if (!nombreL) return res.status(400).json({ error: "Falta nombre" });
+
+    if (![pPub, pMay, pViv, pEsp].every((n) => Number.isFinite(n) && n > 0)) {
+      return res.status(400).json({ error: "Precios inválidos" });
+    }
+
+    if (!Number.isFinite(cst) || cst < 0) {
+      return res.status(400).json({ error: "Costo inválido" });
     }
 
     if (!CATEGORIAS_PLANTA.includes(cat)) {
@@ -203,22 +205,26 @@ export const editarProducto = async (req, res) => {
 
     let r;
 
-    // Si viene codigo, se actualiza; si no, no se toca ese campo
     if (codigo !== undefined) {
       const codigoL = String(codigo || "").trim();
 
       [r] = await pool.query(
         `UPDATE productos
-         SET codigo = ?, nombre = ?, precio = ?, categoria_planta = ?
-         WHERE id = ?`,
-        [codigoL, nombreL, precioN, cat, idN]
+         SET codigo=?,
+             nombre=?,
+             precio_publico=?, precio_mayoreo=?, precio_vivero=?, precio_especial=?, costo=?,
+             categoria_planta=?
+         WHERE id=?`,
+        [codigoL, nombreL, pPub, pMay, pViv, pEsp, cst, cat, idN]
       );
     } else {
       [r] = await pool.query(
         `UPDATE productos
-         SET nombre = ?, precio = ?, categoria_planta = ?
-         WHERE id = ?`,
-        [nombreL, precioN, cat, idN]
+         SET nombre=?,
+             precio_publico=?, precio_mayoreo=?, precio_vivero=?, precio_especial=?, costo=?,
+             categoria_planta=?
+         WHERE id=?`,
+        [nombreL, pPub, pMay, pViv, pEsp, cst, cat, idN]
       );
     }
 
@@ -227,7 +233,9 @@ export const editarProducto = async (req, res) => {
     }
 
     const [actualizado] = await pool.query(
-      `SELECT id, codigo, codigo_cat, nombre, precio, categoria_planta, stock
+      `SELECT id, codigo, codigo_cat, nombre,
+              precio_publico, precio_mayoreo, precio_vivero, precio_especial, costo,
+              categoria_planta, stock, imagen_url
        FROM productos
        WHERE id = ?`,
       [idN]
@@ -235,13 +243,7 @@ export const editarProducto = async (req, res) => {
 
     return res.json({
       mensaje: "Producto actualizado",
-      data:
-        actualizado[0] || {
-          id: idN,
-          nombre: nombreL,
-          precio: precioN,
-          categoria_planta: cat,
-        },
+      data: actualizado[0] || { id: idN, nombre: nombreL },
     });
   } catch (err) {
     console.error("ERROR PUT /productos/:id:", err);
