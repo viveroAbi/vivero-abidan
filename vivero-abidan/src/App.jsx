@@ -223,12 +223,10 @@ const [prodForm, setProdForm] = useState({
   id: null,
   nombre: "",
   precio_publico: "",
-  precio_revendedor: "",
-  precio_jardinero: "",
-  precio_paisajista: "",
-  precio_arquitecto: "",
   precio_mayoreo: "",
   precio_vivero: "",
+  precio_especial: "",
+  costo: "",
   categoria_planta: "sin_categoria",
 });
 const [prodSaving, setProdSaving] = useState(false);
@@ -594,18 +592,14 @@ function limpiarBarcodeSeleccionados() {
 }
 
 function editarProductoUI(p) {
-  console.log("EDITAR PRODUCTO:", p);
-
   setProdForm({
     id: p.id,
     nombre: p.nombre || "",
     precio_publico: String(p.precio_publico ?? p.precio ?? ""),
-    precio_revendedor: String(p.precio_revendedor ?? p.precio_publico ?? p.precio ?? ""),
-    precio_jardinero: String(p.precio_jardinero ?? p.precio_publico ?? p.precio ?? ""),
-    precio_paisajista: String(p.precio_paisajista ?? p.precio_publico ?? p.precio ?? ""),
-    precio_arquitecto: String(p.precio_arquitecto ?? p.precio_publico ?? p.precio ?? ""),
     precio_mayoreo: String(p.precio_mayoreo ?? p.precio_publico ?? p.precio ?? ""),
     precio_vivero: String(p.precio_vivero ?? p.precio_publico ?? p.precio ?? ""),
+    precio_especial: String(p.precio_especial ?? p.precio_publico ?? p.precio ?? ""),
+    costo: String(p.costo ?? ""),
     categoria_planta: p.categoria_planta || "sin_categoria",
   });
 
@@ -618,12 +612,9 @@ function limpiarProductoUI() {
     id: null,
     nombre: "",
     precio_publico: "",
-    precio_revendedor: "",
-    precio_jardinero: "",
-    precio_paisajista: "",
-    precio_arquitecto: "",
     precio_mayoreo: "",
     precio_vivero: "",
+    precio_especial: "",
     categoria_planta: "sin_categoria",
   });
 }
@@ -631,97 +622,71 @@ function limpiarProductoUI() {
 async function guardarProductoUI(e) {
   e.preventDefault();
   setMessage("", "");
-  setMessage("success", prodForm.id ? "✅ Producto actualizado" : "✅ Producto creado");
-
-// limpiar formulario
-limpiarProductoUI();
-setImagenProducto(null);
-setPreviewImagen("");
-
-// recargar lista
-await buscarProductos(qProd, catProd);
 
   const nombre = (prodForm.nombre || "").trim();
-const categoria_planta = (prodForm.categoria_planta || "sin_categoria").trim();
+  const categoria_planta = (prodForm.categoria_planta || "sin_categoria").trim();
 
-const precio_publico = Number(prodForm.precio_publico);
-const precio_revendedor = Number(prodForm.precio_revendedor);
-const precio_jardinero = Number(prodForm.precio_jardinero);
-const precio_paisajista = Number(prodForm.precio_paisajista);
-const precio_arquitecto = Number(prodForm.precio_arquitecto);
-const precio_mayoreo = Number(prodForm.precio_mayoreo);
-const precio_vivero = Number(prodForm.precio_vivero);
+  const precio_publico = Number(prodForm.precio_publico);
+  const precio_mayoreo = Number(prodForm.precio_mayoreo);
+  const precio_vivero = Number(prodForm.precio_vivero);
+  const precio_especial = Number(prodForm.precio_especial);
 
-if (
-  !nombre ||
-  !Number.isFinite(precio_publico) || precio_publico <= 0 ||
-  !Number.isFinite(precio_revendedor) || precio_revendedor <= 0 ||
-  !Number.isFinite(precio_jardinero) || precio_jardinero <= 0 ||
-  !Number.isFinite(precio_paisajista) || precio_paisajista <= 0 ||
-  !Number.isFinite(precio_arquitecto) || precio_arquitecto <= 0 ||
-  !Number.isFinite(precio_mayoreo) || precio_mayoreo <= 0 ||
-  !Number.isFinite(precio_vivero) || precio_vivero <= 0
-) {
-  setMessage("error", "Completa todos los precios con valores válidos.");
-  return;
-}
+  // ✅ Validación (precio_especial puede ser 0 si quieres, aquí lo pido >0)
+  if (
+    !nombre ||
+    !Number.isFinite(precio_publico) || precio_publico <= 0 ||
+    !Number.isFinite(precio_mayoreo) || precio_mayoreo <= 0 ||
+    !Number.isFinite(precio_vivero) || precio_vivero <= 0 ||
+    !Number.isFinite(precio_especial) || precio_especial <= 0
+  ) {
+    setMessage("error", "Completa nombre y todos los precios con valores válidos.");
+    return;
+  }
 
   try {
     setProdSaving(true);
 
-    // ✅ Si es edición (sin imagen por ahora)
     if (prodForm.id) {
+      // ✅ EDITAR (JSON)
       await apiFetch(`/productos/${prodForm.id}`, {
         method: "PUT",
         headers: authHeaders(),
         body: JSON.stringify({
           nombre,
-          precio_publico: precio_publico,
-          precio_revendedor: precio_revendedor,
-          precio_jardinero: precio_jardinero,
-          precio_paisajista: precio_paisajista,
-          precio_arquitecto: precio_arquitecto,
-          precio_mayoreo: precio_mayoreo,
-          precio_vivero: precio_vivero,
-          categoria_planta
+          categoria_planta,
+          precio_publico,
+          precio_mayoreo,
+          precio_vivero,
+          precio_especial,
         }),
       });
+
       setMessage("success", "✅ Producto actualizado");
     } else {
-      // ✅ Si es creación, usar FormData para permitir imagen
+      // ✅ CREAR (FormData + imagen)
       const fd = new FormData();
       fd.append("nombre", nombre);
-fd.append("precio_publico", String(precio_publico));
-fd.append("precio_revendedor", String(precio_revendedor));
-fd.append("precio_jardinero", String(precio_jardinero));
-fd.append("precio_paisajista", String(precio_paisajista));
-fd.append("precio_arquitecto", String(precio_arquitecto));
-fd.append("precio_mayoreo", String(precio_mayoreo));
-fd.append("precio_vivero", String(precio_vivero));
-fd.append("categoria_planta", categoria_planta);
+      fd.append("categoria_planta", categoria_planta);
+      fd.append("precio_publico", String(precio_publico));
+      fd.append("precio_mayoreo", String(precio_mayoreo));
+      fd.append("precio_vivero", String(precio_vivero));
+      fd.append("precio_especial", String(precio_especial));
 
-      if (imagenProducto) {
-        fd.append("imagen", imagenProducto); // debe coincidir con multer.single("imagen")
-      }
+      if (imagenProducto) fd.append("imagen", imagenProducto);
 
-      await apiFetch(`/productos`, {
-        method: "POST",
-        body: fd,
-      });
+      await apiFetch(`/productos`, { method: "POST", body: fd });
 
       setMessage("success", "✅ Producto creado");
     }
 
-    // limpiar formulario
+    // ✅ AHORA SÍ: limpiar + recargar (DESPUÉS de guardar)
     limpiarProductoUI();
     setImagenProducto(null);
     setPreviewImagen("");
-
-    // ✅ Recargar lista respetando filtros actuales
     await buscarProductos(qProd, catProd);
   } catch (err) {
     console.error(err);
-    setMessage("error", err.data?.error || err.message || "No se pudo guardar.");
+    setMessage("error", err?.message || "No se pudo guardar.");
   } finally {
     setProdSaving(false);
   }
@@ -811,14 +776,12 @@ function obtenerPrecioPorCategoria(producto, categoria) {
   const cat = String(categoria || "publico").toLowerCase();
 
   const mapa = {
-    publico: producto.precio_publico,
-    revendedor: producto.precio_revendedor,
-    jardinero: producto.precio_jardinero,
-    paisajista: producto.precio_paisajista,
-    arquitecto: producto.precio_arquitecto,
-    mayoreo: producto.precio_mayoreo,
-    vivero: producto.precio_vivero,
-  };
+  publico: producto.precio_publico,
+  mayoreo: producto.precio_mayoreo,
+  vivero: producto.precio_vivero,
+  especial: producto.precio_especial,
+  costo: producto.costo,
+};
 
   const precioCat = Number(mapa[cat]);
   const precioBase = Number(producto.precio || 0);
@@ -2234,12 +2197,9 @@ if (view === "movimientos") {
     disabled={!!clienteSeleccionado}
   >
     <option value="publico">Público</option>
-    <option value="revendedor">Revendedor</option>
-    <option value="jardinero">Jardinero</option>
-    <option value="paisajista">Paisajista</option>
-    <option value="arquitecto">Arquitecto</option>
-    <option value="mayoreo">Mayoreo</option>
-    <option value="vivero">Vivero</option>
+<option value="mayoreo">Mayoreo</option>
+<option value="vivero">Vivero</option>
+<option value="especial">Precio especial</option>
   </select>
 
   {clienteSeleccionado && (
@@ -3304,57 +3264,17 @@ if (view === "movimientos") {
   name="precio_publico"
   value={prodForm.precio_publico}
   onChange={onProdChange}
-  placeholder="Precio público"
+  placeholder="Público"
   type="number"
   step="0.01"
-  style={{ ...inputStyle, maxWidth: 160, marginTop: 0 }}
-/>
-
-<input
-  name="precio_revendedor"
-  value={prodForm.precio_revendedor}
-  onChange={onProdChange}
-  placeholder="Precio revendedor"
-  type="number"
-  step="0.01"
-  style={{ ...inputStyle, maxWidth: 160, marginTop: 0 }}
-/>
-
-<input
-  name="precio_jardinero"
-  value={prodForm.precio_jardinero}
-  onChange={onProdChange}
-  placeholder="Precio jardinero"
-  type="number"
-  step="0.01"
-  style={{ ...inputStyle, maxWidth: 160, marginTop: 0 }}
-/>
-
-<input
-  name="precio_paisajista"
-  value={prodForm.precio_paisajista}
-  onChange={onProdChange}
-  placeholder="Precio paisajista"
-  type="number"
-  step="0.01"
-  style={{ ...inputStyle, maxWidth: 160, marginTop: 0 }}
-/>
-
-<input
-  name="precio_arquitecto"
-  value={prodForm.precio_arquitecto}
-  onChange={onProdChange}
-  placeholder="Precio arquitecto"
-  type="number"
-  step="0.01"
-  style={{ ...inputStyle, maxWidth: 160, marginTop: 0 }}
+  style={{ ...inputStyle, maxWidth: 150, marginTop: 0 }}
 />
 
 <input
   name="precio_mayoreo"
   value={prodForm.precio_mayoreo}
   onChange={onProdChange}
-  placeholder="Precio mayoreo"
+  placeholder="Mayoreo"
   type="number"
   step="0.01"
   style={{ ...inputStyle, maxWidth: 160, marginTop: 0 }}
@@ -3364,7 +3284,17 @@ if (view === "movimientos") {
   name="precio_vivero"
   value={prodForm.precio_vivero}
   onChange={onProdChange}
-  placeholder="Precio vivero"
+  placeholder="Vivero"
+  type="number"
+  step="0.01"
+  style={{ ...inputStyle, maxWidth: 160, marginTop: 0 }}
+/>
+
+<input
+  name="precio_especial"
+  value={prodForm.precio_especial}
+  onChange={onProdChange}
+  placeholder="Especial"
   type="number"
   step="0.01"
   style={{ ...inputStyle, maxWidth: 160, marginTop: 0 }}
