@@ -615,6 +615,7 @@ function limpiarProductoUI() {
     precio_mayoreo: "",
     precio_vivero: "",
     precio_especial: "",
+    costo: "",
     categoria_planta: "sin_categoria",
   });
 }
@@ -783,7 +784,7 @@ function obtenerPrecioPorCategoria(producto, categoria) {
   mayoreo: producto.precio_mayoreo,
   vivero: producto.precio_vivero,
   especial: producto.precio_especial,
-  costo: producto.costo,
+  
 };
 
   const precioCat = Number(mapa[cat]);
@@ -2301,27 +2302,73 @@ if (view === "movimientos") {
       ) : (
         sugerencias.map((p) => (
           <button
-            key={p.id}
-            type="button"
-            onMouseDown={(e) => e.preventDefault()} // evita que blur cierre antes del click
-            onClick={() => seleccionarSugerencia(p)}
-            style={{
-              width: "100%",
-              textAlign: "left",
-              padding: "10px 12px",
-              border: "none",
-              borderBottom: "1px solid #edf2ef",
-              background: "#fff",
-              cursor: "pointer",
-            }}
-          >
-            <div style={{ fontWeight: 700, fontSize: 13 }}>
-              {p.nombre}
-            </div>
-            <div style={{ fontSize: 12, color: "#5b6f67" }}>
-              {p.codigo_cat || p.codigo} • ${Number(p.precio_publico ?? p.precio ?? 0).toFixed(2)}
-            </div>
-          </button>
+  key={p.id}
+  type="button"
+  onMouseDown={(e) => e.preventDefault()} // evita que el blur cierre antes del click
+  onClick={() => seleccionarSugerencia(p)}
+  style={{
+    width: "100%",
+    textAlign: "left",
+    padding: "10px 12px",
+    border: "none",
+    borderBottom: "1px solid #edf2ef",
+    background: "#fff",
+    cursor: "pointer",
+  }}
+>
+  <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+    {/* Imagen */}
+    {p.imagen_url ? (
+      <img
+        src={`${API_URL.replace("/api", "")}${p.imagen_url}`}
+        alt={p.nombre}
+        style={{
+          width: 44,
+          height: 44,
+          borderRadius: 10,
+          objectFit: "cover",
+          border: "1px solid #d7e3de",
+          flex: "0 0 auto",
+        }}
+      />
+    ) : (
+      <div
+        style={{
+          width: 44,
+          height: 44,
+          borderRadius: 10,
+          border: "1px solid #d7e3de",
+          background: "#f7fbf9",
+          display: "grid",
+          placeItems: "center",
+          color: "#8aa39a",
+          fontSize: 10,
+          flex: "0 0 auto",
+        }}
+      >
+        Sin foto
+      </div>
+    )}
+
+    {/* Texto */}
+    <div style={{ minWidth: 0 }}>
+      <div
+        style={{
+          fontWeight: 800,
+          fontSize: 13,
+          whiteSpace: "nowrap",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+        }}
+      >
+        {p.nombre}
+      </div>
+      <div style={{ fontSize: 12, color: "#5b6f67" }}>
+        {p.codigo_cat || p.codigo} • {money(p.precio_publico ?? p.precio ?? 0)}
+      </div>
+    </div>
+  </div>
+</button>
         ))
       )}
     </div>
@@ -3236,114 +3283,115 @@ if (view === "movimientos") {
 
     {/* Form crear/editar */}
     <form
-      onSubmit={guardarProductoUI}
-      style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}
+  onSubmit={guardarProductoUI}
+  style={{ display: "grid", gap: 10, marginBottom: 12 }}
+>
+  {/* Categoría */}
+  <label style={{ ...labelStyle, marginBottom: 0 }}>
+    Categoría del NUEVO producto:
+    <select
+      name="categoria_planta"
+      value={prodForm.categoria_planta}
+      onChange={onProdChange}
+      style={{ ...inputStyle, maxWidth: 260 }}
     >
-      <label style={{ ...labelStyle, marginBottom: 0 }}>
-        Categoría del NUEVO producto:
-        <select
-          name="categoria_planta"
-          value={prodForm.categoria_planta}
-          onChange={onProdChange}
-          style={{ ...inputStyle, maxWidth: 220 }}
-        >
-          {CATEGORIAS_PLANTA.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
-      </label>
+      {CATEGORIAS_PLANTA.map((c) => (
+        <option key={c} value={c}>
+          {c}
+        </option>
+      ))}
+    </select>
+  </label>
 
-      {/* ===== PRECIOS (con etiqueta abajo) ===== */}
-<div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-start" }}>
-  {/* Público */}
-  <div style={{ display: "grid", gap: 4 }}>
-    <input
-      name="precio_publico"
-      value={prodForm.precio_publico}
-      onChange={onProdChange}
-      type="number"
-      step="0.01"
-      placeholder="0.00"
-      style={{ ...inputStyle, minWidth: 140, marginTop: 0 }}
-    />
-    <div style={{ fontSize: 12, color: theme.muted, textAlign: "center" }}>Público</div>
-  </div>
+  {/* Nombre */}
+  <input
+    name="nombre"
+    value={prodForm.nombre}
+    onChange={onProdChange}
+    placeholder="Nombre"
+    style={inputStyle}
+  />
 
-  {/* Mayoreo */}
-  <div style={{ display: "grid", gap: 4 }}>
-    <input
-      name="precio_mayoreo"
-      value={prodForm.precio_mayoreo}
-      onChange={onProdChange}
-      type="number"
-      step="0.01"
-      placeholder="0.00"
-      style={{ ...inputStyle, minWidth: 140, marginTop: 0 }}
-    />
-    <div style={{ fontSize: 12, color: theme.muted, textAlign: "center" }}>Mayoreo</div>
-  </div>
-
-  {/* Vivero */}
-  <div style={{ display: "grid", gap: 4 }}>
-    <input
-      name="precio_vivero"
-      value={prodForm.precio_vivero}
-      onChange={onProdChange}
-      type="number"
-      step="0.01"
-      placeholder="0.00"
-      style={{ ...inputStyle, minWidth: 140, marginTop: 0 }}
-    />
-    <div style={{ fontSize: 12, color: theme.muted, textAlign: "center" }}>Vivero</div>
-  </div>
-
-  {/* Especial */}
-  <div style={{ display: "grid", gap: 4 }}>
-    <input
-      name="precio_especial"
-      value={prodForm.precio_especial}
-      onChange={onProdChange}
-      type="number"
-      step="0.01"
-      placeholder="0.00"
-      style={{ ...inputStyle, minWidth: 140, marginTop: 0 }}
-    />
-    <div style={{ fontSize: 12, color: theme.muted, textAlign: "center" }}>Especial</div>
-  </div>
-
-  {/* Costo (llegada) */}
-  <div style={{ display: "grid", gap: 4 }}>
-    <input
-      name="costo"
-      value={prodForm.costo}
-      onChange={onProdChange}
-      type="number"
-      step="0.01"
-      placeholder="0.00"
-      style={{ ...inputStyle, minWidth: 160, marginTop: 0 }}
-    />
-    <div style={{ fontSize: 12, color: theme.muted, textAlign: "center" }}>Costo (llegada)</div>
-  </div>
-</div>
+  {/* Precios (con etiqueta abajo) */}
+  <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-start" }}>
+    <div style={{ display: "grid", gap: 4 }}>
       <input
-  type="file"
-  accept="image/*"
-  onChange={(e) => {
-    const file = e.target.files?.[0] || null;
-    setImagenProducto(file);
+        name="precio_publico"
+        value={prodForm.precio_publico}
+        onChange={onProdChange}
+        type="number"
+        step="0.01"
+        placeholder="0.00"
+        style={{ ...inputStyle, minWidth: 140, marginTop: 0 }}
+      />
+      <div style={{ fontSize: 12, color: theme.muted, textAlign: "center" }}>Público</div>
+    </div>
 
-    if (file) {
-      const url = URL.createObjectURL(file);
-      setPreviewImagen(url);
-    } else {
-      setPreviewImagen("");
-    }
-  }}
-/>
-{previewImagen && (
-  <div style={{ marginTop: 8 }}>
+    <div style={{ display: "grid", gap: 4 }}>
+      <input
+        name="precio_mayoreo"
+        value={prodForm.precio_mayoreo}
+        onChange={onProdChange}
+        type="number"
+        step="0.01"
+        placeholder="0.00"
+        style={{ ...inputStyle, minWidth: 140, marginTop: 0 }}
+      />
+      <div style={{ fontSize: 12, color: theme.muted, textAlign: "center" }}>Mayoreo</div>
+    </div>
+
+    <div style={{ display: "grid", gap: 4 }}>
+      <input
+        name="precio_vivero"
+        value={prodForm.precio_vivero}
+        onChange={onProdChange}
+        type="number"
+        step="0.01"
+        placeholder="0.00"
+        style={{ ...inputStyle, minWidth: 140, marginTop: 0 }}
+      />
+      <div style={{ fontSize: 12, color: theme.muted, textAlign: "center" }}>Vivero</div>
+    </div>
+
+    <div style={{ display: "grid", gap: 4 }}>
+      <input
+        name="precio_especial"
+        value={prodForm.precio_especial}
+        onChange={onProdChange}
+        type="number"
+        step="0.01"
+        placeholder="0.00"
+        style={{ ...inputStyle, minWidth: 140, marginTop: 0 }}
+      />
+      <div style={{ fontSize: 12, color: theme.muted, textAlign: "center" }}>Especial</div>
+    </div>
+
+    <div style={{ display: "grid", gap: 4 }}>
+      <input
+        name="costo"
+        value={prodForm.costo}
+        onChange={onProdChange}
+        type="number"
+        step="0.01"
+        placeholder="0.00"
+        style={{ ...inputStyle, minWidth: 160, marginTop: 0 }}
+      />
+      <div style={{ fontSize: 12, color: theme.muted, textAlign: "center" }}>Costo (llegada)</div>
+    </div>
+  </div>
+
+  {/* Imagen */}
+  <input
+    type="file"
+    accept="image/*"
+    onChange={(e) => {
+      const file = e.target.files?.[0] || null;
+      setImagenProducto(file);
+      setPreviewImagen(file ? URL.createObjectURL(file) : "");
+    }}
+  />
+
+  {previewImagen && (
     <img
       src={previewImagen}
       alt="Vista previa"
@@ -3352,26 +3400,28 @@ if (view === "movimientos") {
         height: 90,
         objectFit: "cover",
         borderRadius: 8,
-        border: "1px solid #d7e3de"
+        border: "1px solid #d7e3de",
       }}
     />
-  </div>
-)}
+  )}
 
-      <button
-        type="submit"
-        disabled={prodSaving}
-        style={{ ...btn("primary"), opacity: prodSaving ? 0.7 : 1 }}
-      >
-        {prodForm.id ? "Guardar cambios" : "Crear"}
+  {/* Botones */}
+  <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+    <button
+      type="submit"
+      disabled={prodSaving}
+      style={{ ...btn("primary"), opacity: prodSaving ? 0.7 : 1 }}
+    >
+      {prodForm.id ? "Guardar cambios" : "Crear"}
+    </button>
+
+    {prodForm.id && (
+      <button type="button" onClick={limpiarProductoUI} style={btn("ghost")}>
+        Cancelar
       </button>
-
-      {prodForm.id && (
-  <button type="button" onClick={limpiarProductoUI} style={btn("ghost")}>
-    Cancelar
-  </button>
-)}
-    </form>
+    )}
+  </div>
+</form>
 
     {/* Filtro para la tabla */}
     <label style={{ ...labelStyle, marginBottom: 0 }}>
