@@ -189,9 +189,9 @@ const [nuevoProducto, setNuevoProducto] = useState({
   precio: "",
   categoria_planta: "sin_categoria",
 });
-
 const [imagenProducto, setImagenProducto] = useState(null);
 const [previewImagen, setPreviewImagen] = useState("");
+const fileInputRef = useRef(null);
   // ---- PRODUCTOS / CARRITO ----
   const [search, setSearch] = useState("");
   const [productos, setProductos] = useState([]);
@@ -288,12 +288,22 @@ async function crearProducto() {
     alert("Producto creado");
 
     // limpiar
+        // limpiar
     setNuevoProducto((p) => ({ ...p, nombre: "", precio: "" }));
     setImagenProducto(null);
+
+    if (previewImagen) {
+      URL.revokeObjectURL(previewImagen);
+    }
     setPreviewImagen("");
 
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+
     // recargar lista (tu función actual)
-    await cargarProductos();
+        // recargar lista
+    await buscarProductos("", "");
   } catch (err) {
     alert(err.message || "Error al crear producto");
     console.error(err);
@@ -624,6 +634,17 @@ function limpiarProductoUI() {
     costo: "",
     categoria_planta: "sin_categoria",
   });
+
+  setImagenProducto(null);
+
+  if (previewImagen) {
+    URL.revokeObjectURL(previewImagen);
+  }
+  setPreviewImagen("");
+
+  if (fileInputRef.current) {
+    fileInputRef.current.value = "";
+  }
 }
 
 async function guardarProductoUI(e) {
@@ -690,9 +711,19 @@ async function guardarProductoUI(e) {
     }
 
     // ✅ AHORA SÍ: limpiar + recargar (DESPUÉS de guardar)
+        // ✅ AHORA SÍ: limpiar + recargar (DESPUÉS de guardar)
     limpiarProductoUI();
     setImagenProducto(null);
+
+    if (previewImagen) {
+      URL.revokeObjectURL(previewImagen);
+    }
     setPreviewImagen("");
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+
     await buscarProductos(qProd, catProd);
   } catch (err) {
     console.error(err);
@@ -3428,10 +3459,26 @@ if (view === "movimientos") {
     </button>
 
     {prodForm.id && (
-      <button type="button" onClick={limpiarProductoUI} style={btn("ghost")}>
-        Cancelar
-      </button>
-    )}
+  <button
+    type="button"
+    onClick={() => {
+      limpiarProductoUI();
+      setImagenProducto(null);
+
+      if (previewImagen) {
+        URL.revokeObjectURL(previewImagen);
+      }
+      setPreviewImagen("");
+
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }}
+    style={btn("ghost")}
+  >
+    Cancelar
+  </button>
+)}
   </div>
 </form>
 
