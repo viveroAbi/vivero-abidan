@@ -14,7 +14,7 @@ const emptyForm = {
   direccion: "",
   rfc: "",
   notas: "",
-  categoria_cliente: "publico", // ✅ nuevo
+  categoria_cliente: "publico",
 };
 
 export default function Clientes() {
@@ -318,12 +318,9 @@ function buscarEnVivo(texto) {
   style={{ padding: 10 }}
 >
   <option value="publico">Público</option>
-  <option value="revendedor">Revendedor</option>
-  <option value="jardinero">Jardinero</option>
-  <option value="paisajista">Paisajista</option>
-  <option value="arquitecto">Arquitecto</option>
   <option value="mayoreo">Mayoreo</option>
   <option value="vivero">Vivero</option>
+  <option value="especial">Especial</option>
 </select>
               <input
                 value={form.notas}

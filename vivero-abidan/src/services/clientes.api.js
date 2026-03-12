@@ -1,7 +1,25 @@
-const API_URL = "https://tu-backend.onrender.com/api";
+const API_URL =
+  import.meta.env.VITE_API_URL || "https://vivero-abidan.onrender.com/api";
+
 function getAuthHeaders() {
   const token = localStorage.getItem("token");
   return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+async function manejarRespuesta(res, mensajeDefault) {
+  let data;
+
+  try {
+    data = await res.json();
+  } catch {
+    throw new Error("El servidor no respondió con JSON válido");
+  }
+
+  if (!res.ok) {
+    throw new Error(data?.error || mensajeDefault);
+  }
+
+  return data;
 }
 
 export async function getClientes({ search = "", activo = "1" } = {}) {
@@ -10,15 +28,15 @@ export async function getClientes({ search = "", activo = "1" } = {}) {
   if (activo !== undefined && activo !== null) qs.set("activo", String(activo));
 
   const res = await fetch(`${API_URL}/clientes?${qs.toString()}`, {
+    method: "GET",
     cache: "no-store",
     headers: {
       ...getAuthHeaders(),
     },
   });
 
-  const data = await res.json();
-  if (!res.ok) throw new Error(data?.error || "Error al listar clientes");
-  return data.data;
+  const data = await manejarRespuesta(res, "Error al listar clientes");
+  return Array.isArray(data.data) ? data.data : [];
 }
 
 export async function createCliente(payload) {
@@ -32,8 +50,7 @@ export async function createCliente(payload) {
     body: JSON.stringify(payload),
   });
 
-  const data = await res.json();
-  if (!res.ok) throw new Error(data?.error || "Error al crear cliente");
+  const data = await manejarRespuesta(res, "Error al crear cliente");
   return data.data;
 }
 
@@ -48,12 +65,10 @@ export async function updateCliente(id, payload) {
     body: JSON.stringify(payload),
   });
 
-  const data = await res.json();
-  if (!res.ok) throw new Error(data?.error || "Error al actualizar cliente");
+  const data = await manejarRespuesta(res, "Error al actualizar cliente");
   return data.data;
 }
 
-// ⚠️ Lo dejas así para no romper tu código actual (lo usas como "desactivar")
 export async function deleteCliente(id) {
   const res = await fetch(`${API_URL}/clientes/${id}`, {
     method: "DELETE",
@@ -63,12 +78,10 @@ export async function deleteCliente(id) {
     },
   });
 
-  const data = await res.json();
-  if (!res.ok) throw new Error(data?.error || "Error al desactivar cliente");
+  const data = await manejarRespuesta(res, "Error al desactivar cliente");
   return data;
 }
 
-// ✅ NUEVO: activar cliente
 export async function activateCliente(id) {
   const res = await fetch(`${API_URL}/clientes/${id}/activar`, {
     method: "PATCH",
@@ -78,7 +91,6 @@ export async function activateCliente(id) {
     },
   });
 
-  const data = await res.json();
-  if (!res.ok) throw new Error(data?.error || "Error al activar cliente");
+  const data = await manejarRespuesta(res, "Error al activar cliente");
   return data;
 }
