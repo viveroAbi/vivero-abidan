@@ -199,21 +199,8 @@ const [previewImagen, setPreviewImagen] = useState("");
   // ✅ NUEVO: categoría seleccionada en vista Productos
 const [catProd, setCatProd] = useState(""); // "" = todas
 const productosFiltrados = useMemo(() => {
-  const t = qProd.trim().toLowerCase();
-
-  return productos.filter((p) => {
-    const okText = !t
-      ? true
-      : String(p.codigo || "").toLowerCase().includes(t) ||
-        String(p.nombre || "").toLowerCase().includes(t);
-
-    const okCat = !catProd
-      ? true
-      : (p.categoria_planta || "sin_categoria") === catProd;
-
-    return okText && okCat;
-  });
-}, [qProd, productos, catProd]);
+  return Array.isArray(productos) ? productos : [];
+}, [productos]);
 
 
 
@@ -502,16 +489,35 @@ const cambioNum = useMemo(() => {
 }
 
   // ====== PRODUCTOS (manual) ======
- async function buscarProductos(q = "", cat = "") {
-  const params = new URLSearchParams();
-  params.set("limit", "5000");
+async function buscarProductos(q = "", cat = "") {
+  try {
+    const params = new URLSearchParams();
+    params.set("limit", "5000");
 
-  if (q && q.trim()) params.set("q", q.trim());        // 👈 tu backend usa q o search
-  if (cat && cat.trim()) params.set("categoria", cat); // 👈 tu backend usa ?categoria=
+    if (q && q.trim()) params.set("q", q.trim());
+    if (cat && cat.trim()) params.set("categoria", cat.trim());
 
-  const data = await apiFetch(`/productos?${params.toString()}`);
-  setProductos(Array.isArray(data.data) ? data.data : []);
+    const data = await apiFetch(`/productos?${params.toString()}`, {
+      cache: "no-store",
+    });
+
+    setProductos(Array.isArray(data.data) ? data.data : []);
+  } catch (err) {
+    console.error("Error cargando productos:", err);
+    setProductos([]);
+    setMessage("error", err?.message || "No se pudieron cargar los productos.");
+  }
 }
+useEffect(() => {
+  if (view !== "productos") return;
+
+  const timer = setTimeout(() => {
+    buscarProductos(qProd, catProd);
+  }, 250);
+
+  return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [qProd, catProd, view]);
 // ====== CÓDIGOS DE BARRAS ======
 // ====== CÓDIGOS DE BARRAS ======
 async function buscarProductosBarcode(q = "") {
@@ -3382,14 +3388,20 @@ if (view === "movimientos") {
 
   {/* Imagen */}
   <input
-    type="file"
-    accept="image/*"
-    onChange={(e) => {
-      const file = e.target.files?.[0] || null;
-      setImagenProducto(file);
-      setPreviewImagen(file ? URL.createObjectURL(file) : "");
-    }}
-  />
+  ref={fileInputRef}
+  type="file"
+  accept="image/*"
+  onChange={(e) => {
+    const file = e.target.files?.[0] || null;
+    setImagenProducto(file);
+
+    if (previewImagen) {
+      URL.revokeObjectURL(previewImagen);
+    }
+
+    setPreviewImagen(file ? URL.createObjectURL(file) : "");
+  }}
+/>
 
   {previewImagen && (
     <img
@@ -3532,11 +3544,7 @@ if (view === "movimientos") {
             <button
   type="button"
   style={btn("ghost")}
-  onClick={() => {
-    alert(`Click en editar producto ${p.id}`);
-    console.log("CLICK EDITAR PRODUCTO:", p);
-    editarProductoUI(p);
-  }}
+  onClick={() => editarProductoUI(p)}
 >
   Editar
 </button>
