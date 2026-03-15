@@ -2008,9 +2008,7 @@ if (view === "movimientos") {
   }}
 >
     {/* FORM */}
-    
-
-    <div
+<div
   style={{
     ...cardStyle,
     padding: 16,
@@ -2019,7 +2017,9 @@ if (view === "movimientos") {
     minWidth: 0,
     maxWidth: isMobile ? "100%" : 560,
     boxSizing: "border-box",
+    order: isMobile ? 1 : 2,
   }}
+
 >
       <h2 style={{ marginTop: 0 }}>
   {editandoVentaId
@@ -2703,11 +2703,12 @@ if (view === "movimientos") {
     </div>
 
     {/* TABLA */}
-    <div
+<div
   style={{
     flex: "2 1 700px",
     width: "100%",
     minWidth: 0,
+    order: isMobile ? 2 : 1,
   }}
 >
       <h2 style={{ marginTop: 0 }}>Ventas</h2>
