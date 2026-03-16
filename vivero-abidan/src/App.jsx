@@ -739,12 +739,22 @@ async function eliminarProductoUI(id) {
 
   try {
     setProdSaving(true);
-    await apiFetch(`/productos/${id}`, { method: "DELETE", headers: authHeaders() });
+
+    await apiFetch(`/productos/${id}`, {
+      method: "DELETE",
+      headers: authHeaders(),
+    });
+
+    // quitarlo de la tabla inmediatamente
+    setProductos((prev) => prev.filter((p) => p.id !== id));
+
     setMessage("success", "🗑️ Producto eliminado");
+
+    // volver a consultar al servidor
     await buscarProductos(qProd, catProd);
   } catch (err) {
     console.error(err);
-    setMessage("error", err.data?.error || err.message || "No se pudo eliminar.");
+    setMessage("error", err?.message || "No se pudo eliminar.");
   } finally {
     setProdSaving(false);
   }
