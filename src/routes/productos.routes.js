@@ -166,7 +166,7 @@ router.get("/", async (req, res) => {
     const offset = (page - 1) * limit;
 
     // ✅ Base: ocultar los viejos TMP/null
-    const whereParts = ["codigo_cat IS NOT NULL"];
+    const whereParts = ["codigo_cat IS NOT NULL", "activo = 1"];
     const params = [];
 
     if (q) {
@@ -242,7 +242,8 @@ router.get("/buscar", async (req, res) => {
              precio_publico, precio_mayoreo, precio_vivero, precio_especial, costo,
              categoria_planta, stock, activo, imagen_url
       FROM productos
-      WHERE (nombre LIKE ? OR codigo LIKE ? OR codigo_cat LIKE ?)
+     WHERE activo = 1
+  AND (nombre LIKE ? OR codigo LIKE ? OR codigo_cat LIKE ?)
       ORDER BY nombre ASC
       LIMIT 15
       `,
@@ -340,7 +341,12 @@ router.delete("/:id", async (req, res) => {
     const id = Number(req.params.id);
     if (!id) return res.status(400).json({ error: "ID inválido" });
 
-    const [r] = await pool.query(`DELETE FROM productos WHERE id=?`, [id]);
+    const [r] = await pool.query(
+      `UPDATE productos
+       SET activo = 0
+       WHERE id = ?`,
+      [id]
+    );
 
     if (r.affectedRows === 0) {
       return res.status(404).json({ error: "Producto no encontrado" });
@@ -349,7 +355,10 @@ router.delete("/:id", async (req, res) => {
     return res.json({ mensaje: "Producto eliminado" });
   } catch (err) {
     console.error("ERROR DELETE /api/productos/:id:", err);
-    return res.status(500).json({ error: "Error al eliminar producto", message: err.message });
+    return res.status(500).json({
+      error: "Error al eliminar producto",
+      message: err.message,
+    });
   }
 });
 
