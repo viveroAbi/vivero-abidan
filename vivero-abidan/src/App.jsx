@@ -745,13 +745,10 @@ async function eliminarProductoUI(id) {
       headers: authHeaders(),
     });
 
-    // quitarlo de la tabla inmediatamente
+    // quitar de la tabla inmediatamente sin refrescar
     setProductos((prev) => prev.filter((p) => p.id !== id));
 
     setMessage("success", "🗑️ Producto eliminado");
-
-    // volver a consultar al servidor
-    await buscarProductos(qProd, catProd);
   } catch (err) {
     console.error(err);
     setMessage("error", err?.message || "No se pudo eliminar.");
