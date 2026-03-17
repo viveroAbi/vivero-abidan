@@ -363,29 +363,43 @@ if (!isCotizacion && !isCotizacionPedido) {
     total = Number(total.toFixed(2));
     totalIVA = Number(totalIVA.toFixed(2));
 
-    // 3) Descuento general (tu lógica) y total final con IVA
-    const descuentoPct = Number(req.body.descuentoPct || 0);
-    const descuentoPctSeguro = Math.min(Math.max(descuentoPct, 0), 100);
+    // 3) Descuento general y total final con IVA
+const descuentoPctRaw = req.body.descuentoPct;
 
-    let descuento = 0;
+const descuentoPct =
+  descuentoPctRaw === undefined ||
+  descuentoPctRaw === null ||
+  descuentoPctRaw === ""
+    ? null
+    : Number(descuentoPctRaw);
 
-    if (descuentoPctSeguro > 0) {
-      descuento = Number((total * (descuentoPctSeguro / 100)).toFixed(2));
-    } else {
-      const esTarjetaLocal =
-        tipoPago === "tarjeta_credito" || tipoPago === "tarjeta_debito";
-      descuento = esTarjetaLocal ? 0 : Number(calcularDescuento(categoria, total));
-    }
+const descuentoPctSeguro =
+  descuentoPct === null
+    ? null
+    : Math.min(Math.max(descuentoPct, 0), 100);
 
-    const totalSinIVA = Number((total - descuento).toFixed(2));
-    const totalConIVA = Number((totalSinIVA + totalIVA).toFixed(2));
-    
-    // ===============================
-// ✅ SALDO A FAVOR (DESPUÉS DE totalConIVA)
+let descuento = 0;
+
+if (descuentoPctSeguro !== null) {
+  // usar exactamente el porcentaje enviado, incluso si es 0
+  descuento = Number((total * (descuentoPctSeguro / 100)).toFixed(2));
+} else {
+  // solo si NO enviaron descuentoPct, aplicar lógica automática
+  const esTarjetaLocal =
+    tipoPago === "tarjeta_credito" || tipoPago === "tarjeta_debito";
+
+  descuento = esTarjetaLocal ? 0 : Number(calcularDescuento(categoria, total));
+}
+
+const totalSinIVA = Number((total - descuento).toFixed(2));
+const totalConIVA = Number((totalSinIVA + totalIVA).toFixed(2));
+
 // ===============================
-let saldoAntes = 0;
+// ✅ SALDO A FAVOR
+// ===============================
+
 let saldoAplicado = 0;
-let saldoGuardado = 0;
+
 
 if (clienteId) {
   const [[cli]] = await conn.query(
@@ -394,8 +408,7 @@ if (clienteId) {
   );
   saldoAntes = Number(cli?.saldo_favor || 0);
 
-  // por ahora: SOLO APLICAR saldo si tú quieres que se aplique automático
-  // (si NO quieres aplicarlo automático, déjalo en 0)
+  // por ahora NO se aplica automático
   saldoAplicado = 0;
 }
 
@@ -475,87 +488,102 @@ if (!isCotizacion && !isCotizacionPedido && tipoPago === "efectivo") {
 // ==========================
 // DELETE /api/ventas/:id
 // ==========================
-export const eliminarVenta = async (req, res) => {
+export const actualizarItemsBorrador = async (req, res) => {
   const { id } = req.params;
+  const { items = [] } = req.body;
+
+  if (!Array.isArray(items)) {
+    return res.status(400).json({ error: "items debe ser arreglo" });
+  }
 
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
 
-    // 1) Verificar que exista la venta
-    const [ventas] = await conn.query(
-      "SELECT id FROM ventas WHERE id = ?",
+    // 1) Verificar que exista la venta y que sea borrador
+    const [ventaRows] = await conn.query(
+      `SELECT id, estado
+       FROM ventas
+       WHERE id = ? FOR UPDATE`,
       [id]
     );
 
-    if (ventas.length === 0) {
+    if (!ventaRows.length) {
       await conn.rollback();
       return res.status(404).json({ error: "Venta no encontrada" });
     }
 
-    // 2) Traer items de la venta (para regresar stock)
-    const [items] = await conn.query(
-      `SELECT producto_id, cantidad
-       FROM ventas_items
-       WHERE venta_id = ?`,
-      [id]
-    );
+    if (ventaRows[0].estado !== "borrador") {
+      await conn.rollback();
+      return res
+        .status(400)
+        .json({ error: "Solo se puede editar un borrador" });
+    }
 
-    // 3) Regresar stock + registrar movimiento ENTRADA (cancelación)
+    // 2) Borrar items anteriores
+    await conn.query(`DELETE FROM ventas_items WHERE venta_id = ?`, [id]);
+
+    // 3) Insertar nuevos
     for (const it of items) {
-      // Solo si tiene producto_id (por si en algún caso hay item manual)
+      const cantidad = Number(it.cantidad || 0);
+      const precio = Number(it.precio_unitario ?? it.precio ?? 0);
+
+      if (!Number.isFinite(cantidad) || cantidad <= 0) {
+        throw new Error("Cantidad inválida");
+      }
+
+      if (!Number.isFinite(precio) || precio < 0) {
+        throw new Error("Precio inválido");
+      }
+
+      const subtotal = Number((cantidad * precio).toFixed(2));
+
+      // Caso normal: producto_id
       if (it.producto_id) {
-        await conn.query(
-          `UPDATE productos
-           SET stock = stock + ?
-           WHERE id = ?`,
-          [Number(it.cantidad), Number(it.producto_id)]
+        const productoId = Number(it.producto_id);
+
+        const [prods] = await conn.query(
+          `SELECT codigo, nombre FROM productos WHERE id = ?`,
+          [productoId]
         );
 
+        if (!prods.length) {
+          throw new Error(`Producto no existe: ${productoId}`);
+        }
+
+        const productoNombre = `${prods[0].codigo} - ${prods[0].nombre}`;
+
         await conn.query(
-          `INSERT INTO inventario_movimientos
-           (producto_id, tipo, cantidad, referencia, usuario_id)
-           VALUES (?, 'ENTRADA', ?, ?, ?)`,
-          [
-            Number(it.producto_id),
-            Number(it.cantidad),
-            `Cancelación venta #${id}`,
-            req.user?.id || null,
-          ]
+          `INSERT INTO ventas_items
+            (venta_id, producto_id, producto_nombre, cantidad, precio_unitario, subtotal)
+           VALUES (?, ?, ?, ?, ?, ?)`,
+          [id, productoId, productoNombre, cantidad, precio, subtotal]
+        );
+      } else {
+        // Item manual
+        const nombreManual = String(
+          it.producto_nombre || it.nombre || ""
+        ).trim();
+
+        if (!nombreManual) {
+          throw new Error("Item manual requiere producto_nombre");
+        }
+
+        await conn.query(
+          `INSERT INTO ventas_items
+            (venta_id, producto_id, producto_nombre, cantidad, precio_unitario, subtotal)
+           VALUES (?, NULL, ?, ?, ?, ?)`,
+          [id, nombreManual, cantidad, precio, subtotal]
         );
       }
     }
 
-    // 4) Borrar items de la venta
-    await conn.query("DELETE FROM ventas_items WHERE venta_id = ?", [id]);
-
-    // 5) Borrar venta
-    const [result] = await conn.query(
-  "DELETE FROM ventas WHERE id = ?",
-  [id]
-);
-
-    if (result.affectedRows === 0) {
-      throw new Error("No se pudo eliminar la venta");
-    }
-
     await conn.commit();
-
-    return res.json({
-      mensaje: "Venta eliminada correctamente",
-      data: {
-        id: Number(id),
-        stockDevuelto: true,
-        movimientosRegistrados: items.filter(i => i.producto_id).length,
-      },
-    });
+    return res.json({ mensaje: "Items del borrador actualizados" });
   } catch (err) {
     await conn.rollback();
-    console.error("ERROR DELETE /ventas/:id:", err);
-    return res.status(500).json({
-      error: "Error en BD",
-      message: err.sqlMessage || err.message,
-    });
+    console.error("ERROR actualizarItemsBorrador:", err);
+    return res.status(500).json({ error: err.message });
   } finally {
     conn.release();
   }
@@ -710,7 +738,7 @@ const clienteId = req.body.cliente_id ? Number(req.body.cliente_id) : null;
 const guardarSaldoFavor = Boolean(req.body.guardarSaldoFavor);
   const isCotizacion = Boolean(esCotizacion);
   const isCotizacionPedido = Boolean(esCotizacionPedido); // ✅
-  const esCotizacionFinal = isCotizacion || isCotizacionPedido; // ✅
+ ✅
 
   // Validaciones básicas
   if (!categoria || !tipoPago) {
@@ -803,18 +831,18 @@ const ventaAnteriorEraCotizacion =
       }
     }
 
-    // 3) Actualizar datos base de la venta
     await conn.query(
   `UPDATE ventas
-   SET categoria=?, tipo_pago=?, efectivo=?, tarjeta=?, es_cotizacion=?, es_cotizacion_pedido=?, requiere_factura=?
+   SET categoria=?, cliente_id=?, tipo_pago=?, efectivo=?, tarjeta=?, es_cotizacion=?, es_cotizacion_pedido=?, requiere_factura=?
    WHERE id=?`,
   [
     categoria,
+    clienteId,
     tipoPago,
     Number(efectivo || 0),
     Number(tarjeta || 0),
     isCotizacion ? 1 : 0,
-    isCotizacionPedido ? 1 : 0, // ✅ AGREGAR
+    isCotizacionPedido ? 1 : 0,
     requiereFactura ? 1 : 0,
     id,
   ]
@@ -944,18 +972,27 @@ const ventaAnteriorEraCotizacion =
     total = Number(total.toFixed(2));
     totalIVA = Number(totalIVA.toFixed(2));
 
+    
     // 6) Descuento general
-    const descuentoPct = Number(req.body.descuentoPct || 0);
-    const descuentoPctSeguro = Math.min(Math.max(descuentoPct, 0), 100);
+const descuentoPct =
+  req.body.descuentoPct === undefined || req.body.descuentoPct === null || req.body.descuentoPct === ""
+    ? null
+    : Number(req.body.descuentoPct);
 
-    let descuento = 0;
-    if (descuentoPctSeguro > 0) {
-      descuento = Number((total * (descuentoPctSeguro / 100)).toFixed(2));
-    } else {
-      const esTarjetaLocal =
-        tipoPago === "tarjeta_credito" || tipoPago === "tarjeta_debito";
-      descuento = esTarjetaLocal ? 0 : Number(calcularDescuento(categoria, total));
-    }
+const descuentoPctSeguro =
+  descuentoPct === null ? null : Math.min(Math.max(descuentoPct, 0), 100);
+
+let descuento = 0;
+
+if (descuentoPctSeguro !== null) {
+  // Si el frontend mandó descuentoPct, usar exactamente ese valor, incluso si es 0
+  descuento = Number((total * (descuentoPctSeguro / 100)).toFixed(2));
+} else {
+  // Si NO mandó descuentoPct, usar descuento automático
+  const esTarjetaLocal =
+    tipoPago === "tarjeta_credito" || tipoPago === "tarjeta_debito";
+  descuento = esTarjetaLocal ? 0 : Number(calcularDescuento(categoria, total));
+}
 
     const totalSinIVA = Number((total - descuento).toFixed(2));
     const totalConIVA = Number((totalSinIVA + totalIVA).toFixed(2));
@@ -988,13 +1025,7 @@ if (tipoPago === "tarjeta_credito" || tipoPago === "tarjeta_debito") {
   }
 }
 
-if (!esCotizacionFinal && tipoPago === "efectivo") {
-  if (recibidoN < totalConIVA) {
-    return res.status(400).json({
-      error: "Recibido insuficiente.",
-    });
-  }
-}
+
 
     // 8) Validar efectivo (solo si no es cotización)
     if (!esCotizacionFinal && tipoPago === "efectivo") {

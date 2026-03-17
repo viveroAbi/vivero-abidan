@@ -1662,7 +1662,7 @@ if (isMixto && sumaMixto !== totalEsperado) {
   tipoPago: form.tipoPago,
   cliente_id: clienteSeleccionado?.id || null,
   esCotizacionPedido: !!esCotizacionPedido,
-  descuentoPct: Number(form.descuentoPct || 0), // ✅ AGREGAR
+  descuentoPct: form.descuentoPct === "" ? 0 : Number(form.descuentoPct),// ✅ AGREGAR
   efectivo: isTarjeta ? 0 : Number(form.efectivo || (form.tipoPago === "efectivo" ? totalNum : 0)),
   tarjeta: form.tipoPago === "efectivo" ? 0 : Number(form.tarjeta || (isTarjeta ? totalNum : 0)),
   recibido: Number(form.recibido || 0),
