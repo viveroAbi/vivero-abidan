@@ -398,17 +398,20 @@ const [loadingSugerencias, setLoadingSugerencias] = useState(false);
 
   // ====== TOTAL CARRITO ======
   const totalCarrito = useMemo(() => {
-    return carrito.reduce(
-      (acc, it) => acc + Number(it.cantidad) * Number(it.precio_unitario),
-      0
-    );
-  }, [carrito]);
+  return carrito.reduce(
+    (acc, it) => acc + Number(it.cantidad) * Number(it.precio_unitario),
+    0
+  );
+}, [carrito]);
 
-  const descuentoPctNum = useMemo(() => {
+const totalNum = useMemo(() => Number(totalCarrito || 0), [totalCarrito]);
+
+const descuentoPctNum = useMemo(() => {
   const n = Number(String(form.descuentoPct || 0).replace(",", "."));
   if (!Number.isFinite(n)) return 0;
   return Math.min(Math.max(n, 0), 100);
 }, [form.descuentoPct]);
+
 const descuentoMonto = useMemo(() => {
   return Number((totalNum * (descuentoPctNum / 100)).toFixed(2));
 }, [totalNum, descuentoPctNum]);
