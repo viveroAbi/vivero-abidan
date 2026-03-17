@@ -381,14 +381,9 @@ const descuentoPctSeguro =
 let descuento = 0;
 
 if (descuentoPctSeguro !== null) {
-  // usar exactamente el porcentaje enviado, incluso si es 0
   descuento = Number((total * (descuentoPctSeguro / 100)).toFixed(2));
 } else {
-  // solo si NO enviaron descuentoPct, aplicar lógica automática
-  const esTarjetaLocal =
-    tipoPago === "tarjeta_credito" || tipoPago === "tarjeta_debito";
-
-  descuento = esTarjetaLocal ? 0 : Number(calcularDescuento(categoria, total));
+  descuento = 0;
 }
 
 const totalSinIVA = Number((total - descuento).toFixed(2));
@@ -985,13 +980,9 @@ const descuentoPctSeguro =
 let descuento = 0;
 
 if (descuentoPctSeguro !== null) {
-  // Si el frontend mandó descuentoPct, usar exactamente ese valor, incluso si es 0
   descuento = Number((total * (descuentoPctSeguro / 100)).toFixed(2));
 } else {
-  // Si NO mandó descuentoPct, usar descuento automático
-  const esTarjetaLocal =
-    tipoPago === "tarjeta_credito" || tipoPago === "tarjeta_debito";
-  descuento = esTarjetaLocal ? 0 : Number(calcularDescuento(categoria, total));
+  descuento = 0;
 }
 
     const totalSinIVA = Number((total - descuento).toFixed(2));
