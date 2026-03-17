@@ -851,28 +851,27 @@ function obtenerPrecioPorCategoria(producto, categoria) {
       copia[idx] = {
         ...copia[idx],
         cantidad: Number(copia[idx].cantidad || 1) + 1,
-        // opcional: actualizar precio si cambia la categoría antes de agregar más
         precio_unitario: precioAplicado,
       };
       return copia;
     }
 
     return [
-  ...prev,
-  {
-    producto_id: p.id,
-    codigo: p.codigo_cat || p.codigo || "",
-    nombre: p.nombre || "",
+      ...prev,
+      {
+        producto_id: p.id,
+        codigo: p.codigo_cat || p.codigo || "",
+        nombre: p.nombre || "",
 
-    precio_publico: Number(p.precio_publico ?? p.precio ?? 0),
-    precio_mayoreo: Number(p.precio_mayoreo ?? p.precio_publico ?? p.precio ?? 0),
-    precio_vivero: Number(p.precio_vivero ?? p.precio_publico ?? p.precio ?? 0),
-    precio_especial: Number(p.precio_especial ?? p.precio_publico ?? p.precio ?? 0),
+        precio_publico: Number(p.precio_publico ?? p.precio ?? 0),
+        precio_mayoreo: Number(p.precio_mayoreo ?? p.precio_publico ?? p.precio ?? 0),
+        precio_vivero: Number(p.precio_vivero ?? p.precio_publico ?? p.precio ?? 0),
+        precio_especial: Number(p.precio_especial ?? p.precio_publico ?? p.precio ?? 0),
 
-    precio_unitario: precioAplicado,
-    cantidad: 1,
-  },
-];
+        precio_unitario: precioAplicado,
+        cantidad: 1,
+      },
+    ];
   });
 }
 
@@ -1591,7 +1590,6 @@ async function onCreateUserSubmit(e) {
 
   setForm((f) => ({ ...f, [name]: value }));
 
-  // Si cambia la categoría manual, recalcular precios del carrito
   if (name === "categoria") {
     setCarrito((prev) =>
       prev.map((it) => ({
