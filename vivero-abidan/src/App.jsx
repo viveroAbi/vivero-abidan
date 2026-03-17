@@ -1188,6 +1188,21 @@ function limpiarProductoMovimiento() {
   setMovProdSearch("");
   setMovProdSugerencias([]);
 }
+async function refrescarProductoSeleccionadoMovimiento(productoId) {
+  try {
+    const data = await apiFetch(`/inventario`, { cache: "no-store" });
+    const list = Array.isArray(data.data) ? data.data : [];
+    const actualizado = list.find((p) => Number(p.id) === Number(productoId));
+
+    if (actualizado) {
+      setMovProdSeleccionado(actualizado);
+      setMovProdSearch(`${actualizado.codigo_cat || actualizado.codigo} — ${actualizado.nombre}`);
+      setMovForm((f) => ({ ...f, producto_id: String(actualizado.id) }));
+    }
+  } catch (err) {
+    console.error("No se pudo refrescar producto seleccionado:", err);
+  }
+}
 async function guardarMovimiento(e) {
   e.preventDefault();
   setMessage("", "");
@@ -1206,13 +1221,14 @@ async function guardarMovimiento(e) {
     setMessage("error", "La cantidad debe ser mayor a 0.");
     return;
   }
+
   if (tipo === "salida" && movProdSeleccionado) {
-  const stockActual = Number(movProdSeleccionado.stock || 0);
-  if (cantidad > stockActual) {
-    setMessage("error", `No hay suficiente stock. Disponible: ${stockActual}`);
-    return;
+    const stockActual = Number(movProdSeleccionado.stock || 0);
+    if (cantidad > stockActual) {
+      setMessage("error", `No hay suficiente stock. Disponible: ${stockActual}`);
+      return;
+    }
   }
-}
 
   try {
     if (tipo === "entrada") {
@@ -1236,7 +1252,6 @@ async function guardarMovimiento(e) {
         }),
       });
     } else if (tipo === "ajuste") {
-      // ⚠️ aquí "cantidad" se usa como NUEVO STOCK
       await apiFetch("/inventario/ajuste", {
         method: "POST",
         headers: authHeaders(),
@@ -1253,22 +1268,21 @@ async function guardarMovimiento(e) {
 
     setMessage("success", "✅ Movimiento guardado");
 
-    setMovForm({
-      tipo: "entrada",
-      producto_id: "",
-      cantidad: "",
-      motivo: "compra",
-      referencia: "",
-    });
+setMovForm((f) => ({
+  ...f,
+  cantidad: "",
+  referencia: "",
+}));
 
-    await cargarMovimientos();
-    // Si quieres refrescar stock visible en productos:
-    // await buscarProductos("", "");
+await cargarMovimientos();
+await refrescarProductoSeleccionadoMovimiento(productoId);
+    await buscarProductos("", "");
   } catch (err) {
     console.error(err);
     setMessage("error", err.data?.error || err.message || "No se pudo guardar movimiento.");
   }
 }
+
 async function imprimirCorteTicket() {
   try {
     // ✅ 1) guardar cierre (ruta correcta)
