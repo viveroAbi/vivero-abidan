@@ -387,7 +387,6 @@ if (descuentoPctSeguro !== null) {
 }
 
 const totalSinIVA = Number((total - descuento).toFixed(2));
-const totalConIVA = Number((totalSinIVA + totalIVA).toFixed(2));
 
 // ===============================
 // ✅ SALDO A FAVOR
@@ -985,8 +984,7 @@ if (descuentoPctSeguro !== null) {
   descuento = 0;
 }
 
-    const totalSinIVA = Number((total - descuento).toFixed(2));
-    const totalConIVA = Number((totalSinIVA + totalIVA).toFixed(2));
+const totalSinIVA = Number((total - descuento).toFixed(2));
 
     // 7) Validar pago mixto (400, no 500)
     // ===============================
