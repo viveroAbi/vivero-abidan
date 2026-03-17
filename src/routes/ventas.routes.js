@@ -11,7 +11,7 @@ import {
   crearBorrador,
   getBorradores,
   actualizarItemsBorrador,
-  eliminarBorrador, // ✅ AGREGAR
+  eliminarBorrador,
 } from "../controllers/ventas.controller.js";
 
 const router = Router();

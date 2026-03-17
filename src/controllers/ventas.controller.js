@@ -1,5 +1,4 @@
 import { pool } from "../config/db.js";
-import { calcularDescuento } from "../services/descuentos.service.js";
 
 const categoriasValidas = [
   "publico",
@@ -9,6 +8,7 @@ const categoriasValidas = [
   "arquitecto",
   "mayoreo",
   "vivero",
+  "especial",
 ];
 
 const tiposPagoValidos = [
@@ -21,14 +21,16 @@ const tiposPagoValidos = [
 ];
 
 const getTipoPagoLabel = (tipoPago) =>
-  ({
-    efectivo: "Efectivo",
-    tarjeta_credito: "Tarjeta (Crédito)",
-    tarjeta_debito: "Tarjeta (Débito)",
-    transferencia: "Transferencia",
-    cheque: "Cheque",
-    mixto: "Mixto",
-  }[tipoPago] || tipoPago);
+  (
+    {
+      efectivo: "Efectivo",
+      tarjeta_credito: "Tarjeta (Crédito)",
+      tarjeta_debito: "Tarjeta (Débito)",
+      transferencia: "Transferencia",
+      cheque: "Cheque",
+      mixto: "Mixto",
+    }[tipoPago] || tipoPago
+  );
 
 // ==========================
 // GET /api/ventas
@@ -36,18 +38,18 @@ const getTipoPagoLabel = (tipoPago) =>
 export const getVentas = async (req, res) => {
   try {
     const [rows] = await pool.query(`
-  SELECT 
-    v.*,
-    COALESCE(
-      GROUP_CONCAT(CONCAT(vi.producto_nombre, ' x', vi.cantidad) SEPARATOR ', '),
-      ''
-    ) AS productos_resumen
-  FROM ventas v
-  LEFT JOIN ventas_items vi ON vi.venta_id = v.id
-  WHERE COALESCE(v.estado, '') <> 'borrador'
-  GROUP BY v.id
-  ORDER BY v.created_at DESC
-`);
+      SELECT 
+        v.*,
+        COALESCE(
+          GROUP_CONCAT(CONCAT(vi.producto_nombre, ' x', vi.cantidad) SEPARATOR ', '),
+          ''
+        ) AS productos_resumen
+      FROM ventas v
+      LEFT JOIN ventas_items vi ON vi.venta_id = v.id
+      WHERE COALESCE(v.estado, '') <> 'borrador'
+      GROUP BY v.id
+      ORDER BY v.created_at DESC
+    `);
 
     return res.json({ mensaje: "Listado de ventas", data: rows });
   } catch (err) {
@@ -57,7 +59,6 @@ export const getVentas = async (req, res) => {
       .json({ error: "Error en BD", message: err.sqlMessage || err.message });
   }
 };
-
 
 // ==========================
 // GET /api/ventas/hoy
@@ -131,46 +132,48 @@ export const getResumenVentas = async (req, res) => {
 // POST /api/ventas
 // ==========================
 export const crearVenta = async (req, res) => {
- const {
-  categoria,
-  tipoPago,
-  cliente_id = null,            // ✅ AGREGAR
-  guardarSaldoFavor = false,    // ✅ AGREGAR
-  efectivo = 0,
-  tarjeta = 0,
-  recibido = 0,
-  cambio = 0,
-  requiere_factura = 0,
-  esCotizacion = false,
-  esCotizacionPedido = false,
-  items = [],
-} = req.body;
-const clienteId = cliente_id ? Number(cliente_id) : null;
-const guardarSaldoFavorBool = Boolean(guardarSaldoFavor);
-const isCotizacion = Boolean(esCotizacion);
-const isCotizacionPedido = Boolean(esCotizacionPedido);
-const esCotizacionFinal = isCotizacion || isCotizacionPedido; // ✅ AGREGAR
-  // Validaciones básicas
+  const {
+    categoria,
+    tipoPago,
+    cliente_id = null,
+    guardarSaldoFavor = false,
+    efectivo = 0,
+    tarjeta = 0,
+    recibido = 0,
+    cambio = 0,
+    requiere_factura = 0,
+    esCotizacion = false,
+    esCotizacionPedido = false,
+    items = [],
+  } = req.body;
+
+  const clienteId = cliente_id ? Number(cliente_id) : null;
+  const guardarSaldoFavorBool = Boolean(guardarSaldoFavor);
+  const isCotizacion = Boolean(esCotizacion);
+  const isCotizacionPedido = Boolean(esCotizacionPedido);
+  const esCotizacionFinal = isCotizacion || isCotizacionPedido;
+
   if (!categoria || !tipoPago) {
     return res.status(400).json({ message: "Falta categoria o tipoPago" });
   }
+
   if (!categoriasValidas.includes(categoria)) {
     return res.status(400).json({ error: "Categoría no válida" });
   }
-  // 4) Validar pago mixto contra totalConIVA
-// 4) Validar pago mixto contra totalConIVA
-// 4) Validar pago mixto contra totalConIVA
 
+  if (!tiposPagoValidos.includes(tipoPago)) {
+    return res.status(400).json({ error: "tipoPago no válido" });
+  }
 
   if (!Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ message: "La venta debe traer items" });
   }
 
-  // Restricción: publico solo efectivo si NO es cotización
-if (!isCotizacion && !isCotizacionPedido && categoria === "publico" && tipoPago !== "efectivo") {  return res.status(400).json({
-    error: "Venta al público solo acepta efectivo",
-  });
-}
+  if (!esCotizacionFinal && categoria === "publico" && tipoPago !== "efectivo") {
+    return res.status(400).json({
+      error: "Venta al público solo acepta efectivo",
+    });
+  }
 
   const recibidoN = Number(recibido || 0);
   const cambioN = Number(cambio || 0);
@@ -178,12 +181,12 @@ if (!isCotizacion && !isCotizacionPedido && categoria === "publico" && tipoPago 
   if (!Number.isFinite(recibidoN) || recibidoN < 0) {
     return res.status(400).json({ error: "Recibido inválido" });
   }
+
   if (!Number.isFinite(cambioN) || cambioN < 0) {
     return res.status(400).json({ error: "Cambio inválido" });
   }
 
-  // Reglas negocio
-  const requiereFactura = Number(req.body.requiere_factura || 0) === 1;
+  const requiereFactura = Number(requiere_factura || 0) === 1;
 
   const esTarjeta =
     tipoPago === "tarjeta_credito" ||
@@ -191,393 +194,228 @@ if (!isCotizacion && !isCotizacionPedido && categoria === "publico" && tipoPago 
     Number(tarjeta || 0) > 0;
 
   const conn = await pool.getConnection();
+
   try {
     await conn.beginTransaction();
 
-    // 1) Insertar venta primero (totales en 0)
-    
-
     const [result] = await conn.query(
-  `INSERT INTO ventas
-   (
-     categoria,
-     cliente_id,
-     tipo_pago,
-     total,
-     descuento,
-     total_iva,
-     total_final,
-     efectivo,
-     tarjeta,
-     recibido,
-     cambio,
-     es_cotizacion,
-     es_cotizacion_pedido,
-     requiere_factura
-   )
-   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-  [
-    categoria,
-    clienteId,
-    tipoPago,
-    0,
-    0,
-    0,
-    0,
-    Number(efectivo || 0),
-    Number(tarjeta || 0),
-    recibidoN,
-    cambioN,
-    isCotizacion ? 1 : 0,
-    isCotizacionPedido ? 1 : 0,
-    requiereFactura ? 1 : 0,
-  ]
-);
-
-const ventaId = result.insertId;
-/*
-    // ==========================
-// GUARDAR DETALLE DE LA VENTA
-// ==========================
-if (Array.isArray(items) && items.length > 0) {
-  for (const item of items) {
-    const cantidad = Number(item.cantidad || 0);
-
-    // Ajusta el nombre del producto según cómo venga en tu frontend
-    const producto = String(
-      item.producto || item.nombre || item.descripcion || ""
-    ).trim();
-
-    // Ajusta el precio según cómo venga en tus items
-    const precio = Number(
-      item.precio ?? item.precio_unitario ?? item.precioVenta ?? 0
+      `INSERT INTO ventas
+      (
+        categoria,
+        cliente_id,
+        tipo_pago,
+        total,
+        descuento,
+        total_iva,
+        total_final,
+        efectivo,
+        tarjeta,
+        recibido,
+        cambio,
+        es_cotizacion,
+        es_cotizacion_pedido,
+        requiere_factura
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        categoria,
+        clienteId,
+        tipoPago,
+        0,
+        0,
+        0,
+        0,
+        Number(efectivo || 0),
+        Number(tarjeta || 0),
+        recibidoN,
+        cambioN,
+        isCotizacion ? 1 : 0,
+        isCotizacionPedido ? 1 : 0,
+        requiereFactura ? 1 : 0,
+      ]
     );
 
-    // Si no viene importe, se calcula
-    const importe = Number(item.importe ?? (cantidad * precio));
+    const ventaId = result.insertId;
 
-    // Validación mínima para no meter basura
-    if (!producto || !Number.isFinite(cantidad) || cantidad <= 0) continue;
-
-    await conn.query(
-  `
-  INSERT INTO venta_detalle (venta_id, cantidad, producto, precio, importe)
-  VALUES (?, ?, ?, ?, ?)
-  `,
-  [ventaId, cantidad, producto, Number(precio || 0), Number(importe || 0)]
-);
-  }
-}*/
-    // 2) Insertar items y calcular total + IVA con reglas
-    let total = 0;       // subtotal (sin descuento)
-    let totalIVA = 0;    // iva total
+    let total = 0;
+    let totalIVA = 0;
 
     for (const it of items) {
-  const productoId = Number(it.producto_id ?? it.productoId ?? it.idProducto);
-  const cantidad = Number(it.cantidad || 0);
-  const precioUnitario = Number(it.precio_unitario ?? 0);
-  let descuentoItem = Number(it.descuento || 0);
+      const productoId = Number(it.producto_id ?? it.productoId ?? it.idProducto);
+      const cantidad = Number(it.cantidad || 0);
+      const precioUnitario = Number(it.precio_unitario ?? 0);
+      let descuentoItem = Number(it.descuento || 0);
 
-  if (!productoId || cantidad <= 0 || precioUnitario <= 0) {
-    throw new Error(
-      "Items incompletos o inválidos (producto_id, cantidad, precio_unitario)"
-    );
-  }
+      if (!productoId || cantidad <= 0 || precioUnitario <= 0) {
+        throw new Error(
+          "Items incompletos o inválidos (producto_id, cantidad, precio_unitario)"
+        );
+      }
 
+      const [prods] = await conn.query(
+        `SELECT id, codigo, nombre, tipo, iva_tarjeta, facturable, stock
+         FROM productos
+         WHERE id = ?
+         FOR UPDATE`,
+        [productoId]
+      );
 
+      if (!prods.length) throw new Error(`Producto no existe: ${productoId}`);
 
-  // ✅ Traer producto + STOCK y bloquear fila (FOR UPDATE)
-  const [prods] = await conn.query(
-    `SELECT id, codigo, nombre, tipo, iva_tarjeta, facturable, stock
-     FROM productos
-     WHERE id = ?
-     FOR UPDATE`,
-    [productoId]
-  );
+      const p = prods[0];
 
-  if (!prods.length) throw new Error(`Producto no existe: ${productoId}`);
+      if (!esCotizacionFinal) {
+        const stockActual = Number(p.stock || 0);
+        if (stockActual < cantidad) {
+          throw new Error(
+            `Stock insuficiente para ${p.codigo} - ${p.nombre}. Disponible: ${stockActual}, requerido: ${cantidad}`
+          );
+        }
+      }
 
-  const p = prods[0];
+      if (requiereFactura && Number(p.facturable) === 0) {
+        throw new Error(`Producto no facturable (Bloqueado): ${p.nombre}`);
+      }
 
-  // ✅ Si NO es cotización, validar stock
-  if (!isCotizacion && !isCotizacionPedido) {
-  const stockActual = Number(p.stock || 0);
-  if (stockActual < cantidad) {
-    throw new Error(
-      `Stock insuficiente para ${p.codigo} - ${p.nombre}. Disponible: ${stockActual}, requerido: ${cantidad}`
-    );
-  }
-}
+      if (String(p.tipo) === "insumo") {
+        descuentoItem = 0;
+      }
 
-  // BLOQUEO factura (Tierra)
-  if (requiereFactura && Number(p.facturable) === 0) {
-    throw new Error(`Producto no facturable (Bloqueado): ${p.nombre}`);
-  }
+      const productoNombre = `${p.codigo} - ${p.nombre}`;
+      const subtotal = Number((cantidad * precioUnitario).toFixed(2));
+      total += subtotal;
 
-  // DESCUENTO solo plantas: insumo => 0
-  if (String(p.tipo) === "insumo") {
-    descuentoItem = 0;
-  }
+      const totalFinalItem = Math.max(subtotal - descuentoItem, 0);
 
-  const productoNombre = `${p.codigo} - ${p.nombre}`;
+      const ivaItem =
+        esTarjeta && Number(p.iva_tarjeta) === 1
+          ? Number((totalFinalItem * 0.16).toFixed(2))
+          : 0;
 
-  const subtotal = cantidad * precioUnitario;
-  total += subtotal;
+      totalIVA += ivaItem;
 
-  const totalFinalItem = Math.max(subtotal - descuentoItem, 0);
+      await conn.query(
+        `INSERT INTO ventas_items
+          (venta_id, producto_id, producto_nombre, cantidad, precio_unitario, subtotal)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [ventaId, productoId, productoNombre, cantidad, precioUnitario, subtotal]
+      );
 
-  // IVA SOLO si es tarjeta y producto tiene iva_tarjeta=1
-  const ivaItem =
-    esTarjeta && Number(p.iva_tarjeta) === 1
-      ? Number((totalFinalItem * 0.16).toFixed(2))
-      : 0;
+      if (!esCotizacionFinal) {
+        await conn.query(
+          "UPDATE productos SET stock = stock - ? WHERE id = ?",
+          [cantidad, productoId]
+        );
 
-  totalIVA += ivaItem;
-
-  // ✅ Guardar item
-  await conn.query(
-    `INSERT INTO ventas_items
-      (venta_id, producto_id, producto_nombre, cantidad, precio_unitario, subtotal)
-     VALUES (?, ?, ?, ?, ?, ?)`,
-    [ventaId, productoId, productoNombre, cantidad, precioUnitario, subtotal]
-  );
-
-  // ✅ Descontar inventario SOLO si es venta real (no cotización / no pedido)
-if (!isCotizacion && !isCotizacionPedido) {
-  await conn.query(
-    "UPDATE productos SET stock = stock - ? WHERE id = ?",
-    [cantidad, productoId]
-  );
-
-  await conn.query(
-    `INSERT INTO inventario_movimientos
-     (producto_id, tipo, cantidad, referencia, usuario_id)
-     VALUES (?, 'SALIDA', ?, ?, ?)`,
-    [productoId, cantidad, `Venta #${ventaId}`,(req.user?.id ?? req.user?.userId ?? req.userId ?? null)]
-  );
-}
-}
+        await conn.query(
+          `INSERT INTO inventario_movimientos
+           (producto_id, tipo, cantidad, referencia, usuario_id)
+           VALUES (?, 'SALIDA', ?, ?, ?)`,
+          [
+            productoId,
+            cantidad,
+            `Venta #${ventaId}`,
+            req.user?.id ?? req.user?.userId ?? req.userId ?? null,
+          ]
+        );
+      }
+    }
 
     if (total <= 0) throw new Error("El total debe ser mayor a 0");
 
     total = Number(total.toFixed(2));
     totalIVA = Number(totalIVA.toFixed(2));
 
-    // 3) Descuento general y total final con IVA
-const descuentoPctRaw = req.body.descuentoPct;
+    const descuentoPctSeguro = 0;
+    const descuento = 0;
+    const totalSinIVA = Number(total.toFixed(2));
+    const totalConIVA = Number((totalSinIVA + totalIVA).toFixed(2));
 
-const descuentoPct =
-  descuentoPctRaw === undefined ||
-  descuentoPctRaw === null ||
-  descuentoPctRaw === ""
-    ? null
-    : Number(descuentoPctRaw);
+    let saldoAplicado = 0;
 
-const descuentoPctSeguro =
-  descuentoPct === null
-    ? null
-    : Math.min(Math.max(descuentoPct, 0), 100);
+    if (clienteId) {
+      const [[cli]] = await conn.query(
+        "SELECT saldo_favor FROM clientes WHERE id = ? LIMIT 1 FOR UPDATE",
+        [clienteId]
+      );
 
-let descuento = 0;
+      const saldoAntes = Number(cli?.saldo_favor || 0);
+      saldoAplicado = 0;
+      void saldoAntes;
+    }
 
-if (descuentoPctSeguro !== null) {
-  descuento = Number((total * (descuentoPctSeguro / 100)).toFixed(2));
-} else {
-  descuento = 0;
-}
+    const totalACobrar = Number((totalConIVA - saldoAplicado).toFixed(2));
 
-const totalSinIVA = Number((total - descuento).toFixed(2));
-
-// ===============================
-// ✅ SALDO A FAVOR
-// ===============================
-
-let saldoAplicado = 0;
-
-
-if (clienteId) {
-  const [[cli]] = await conn.query(
-    "SELECT saldo_favor FROM clientes WHERE id = ? LIMIT 1 FOR UPDATE",
-    [clienteId]
-  );
-  saldoAntes = Number(cli?.saldo_favor || 0);
-
-  // por ahora NO se aplica automático
-  saldoAplicado = 0;
-}
-
-// Total que realmente se cobra hoy
-const totalACobrar = Number((totalConIVA - saldoAplicado).toFixed(2));
-
-    // 4) Validar pago mixto contra totalConIVA
     if (tipoPago === "mixto") {
-      if (Number(efectivo) + Number(tarjeta) !== Number(totalConIVA)) {
+      const suma = Number((Number(efectivo) + Number(tarjeta)).toFixed(2));
+      if (suma !== Number(totalConIVA.toFixed(2))) {
         throw new Error("El pago mixto no coincide con el total final");
       }
     }
 
-    // 4.1) Validar efectivo (SOLO si no es cotización)
-if (!isCotizacion && !isCotizacionPedido && tipoPago === "efectivo") {
-  if (recibidoN < totalACobrar) {
-    throw new Error("El recibido no puede ser menor al total a cobrar");
-  }
+    if (
+      (tipoPago === "tarjeta_credito" || tipoPago === "tarjeta_debito") &&
+      Number(Number(tarjeta).toFixed(2)) !== Number(totalConIVA.toFixed(2))
+    ) {
+      throw new Error("El monto en tarjeta debe ser igual al total final");
+    }
 
-  const cambioCalc = Number((recibidoN - totalACobrar).toFixed(2));
+    if (!esCotizacionFinal && tipoPago === "efectivo") {
+      if (recibidoN < totalACobrar) {
+        throw new Error("El recibido no puede ser menor al total a cobrar");
+      }
 
-  // ✅ Guardar cambio como saldo (solo si hay cliente)
-  if (clienteId && guardarSaldoFavorBool && cambioCalc > 0) {
+      const cambioCalc = Number((recibidoN - totalACobrar).toFixed(2));
+
+      if (clienteId && guardarSaldoFavorBool && cambioCalc > 0) {
+        await conn.query(
+          "UPDATE clientes SET saldo_favor = COALESCE(saldo_favor,0) + ? WHERE id = ?",
+          [cambioCalc, clienteId]
+        );
+
+        await conn.query(
+          "UPDATE ventas SET cambio = 0, recibido = ? WHERE id = ?",
+          [recibidoN, ventaId]
+        );
+      } else {
+        await conn.query(
+          "UPDATE ventas SET cambio = ?, recibido = ? WHERE id = ?",
+          [cambioCalc, recibidoN, ventaId]
+        );
+      }
+    }
+
     await conn.query(
-      "UPDATE clientes SET saldo_favor = COALESCE(saldo_favor,0) + ? WHERE id = ?",
-      [cambioCalc, clienteId]
+      `UPDATE ventas
+       SET total = ?, descuento_pct = ?, descuento = ?, total_iva = ?, total_final = ?
+       WHERE id = ?`,
+      [total, descuentoPctSeguro, descuento, totalIVA, totalConIVA, ventaId]
     );
 
-    // si se guarda como saldo, no hay cambio físico
-    await conn.query(
-  "UPDATE ventas SET cambio=0, recibido=? WHERE id=?",
-  [recibidoN, ventaId]
-);
-  } else {
-    await conn.query(
-  "UPDATE ventas SET cambio=?, recibido=? WHERE id=?",
-  [cambioCalc, recibidoN, ventaId]
-);
-  }
-}
-    // 5) Actualizar venta con totales + IVA
-    await conn.query(
-  `UPDATE ventas
-   SET total=?, descuento_pct=?, descuento=?, total_iva=?, total_final=?
-   WHERE id=?`,
-  [total, descuentoPctSeguro ?? 0, descuento, totalIVA, totalConIVA, ventaId]
-);
     await conn.commit();
 
     return res.json({
-  mensaje: isCotizacionPedido
-    ? "Cotización de pedido guardada"
-    : isCotizacion
-    ? "Cotización guardada"
-    : "Venta guardada",
-  data: {
-    id: ventaId,
-    total: Number(total),
-    descuento: Number(descuento),
-    totalIva: Number(totalIVA),
-    totalFinal: Number(totalConIVA),
-    tipoPago,
-    tipoPagoLabel: getTipoPagoLabel(tipoPago),
-    esCotizacion: isCotizacion,
-    esCotizacionPedido: isCotizacionPedido, // ✅ NUEVO
-  },
-});
+      mensaje: isCotizacionPedido
+        ? "Cotización de pedido guardada"
+        : isCotizacion
+        ? "Cotización guardada"
+        : "Venta guardada",
+      data: {
+        id: ventaId,
+        total: Number(total),
+        descuento: Number(descuento),
+        totalIva: Number(totalIVA),
+        totalFinal: Number(totalConIVA),
+        tipoPago,
+        tipoPagoLabel: getTipoPagoLabel(tipoPago),
+        esCotizacion: isCotizacion,
+        esCotizacionPedido: isCotizacionPedido,
+      },
+    });
   } catch (err) {
     await conn.rollback();
     console.error("ERROR POST /ventas:", err);
     return res.status(500).json({ message: err.message });
-  } finally {
-    conn.release();
-  }
-};
-
-// ==========================
-// DELETE /api/ventas/:id
-// ==========================
-export const actualizarItemsBorrador = async (req, res) => {
-  const { id } = req.params;
-  const { items = [] } = req.body;
-
-  if (!Array.isArray(items)) {
-    return res.status(400).json({ error: "items debe ser arreglo" });
-  }
-
-  const conn = await pool.getConnection();
-  try {
-    await conn.beginTransaction();
-
-    // 1) Verificar que exista la venta y que sea borrador
-    const [ventaRows] = await conn.query(
-      `SELECT id, estado
-       FROM ventas
-       WHERE id = ? FOR UPDATE`,
-      [id]
-    );
-
-    if (!ventaRows.length) {
-      await conn.rollback();
-      return res.status(404).json({ error: "Venta no encontrada" });
-    }
-
-    if (ventaRows[0].estado !== "borrador") {
-      await conn.rollback();
-      return res
-        .status(400)
-        .json({ error: "Solo se puede editar un borrador" });
-    }
-
-    // 2) Borrar items anteriores
-    await conn.query(`DELETE FROM ventas_items WHERE venta_id = ?`, [id]);
-
-    // 3) Insertar nuevos
-    for (const it of items) {
-      const cantidad = Number(it.cantidad || 0);
-      const precio = Number(it.precio_unitario ?? it.precio ?? 0);
-
-      if (!Number.isFinite(cantidad) || cantidad <= 0) {
-        throw new Error("Cantidad inválida");
-      }
-
-      if (!Number.isFinite(precio) || precio < 0) {
-        throw new Error("Precio inválido");
-      }
-
-      const subtotal = Number((cantidad * precio).toFixed(2));
-
-      // Caso normal: producto_id
-      if (it.producto_id) {
-        const productoId = Number(it.producto_id);
-
-        const [prods] = await conn.query(
-          `SELECT codigo, nombre FROM productos WHERE id = ?`,
-          [productoId]
-        );
-
-        if (!prods.length) {
-          throw new Error(`Producto no existe: ${productoId}`);
-        }
-
-        const productoNombre = `${prods[0].codigo} - ${prods[0].nombre}`;
-
-        await conn.query(
-          `INSERT INTO ventas_items
-            (venta_id, producto_id, producto_nombre, cantidad, precio_unitario, subtotal)
-           VALUES (?, ?, ?, ?, ?, ?)`,
-          [id, productoId, productoNombre, cantidad, precio, subtotal]
-        );
-      } else {
-        // Item manual
-        const nombreManual = String(
-          it.producto_nombre || it.nombre || ""
-        ).trim();
-
-        if (!nombreManual) {
-          throw new Error("Item manual requiere producto_nombre");
-        }
-
-        await conn.query(
-          `INSERT INTO ventas_items
-            (venta_id, producto_id, producto_nombre, cantidad, precio_unitario, subtotal)
-           VALUES (?, NULL, ?, ?, ?, ?)`,
-          [id, nombreManual, cantidad, precio, subtotal]
-        );
-      }
-    }
-
-    await conn.commit();
-    return res.json({ mensaje: "Items del borrador actualizados" });
-  } catch (err) {
-    await conn.rollback();
-    console.error("ERROR actualizarItemsBorrador:", err);
-    return res.status(500).json({ error: err.message });
   } finally {
     conn.release();
   }
@@ -590,11 +428,11 @@ export const obtenerVenta = async (req, res) => {
   const { id } = req.params;
 
   try {
-    const [ventaRows] = await pool.query(`SELECT * FROM ventas WHERE id=?`, [
-      id,
-    ]);
-    if (ventaRows.length === 0)
+    const [ventaRows] = await pool.query(`SELECT * FROM ventas WHERE id = ?`, [id]);
+
+    if (ventaRows.length === 0) {
       return res.status(404).json({ message: "Venta no encontrada" });
+    }
 
     const [itemsRows] = await pool.query(
       `SELECT 
@@ -611,8 +449,13 @@ export const obtenerVenta = async (req, res) => {
     return res.status(500).json({ message: err.message });
   }
 };
+
+// ==========================
+// DELETE /api/ventas/borradores/:id
+// ==========================
 export const eliminarBorrador = async (req, res) => {
   let conn;
+
   try {
     const id = Number(req.params.id);
 
@@ -623,16 +466,11 @@ export const eliminarBorrador = async (req, res) => {
     conn = await pool.getConnection();
     await conn.beginTransaction();
 
-    // ✅ Borra detalles posibles (usa las tablas que existan en tu proyecto)
     await conn.query("DELETE FROM ventas_items WHERE venta_id = ?", [id]).catch(() => {});
     await conn.query("DELETE FROM venta_detalle WHERE venta_id = ?", [id]).catch(() => {});
     await conn.query("DELETE FROM venta_items WHERE venta_id = ?", [id]).catch(() => {});
 
-    // ✅ Borra la cabecera del borrador/venta
-    const [result] = await conn.query(
-      "DELETE FROM ventas WHERE id = ?",
-      [id]
-    );
+    const [result] = await conn.query("DELETE FROM ventas WHERE id = ?", [id]);
 
     if (result.affectedRows === 0) {
       await conn.rollback();
@@ -668,27 +506,30 @@ export const getTicketVenta = async (req, res) => {
       "SELECT * FROM ventas WHERE id = ?",
       [id]
     );
-    if (!ventaRows.length) return res.status(404).json({ error: "Venta no encontrada" });
+
+    if (!ventaRows.length) {
+      return res.status(404).json({ error: "Venta no encontrada" });
+    }
 
     const venta = ventaRows[0];
 
     const [items] = await pool.query(
-  `
-  SELECT 
-    vi.producto_id,                 -- ✅ AGREGAR
-    vi.producto_nombre,             -- ✅ AGREGAR (respaldo)
-    vi.cantidad,
-    vi.precio_unitario,
-    vi.subtotal AS importe,
-    p.codigo,
-    p.nombre
-  FROM ventas_items vi
-  LEFT JOIN productos p ON p.id = vi.producto_id   -- ✅ LEFT JOIN para no romper si falta producto
-  WHERE vi.venta_id = ?
-  ORDER BY COALESCE(p.nombre, vi.producto_nombre) ASC
-  `,
-  [id]
-);
+      `
+      SELECT 
+        vi.producto_id,
+        vi.producto_nombre,
+        vi.cantidad,
+        vi.precio_unitario,
+        vi.subtotal AS importe,
+        p.codigo,
+        p.nombre
+      FROM ventas_items vi
+      LEFT JOIN productos p ON p.id = vi.producto_id
+      WHERE vi.venta_id = ?
+      ORDER BY COALESCE(p.nombre, vi.producto_nombre) ASC
+      `,
+      [id]
+    );
 
     return res.json({
       mensaje: "Ticket",
@@ -705,10 +546,6 @@ export const getTicketVenta = async (req, res) => {
   }
 };
 
-
-// ==========================
-// PUT /api/ventas/:id
-// ==========================
 // ==========================
 // PUT /api/ventas/:id
 // ==========================
@@ -724,36 +561,37 @@ export const editarVenta = async (req, res) => {
     cambio = 0,
     requiere_factura = 0,
     esCotizacion = false,
-    esCotizacionPedido = false, // ✅
+    esCotizacionPedido = false,
     items = [],
   } = req.body;
-  // ✅ leer cliente_id y guardarSaldoFavor del body
-const clienteId = req.body.cliente_id ? Number(req.body.cliente_id) : null;
-const guardarSaldoFavor = Boolean(req.body.guardarSaldoFavor);
-  const isCotizacion = Boolean(esCotizacion);
-  const isCotizacionPedido = Boolean(esCotizacionPedido); // ✅
- ✅
 
-  // Validaciones básicas
+  const clienteId = req.body.cliente_id ? Number(req.body.cliente_id) : null;
+  const guardarSaldoFavor = Boolean(req.body.guardarSaldoFavor);
+  const isCotizacion = Boolean(esCotizacion);
+  const isCotizacionPedido = Boolean(esCotizacionPedido);
+  const esCotizacionFinal = isCotizacion || isCotizacionPedido;
+
   if (!categoria || !tipoPago) {
     return res.status(400).json({ message: "Falta categoria o tipoPago" });
   }
+
   if (!categoriasValidas.includes(categoria)) {
     return res.status(400).json({ error: "Categoría no válida" });
   }
+
   if (!tiposPagoValidos.includes(tipoPago)) {
     return res.status(400).json({ error: "tipoPago no válido" });
   }
+
   if (!Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ message: "Debe traer items" });
   }
 
-  // Restricción: público solo efectivo si NO es cotización
- if (!esCotizacionFinal && categoria === "publico" && tipoPago !== "efectivo") {
-  return res.status(400).json({
-    error: "Venta al público solo acepta efectivo",
-  });
-}
+  if (!esCotizacionFinal && categoria === "publico" && tipoPago !== "efectivo") {
+    return res.status(400).json({
+      error: "Venta al público solo acepta efectivo",
+    });
+  }
 
   const recibidoN = Number(recibido || 0);
   const cambioN = Number(cambio || 0);
@@ -761,6 +599,7 @@ const guardarSaldoFavor = Boolean(req.body.guardarSaldoFavor);
   if (!Number.isFinite(recibidoN) || recibidoN < 0) {
     return res.status(400).json({ error: "Recibido inválido" });
   }
+
   if (!Number.isFinite(cambioN) || cambioN < 0) {
     return res.status(400).json({ error: "Cambio inválido" });
   }
@@ -773,26 +612,28 @@ const guardarSaldoFavor = Boolean(req.body.guardarSaldoFavor);
     Number(tarjeta || 0) > 0;
 
   const conn = await pool.getConnection();
+
   try {
     await conn.beginTransaction();
 
-    // 1) Verificar que exista la venta
     const [ventaRows] = await conn.query(
-  `SELECT id, es_cotizacion, es_cotizacion_pedido FROM ventas WHERE id=? FOR UPDATE`,
-  [id]
-);
+      `SELECT id, es_cotizacion, es_cotizacion_pedido
+       FROM ventas
+       WHERE id = ?
+       FOR UPDATE`,
+      [id]
+    );
 
-if (!ventaRows.length) {
-  await conn.rollback();
-  return res.status(404).json({ error: "Venta no encontrada" });
-}
+    if (!ventaRows.length) {
+      await conn.rollback();
+      return res.status(404).json({ error: "Venta no encontrada" });
+    }
 
-const ventaAnterior = ventaRows[0];
-const ventaAnteriorEraCotizacion =
-  Number(ventaAnterior.es_cotizacion) === 1 ||
-  Number(ventaAnterior.es_cotizacion_pedido) === 1;
+    const ventaAnterior = ventaRows[0];
+    const ventaAnteriorEraCotizacion =
+      Number(ventaAnterior.es_cotizacion) === 1 ||
+      Number(ventaAnterior.es_cotizacion_pedido) === 1;
 
-    // 2) Traer items anteriores para devolver stock (si la venta anterior NO era cotización)
     const [itemsAnteriores] = await conn.query(
       `SELECT producto_id, cantidad
        FROM ventas_items
@@ -819,69 +660,61 @@ const ventaAnteriorEraCotizacion =
             Number(it.producto_id),
             Number(it.cantidad),
             `Edición venta #${id} (reversa)`,
-            (req.user?.id ?? req.user?.userId ?? req.userId ?? null),
+            req.user?.id ?? req.user?.userId ?? req.userId ?? null,
           ]
         );
       }
     }
 
     await conn.query(
-  `UPDATE ventas
-   SET categoria=?, cliente_id=?, tipo_pago=?, efectivo=?, tarjeta=?, es_cotizacion=?, es_cotizacion_pedido=?, requiere_factura=?
-   WHERE id=?`,
-  [
-    categoria,
-    clienteId,
-    tipoPago,
-    Number(efectivo || 0),
-    Number(tarjeta || 0),
-    isCotizacion ? 1 : 0,
-    isCotizacionPedido ? 1 : 0,
-    requiereFactura ? 1 : 0,
-    id,
-  ]
-);
+      `UPDATE ventas
+       SET categoria = ?, cliente_id = ?, tipo_pago = ?, efectivo = ?, tarjeta = ?, es_cotizacion = ?, es_cotizacion_pedido = ?, requiere_factura = ?
+       WHERE id = ?`,
+      [
+        categoria,
+        clienteId,
+        tipoPago,
+        Number(efectivo || 0),
+        Number(tarjeta || 0),
+        isCotizacion ? 1 : 0,
+        isCotizacionPedido ? 1 : 0,
+        requiereFactura ? 1 : 0,
+        id,
+      ]
+    );
 
-    // 4) Borrar items anteriores
-    await conn.query(`DELETE FROM ventas_items WHERE venta_id=?`, [id]);
+    await conn.query(`DELETE FROM ventas_items WHERE venta_id = ?`, [id]);
 
-    // 5) Insertar items nuevos + recalcular total + IVA + mover inventario
     let total = 0;
     let totalIVA = 0;
 
     for (const it of items) {
-  const productoId = Number(
-    it.producto_id ?? it.productoId ?? it.idProducto ?? it.id
-  );
+      const productoId = Number(
+        it.producto_id ?? it.productoId ?? it.idProducto ?? it.id
+      );
+      const cantidad = Number(it.cantidad ?? it.qty ?? 0);
+      const precioUnitario = Number(
+        it.precio_unitario ??
+          it.precioUnitario ??
+          it.precio ??
+          it.precio_venta ??
+          0
+      );
 
-  const cantidad = Number(it.cantidad ?? it.qty ?? 0);
+      let descuentoItem = Number(it.descuento ?? 0);
 
-  const precioUnitario = Number(
-    it.precio_unitario ??
-    it.precioUnitario ??
-    it.precio ??
-    it.precio_venta ??
-    0
-  );
+      if (!Number.isFinite(productoId) || productoId <= 0) {
+        throw new Error("Items incompletos o inválidos (producto_id)");
+      }
 
-  let descuentoItem = Number(it.descuento ?? 0);
+      if (!Number.isFinite(cantidad) || cantidad <= 0) {
+        throw new Error("Items incompletos o inválidos (cantidad)");
+      }
 
-  if (!Number.isFinite(productoId) || productoId <= 0) {
-    console.error("ITEM INVÁLIDO (productoId):", it);
-    throw new Error("Items incompletos o inválidos (producto_id)");
-  }
+      if (!Number.isFinite(precioUnitario) || precioUnitario <= 0) {
+        throw new Error("Items incompletos o inválidos (precio_unitario)");
+      }
 
-  if (!Number.isFinite(cantidad) || cantidad <= 0) {
-    console.error("ITEM INVÁLIDO (cantidad):", it);
-    throw new Error("Items incompletos o inválidos (cantidad)");
-  }
-
-  if (!Number.isFinite(precioUnitario) || precioUnitario <= 0) {
-    console.error("ITEM INVÁLIDO (precio):", it);
-    throw new Error("Items incompletos o inválidos (precio_unitario)");
-  }
-
-      // Traer producto + stock y bloquear fila
       const [prods] = await conn.query(
         `SELECT id, codigo, nombre, tipo, iva_tarjeta, facturable, stock
          FROM productos
@@ -896,7 +729,6 @@ const ventaAnteriorEraCotizacion =
 
       const p = prods[0];
 
-      // Validar stock SOLO si la venta editada quedará como venta real (no cotización)
       if (!esCotizacionFinal) {
         const stockActual = Number(p.stock || 0);
         if (stockActual < cantidad) {
@@ -906,12 +738,10 @@ const ventaAnteriorEraCotizacion =
         }
       }
 
-      // Bloqueo factura
       if (requiereFactura && Number(p.facturable) === 0) {
         throw new Error(`Producto no facturable (Bloqueado): ${p.nombre}`);
       }
 
-      // Descuento por item: insumo => 0
       if (String(p.tipo) === "insumo") {
         descuentoItem = 0;
       }
@@ -922,7 +752,6 @@ const ventaAnteriorEraCotizacion =
 
       const totalFinalItem = Math.max(subtotal - descuentoItem, 0);
 
-      // IVA SOLO si es tarjeta y producto tiene iva_tarjeta=1
       const ivaItem =
         esTarjeta && Number(p.iva_tarjeta) === 1
           ? Number((totalFinalItem * 0.16).toFixed(2))
@@ -930,7 +759,6 @@ const ventaAnteriorEraCotizacion =
 
       totalIVA += ivaItem;
 
-      // Guardar item
       await conn.query(
         `INSERT INTO ventas_items
           (venta_id, producto_id, producto_nombre, cantidad, precio_unitario, subtotal)
@@ -938,7 +766,6 @@ const ventaAnteriorEraCotizacion =
         [id, productoId, productoNombre, cantidad, precioUnitario, subtotal]
       );
 
-      // Descontar inventario SOLO si queda como venta real
       if (!esCotizacionFinal) {
         await conn.query(
           `UPDATE productos
@@ -955,7 +782,7 @@ const ventaAnteriorEraCotizacion =
             productoId,
             cantidad,
             `Edición venta #${id} (aplicación)`,
-            (req.user?.id ?? req.user?.userId ?? req.userId ?? null),
+            req.user?.id ?? req.user?.userId ?? req.userId ?? null,
           ]
         );
       }
@@ -966,57 +793,36 @@ const ventaAnteriorEraCotizacion =
     total = Number(total.toFixed(2));
     totalIVA = Number(totalIVA.toFixed(2));
 
-    
-    // 6) Descuento general
-const descuentoPct =
-  req.body.descuentoPct === undefined || req.body.descuentoPct === null || req.body.descuentoPct === ""
-    ? null
-    : Number(req.body.descuentoPct);
+    const descuentoPctSeguro = 0;
+    const descuento = 0;
+    const totalSinIVA = Number(total.toFixed(2));
+    const totalConIVA = Number((totalSinIVA + totalIVA).toFixed(2));
 
-const descuentoPctSeguro =
-  descuentoPct === null ? null : Math.min(Math.max(descuentoPct, 0), 100);
+    const efectivoN = Number(efectivo || 0);
+    const tarjetaN = Number(tarjeta || 0);
 
-let descuento = 0;
+    if (tipoPago === "mixto") {
+      const suma = Number((efectivoN + tarjetaN).toFixed(2));
+      const esperado = Number(totalConIVA.toFixed(2));
+      if (suma !== esperado) {
+        await conn.rollback();
+        return res.status(400).json({
+          error: "En pago mixto: efectivo + tarjeta debe ser igual al total final.",
+        });
+      }
+    }
 
-if (descuentoPctSeguro !== null) {
-  descuento = Number((total * (descuentoPctSeguro / 100)).toFixed(2));
-} else {
-  descuento = 0;
-}
+    if (tipoPago === "tarjeta_credito" || tipoPago === "tarjeta_debito") {
+      const esperado = Number(totalConIVA.toFixed(2));
+      const t = Number(tarjetaN.toFixed(2));
+      if (t !== esperado) {
+        await conn.rollback();
+        return res.status(400).json({
+          error: "En pago con tarjeta: el monto debe ser igual al total final.",
+        });
+      }
+    }
 
-const totalSinIVA = Number((total - descuento).toFixed(2));
-
-    // 7) Validar pago mixto (400, no 500)
-    // ===============================
-// ✅ VALIDACIONES CONTRA totalACobrar (no totalFinal)
-// ===============================
-const efectivoN = Number(efectivo || 0);
-const tarjetaN = Number(tarjeta || 0);
-
-// Mixto: efectivo + tarjeta = totalACobrar
-if (tipoPago === "mixto") {
-  const suma = Number((efectivoN + tarjetaN).toFixed(2));
-  const esperado = Number(totalConIVA.toFixed(2));
-  if (suma !== esperado) {
-    return res.status(400).json({
-      error: "En pago mixto: efectivo + tarjeta debe ser igual al total final.",
-    });
-  }
-}
-
-if (tipoPago === "tarjeta_credito" || tipoPago === "tarjeta_debito") {
-  const esperado = Number(totalConIVA.toFixed(2));
-  const t = Number(tarjetaN.toFixed(2));
-  if (t !== esperado) {
-    return res.status(400).json({
-      error: "En pago con tarjeta: el monto debe ser igual al total final.",
-    });
-  }
-}
-
-
-
-    // 8) Validar efectivo (solo si no es cotización)
     if (!esCotizacionFinal && tipoPago === "efectivo") {
       if (recibidoN < totalConIVA) {
         await conn.rollback();
@@ -1027,45 +833,56 @@ if (tipoPago === "tarjeta_credito" || tipoPago === "tarjeta_debito") {
 
       const cambioReal = Number((recibidoN - totalConIVA).toFixed(2));
 
-      await conn.query(
-        `UPDATE ventas SET recibido=?, cambio=? WHERE id=?`,
-        [recibidoN, cambioReal, id]
-      );
+      if (clienteId && guardarSaldoFavor && cambioReal > 0) {
+        await conn.query(
+          "UPDATE clientes SET saldo_favor = COALESCE(saldo_favor,0) + ? WHERE id = ?",
+          [cambioReal, clienteId]
+        );
+
+        await conn.query(
+          `UPDATE ventas SET recibido = ?, cambio = 0 WHERE id = ?`,
+          [recibidoN, id]
+        );
+      } else {
+        await conn.query(
+          `UPDATE ventas SET recibido = ?, cambio = ? WHERE id = ?`,
+          [recibidoN, cambioReal, id]
+        );
+      }
     } else {
       await conn.query(
-        `UPDATE ventas SET recibido=0, cambio=0 WHERE id=?`,
+        `UPDATE ventas SET recibido = 0, cambio = 0 WHERE id = ?`,
         [id]
       );
     }
 
-    // 9) Actualizar totales finales
     await conn.query(
-  `UPDATE ventas
-   SET total=?, descuento_pct=?, descuento=?, total_iva=?, total_final=?
-   WHERE id=?`,
-  [total, descuentoPctSeguro ?? 0, descuento, totalIVA, totalConIVA, id]
-);
+      `UPDATE ventas
+       SET total = ?, descuento_pct = ?, descuento = ?, total_iva = ?, total_final = ?
+       WHERE id = ?`,
+      [total, descuentoPctSeguro, descuento, totalIVA, totalConIVA, id]
+    );
 
     await conn.commit();
 
     return res.json({
-  mensaje: isCotizacionPedido
-    ? "Cotización de pedido actualizada"
-    : isCotizacion
-    ? "Cotización actualizada"
-    : "Venta actualizada",
-  data: {
-    id: Number(id),
-    total: Number(total),
-    descuento: Number(descuento),
-    totalIva: Number(totalIVA),
-    totalFinal: Number(totalConIVA),
-    tipoPago,
-    tipoPagoLabel: getTipoPagoLabel(tipoPago),
-    esCotizacion: isCotizacion,
-    esCotizacionPedido: isCotizacionPedido, // ✅ AGREGAR
-  },
-});
+      mensaje: isCotizacionPedido
+        ? "Cotización de pedido actualizada"
+        : isCotizacion
+        ? "Cotización actualizada"
+        : "Venta actualizada",
+      data: {
+        id: Number(id),
+        total: Number(total),
+        descuento: Number(descuento),
+        totalIva: Number(totalIVA),
+        totalFinal: Number(totalConIVA),
+        tipoPago,
+        tipoPagoLabel: getTipoPagoLabel(tipoPago),
+        esCotizacion: isCotizacion,
+        esCotizacionPedido: isCotizacionPedido,
+      },
+    });
   } catch (err) {
     await conn.rollback();
     console.error("ERROR PUT /ventas/:id:", err);
@@ -1075,17 +892,19 @@ if (tipoPago === "tarjeta_credito" || tipoPago === "tarjeta_debito") {
   }
 };
 
+// ==========================
 // POST /api/ventas/borrador
+// ==========================
 export const crearBorrador = async (req, res) => {
   try {
     const { categoria = "publico", cliente_id = null } = req.body;
 
     const [r] = await pool.query(
-  `INSERT INTO ventas
-   (categoria, estado, cliente_id, tipo_pago, es_cotizacion, total, descuento, total_final, total_iva, efectivo, tarjeta, recibido, cambio)
-   VALUES (?, 'borrador', ?, 'efectivo', 0, 0, 0, 0, 0, 0, 0, 0, 0)`,
-  [categoria, cliente_id]
-);
+      `INSERT INTO ventas
+       (categoria, estado, cliente_id, tipo_pago, es_cotizacion, total, descuento, total_final, total_iva, efectivo, tarjeta, recibido, cambio)
+       VALUES (?, 'borrador', ?, 'efectivo', 0, 0, 0, 0, 0, 0, 0, 0, 0)`,
+      [categoria, cliente_id]
+    );
 
     return res.json({ mensaje: "Borrador creado", data: { id: r.insertId } });
   } catch (err) {
@@ -1093,16 +912,20 @@ export const crearBorrador = async (req, res) => {
     return res.status(500).json({ error: err.message });
   }
 };
+
+// ==========================
 // GET /api/ventas/borradores
+// ==========================
 export const getBorradores = async (req, res) => {
   try {
     const [rows] = await pool.query(
       `SELECT id, categoria, cliente_id, created_at
        FROM ventas
-       WHERE estado='borrador'
+       WHERE estado = 'borrador'
        ORDER BY created_at DESC
        LIMIT 50`
     );
+
     return res.json({ mensaje: "Borradores", data: rows });
   } catch (err) {
     console.error("ERROR getBorradores:", err);
@@ -1110,7 +933,9 @@ export const getBorradores = async (req, res) => {
   }
 };
 
+// ==========================
 // PUT /api/ventas/:id/items
+// ==========================
 export const actualizarItemsBorrador = async (req, res) => {
   const { id } = req.params;
   const { items = [] } = req.body;
@@ -1120,33 +945,30 @@ export const actualizarItemsBorrador = async (req, res) => {
   }
 
   const conn = await pool.getConnection();
+
   try {
     await conn.beginTransaction();
 
-// 1) Verificar que exista la venta
-const [ventaRows] = await conn.query(
-  `SELECT id, es_cotizacion, es_cotizacion_pedido FROM ventas WHERE id=? FOR UPDATE`,
-  [id]
-);
+    const [ventaRows] = await conn.query(
+      `SELECT id, estado
+       FROM ventas
+       WHERE id = ?
+       FOR UPDATE`,
+      [id]
+    );
 
-if (!ventaRows.length) {
-  await conn.rollback();
-  return res.status(404).json({ error: "Venta no encontrada" });
-}
+    if (!ventaRows.length) {
+      await conn.rollback();
+      return res.status(404).json({ error: "Venta no encontrada" });
+    }
 
-const ventaAnterior = ventaRows[0];
-const ventaAnteriorEraCotizacion =
-  Number(ventaAnterior.es_cotizacion) === 1 ||
-  Number(ventaAnterior.es_cotizacion_pedido) === 1;
-    if (!v.length) return res.status(404).json({ error: "Venta no existe" });
-    if (v[0].estado !== "borrador") {
+    if (ventaRows[0].estado !== "borrador") {
+      await conn.rollback();
       return res.status(400).json({ error: "Solo se puede editar un borrador" });
     }
 
-    // borra items anteriores
-    await conn.query(`DELETE FROM ventas_items WHERE venta_id=?`, [id]);
+    await conn.query(`DELETE FROM ventas_items WHERE venta_id = ?`, [id]);
 
-    // inserta nuevos
     for (const it of items) {
       const cantidad = Number(it.cantidad || 0);
       const precio = Number(it.precio_unitario ?? it.precio ?? 0);
@@ -1154,36 +976,45 @@ const ventaAnteriorEraCotizacion =
       if (!Number.isFinite(cantidad) || cantidad <= 0) {
         throw new Error("Cantidad inválida");
       }
+
       if (!Number.isFinite(precio) || precio < 0) {
         throw new Error("Precio inválido");
       }
 
       const subtotal = Number((cantidad * precio).toFixed(2));
 
-      // ✅ Caso normal: producto_id
       if (it.producto_id) {
         const productoId = Number(it.producto_id);
 
         const [prods] = await conn.query(
-          `SELECT codigo, nombre FROM productos WHERE id=?`,
+          `SELECT codigo, nombre
+           FROM productos
+           WHERE id = ?`,
           [productoId]
         );
-        if (!prods.length) throw new Error(`Producto no existe: ${productoId}`);
+
+        if (!prods.length) {
+          throw new Error(`Producto no existe: ${productoId}`);
+        }
 
         const productoNombre = `${prods[0].codigo} - ${prods[0].nombre}`;
 
         await conn.query(
-          `INSERT INTO ventas_items (venta_id, producto_id, producto_nombre, cantidad, precio_unitario, subtotal)
+          `INSERT INTO ventas_items
+            (venta_id, producto_id, producto_nombre, cantidad, precio_unitario, subtotal)
            VALUES (?, ?, ?, ?, ?, ?)`,
           [id, productoId, productoNombre, cantidad, precio, subtotal]
         );
       } else {
-        // ✅ Ticket rápido: item manual (sin producto_id)
         const nombreManual = String(it.producto_nombre || it.nombre || "").trim();
-        if (!nombreManual) throw new Error("Item manual requiere producto_nombre");
+
+        if (!nombreManual) {
+          throw new Error("Item manual requiere producto_nombre");
+        }
 
         await conn.query(
-          `INSERT INTO ventas_items (venta_id, producto_id, producto_nombre, cantidad, precio_unitario, subtotal)
+          `INSERT INTO ventas_items
+            (venta_id, producto_id, producto_nombre, cantidad, precio_unitario, subtotal)
            VALUES (?, NULL, ?, ?, ?, ?)`,
           [id, nombreManual, cantidad, precio, subtotal]
         );
@@ -1200,5 +1031,77 @@ const ventaAnteriorEraCotizacion =
     conn.release();
   }
 };
+export const eliminarVenta = async (req, res) => {
+  const { id } = req.params;
+  const conn = await pool.getConnection();
 
+  try {
+    await conn.beginTransaction();
 
+    const [ventaRows] = await conn.query(
+      `SELECT id, es_cotizacion, es_cotizacion_pedido
+       FROM ventas
+       WHERE id = ?
+       FOR UPDATE`,
+      [id]
+    );
+
+    if (!ventaRows.length) {
+      await conn.rollback();
+      return res.status(404).json({ error: "Venta no encontrada" });
+    }
+
+    const venta = ventaRows[0];
+    const esCotizacionFinal =
+      Number(venta.es_cotizacion) === 1 ||
+      Number(venta.es_cotizacion_pedido) === 1;
+
+    const [items] = await conn.query(
+      `SELECT producto_id, cantidad
+       FROM ventas_items
+       WHERE venta_id = ?`,
+      [id]
+    );
+
+    if (!esCotizacionFinal) {
+      for (const it of items) {
+        if (!it.producto_id) continue;
+
+        await conn.query(
+          `UPDATE productos
+           SET stock = stock + ?
+           WHERE id = ?`,
+          [Number(it.cantidad), Number(it.producto_id)]
+        );
+
+        await conn.query(
+          `INSERT INTO inventario_movimientos
+           (producto_id, tipo, cantidad, referencia, usuario_id)
+           VALUES (?, 'ENTRADA', ?, ?, ?)`,
+          [
+            Number(it.producto_id),
+            Number(it.cantidad),
+            `Eliminación venta #${id}`,
+            req.user?.id ?? req.user?.userId ?? req.userId ?? null,
+          ]
+        );
+      }
+    }
+
+    await conn.query(`DELETE FROM ventas_items WHERE venta_id = ?`, [id]);
+    await conn.query(`DELETE FROM ventas WHERE id = ?`, [id]);
+
+    await conn.commit();
+
+    return res.json({
+      mensaje: "Venta eliminada",
+      data: { id: Number(id) },
+    });
+  } catch (err) {
+    await conn.rollback();
+    console.error("ERROR DELETE /ventas/:id:", err);
+    return res.status(500).json({ error: err.message });
+  } finally {
+    conn.release();
+  }
+};
