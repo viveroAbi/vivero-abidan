@@ -404,13 +404,11 @@ const [loadingSugerencias, setLoadingSugerencias] = useState(false);
     );
   }, [carrito]);
 
-  const totalNum = useMemo(() => Number(totalCarrito || 0), [totalCarrito]);
   const descuentoPctNum = useMemo(() => {
-  const n = Number(form.descuentoPct || 0);
+  const n = Number(String(form.descuentoPct || 0).replace(",", "."));
   if (!Number.isFinite(n)) return 0;
   return Math.min(Math.max(n, 0), 100);
 }, [form.descuentoPct]);
-
 const descuentoMonto = useMemo(() => {
   return Number((totalNum * (descuentoPctNum / 100)).toFixed(2));
 }, [totalNum, descuentoPctNum]);
@@ -1656,13 +1654,22 @@ if (isMixto && sumaMixto !== totalEsperado) {
       cantidad: Number(it.cantidad),
       precio_unitario: Number(it.precio_unitario),
     }));
+    const descuentoPctSafe =
+  form.descuentoPct === ""
+    ? 0
+    : Number(String(form.descuentoPct).replace(",", "."));
+
+if (!Number.isFinite(descuentoPctSafe) || descuentoPctSafe < 0 || descuentoPctSafe > 100) {
+  setMessage("error", "El descuento debe ser un número entre 0 y 100.");
+  return;
+}
 
     const payload = {
   categoria: form.categoria,
   tipoPago: form.tipoPago,
   cliente_id: clienteSeleccionado?.id || null,
   esCotizacionPedido: !!esCotizacionPedido,
-  descuentoPct: form.descuentoPct === "" ? 0 : Number(form.descuentoPct),// ✅ AGREGAR
+  descuentoPct: descuentoPctSafe,
   efectivo: isTarjeta ? 0 : Number(form.efectivo || (form.tipoPago === "efectivo" ? totalNum : 0)),
   tarjeta: form.tipoPago === "efectivo" ? 0 : Number(form.tarjeta || (isTarjeta ? totalNum : 0)),
   recibido: Number(form.recibido || 0),
@@ -1671,7 +1678,6 @@ if (isMixto && sumaMixto !== totalEsperado) {
   guardarSaldoFavor,
   items,
 };
-
     try {
       setLoading(true);
 

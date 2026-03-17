@@ -452,9 +452,9 @@ if (!isCotizacion && !isCotizacionPedido && tipoPago === "efectivo") {
     // 5) Actualizar venta con totales + IVA
     await conn.query(
   `UPDATE ventas
-   SET total=?, descuento=?, total_iva=?, total_final=?
+   SET total=?, descuento_pct=?, descuento=?, total_iva=?, total_final=?
    WHERE id=?`,
-  [total, descuento, totalIVA, totalConIVA, ventaId]
+  [total, descuentoPctSeguro ?? 0, descuento, totalIVA, totalConIVA, ventaId]
 );
     await conn.commit();
 
@@ -1051,11 +1051,11 @@ if (tipoPago === "tarjeta_credito" || tipoPago === "tarjeta_debito") {
 
     // 9) Actualizar totales finales
     await conn.query(
-      `UPDATE ventas
-       SET total=?, descuento=?, total_iva=?, total_final=?
-       WHERE id=?`,
-      [total, descuento, totalIVA, totalConIVA, id]
-    );
+  `UPDATE ventas
+   SET total=?, descuento_pct=?, descuento=?, total_iva=?, total_final=?
+   WHERE id=?`,
+  [total, descuentoPctSeguro ?? 0, descuento, totalIVA, totalConIVA, id]
+);
 
     await conn.commit();
 
