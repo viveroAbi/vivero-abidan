@@ -173,14 +173,13 @@ const [msg, setMsg] = useState({ type: "", text: "" });
 const [userSaving, setUserSaving] = useState(false);
 
   // ---- VENTA FORM ----
- const [form, setForm] = useState({
+const [form, setForm] = useState({
   categoria: "publico",
   tipoPago: "efectivo",
   efectivo: "",
   tarjeta: "",
   recibido: "",
   cambio: "",
-  descuentoPct: "",
   esCotizacion: false,
   esCotizacionPedido: false,
 });
@@ -405,20 +404,9 @@ const [loadingSugerencias, setLoadingSugerencias] = useState(false);
 }, [carrito]);
 
 const totalNum = useMemo(() => Number(totalCarrito || 0), [totalCarrito]);
-
-const descuentoPctNum = useMemo(() => {
-  const n = Number(String(form.descuentoPct || 0).replace(",", "."));
-  if (!Number.isFinite(n)) return 0;
-  return Math.min(Math.max(n, 0), 100);
-}, [form.descuentoPct]);
-
-const descuentoMonto = useMemo(() => {
-  return Number((totalNum * (descuentoPctNum / 100)).toFixed(2));
-}, [totalNum, descuentoPctNum]);
-
-const totalFinalUI = useMemo(() => {
-  return Number((totalNum - descuentoMonto).toFixed(2));
-}, [totalNum, descuentoMonto]);
+const descuentoPctNum = 0;
+const descuentoMonto = 0;
+const totalFinalUI = totalNum;
 
 
   const efectivoNum = useMemo(
@@ -712,7 +700,7 @@ async function guardarProductoUI(e) {
     }
 
     // ✅ AHORA SÍ: limpiar + recargar (DESPUÉS de guardar)
-        // ✅ AHORA SÍ: limpiar + recargar (DESPUÉS de guardar)
+
     limpiarProductoUI();
     setImagenProducto(null);
 
@@ -1086,17 +1074,16 @@ async function iniciarCamaraYDeteccion() {
 
     // 4) Cargar form
     setForm((f) => ({
-      ...f,
-      categoria: ventaData.categoria || "publico",
-      tipoPago: ventaData.tipo_pago || "efectivo",
-      efectivo: String(ventaData.efectivo ?? ""),
-      tarjeta: String(ventaData.tarjeta ?? ""),
-      recibido: String(ventaData.recibido ?? ""),
-      cambio: String(ventaData.cambio ?? ""),
-      descuentoPct: String(ventaData.descuento_pct ?? ""),
-      esCotizacion: esCot,
-      esCotizacionPedido: esPedido,
-    }));
+  ...f,
+  categoria: ventaData.categoria || "publico",
+  tipoPago: ventaData.tipo_pago || "efectivo",
+  efectivo: String(ventaData.efectivo ?? ""),
+  tarjeta: String(ventaData.tarjeta ?? ""),
+  recibido: String(ventaData.recibido ?? ""),
+  cambio: String(ventaData.cambio ?? ""),
+  esCotizacion: esCot,
+  esCotizacionPedido: esPedido,
+}));
 
     // 5) Cargar carrito desde items (MAPEO CORRECTO)
     const itemsEdit = items.map((it) => ({
@@ -1143,16 +1130,15 @@ async function iniciarCamaraYDeteccion() {
   setSearch("");
 
   setForm({
-    categoria: "publico",
-    tipoPago: "efectivo",
-    efectivo: "",
-    tarjeta: "",
-    recibido: "",
-    cambio: "",
-    descuentoPct: "",
-    esCotizacion: false,
-    esCotizacionPedido: false,
-  });
+  categoria: "publico",
+  tipoPago: "efectivo",
+  efectivo: "",
+  tarjeta: "",
+  recibido: "",
+  cambio: "",
+  esCotizacion: false,
+  esCotizacionPedido: false,
+});
 
   setEsCotizacionPedido(false);
   setMessage("success", "Edición cancelada.");
@@ -1668,28 +1654,19 @@ if (isMixto && sumaMixto !== totalEsperado) {
     }
 
     const items = carrito.map((it) => ({
-      producto_id: it.producto_id,
-      cantidad: Number(it.cantidad),
-      precio_unitario: Number(it.precio_unitario),
-    }));
-    const descuentoPctSafe =
-  form.descuentoPct === ""
-    ? 0
-    : Number(String(form.descuentoPct).replace(",", "."));
+  producto_id: it.producto_id,
+  cantidad: Number(it.cantidad),
+  precio_unitario: Number(it.precio_unitario),
+}));
 
-if (!Number.isFinite(descuentoPctSafe) || descuentoPctSafe < 0 || descuentoPctSafe > 100) {
-  setMessage("error", "El descuento debe ser un número entre 0 y 100.");
-  return;
-}
-
-    const payload = {
+const payload = {
   categoria: form.categoria,
   tipoPago: form.tipoPago,
   cliente_id: clienteSeleccionado?.id || null,
   esCotizacionPedido: !!esCotizacionPedido,
-  descuentoPct: descuentoPctSafe,
-  efectivo: isTarjeta ? 0 : Number(form.efectivo || (form.tipoPago === "efectivo" ? totalNum : 0)),
-  tarjeta: form.tipoPago === "efectivo" ? 0 : Number(form.tarjeta || (isTarjeta ? totalNum : 0)),
+  descuentoPct: 0,
+  efectivo: isTarjeta ? 0 : Number(form.efectivo || (form.tipoPago === "efectivo" ? totalFinalUI : 0)),
+  tarjeta: form.tipoPago === "efectivo" ? 0 : Number(form.tarjeta || (isTarjeta ? totalFinalUI : 0)),
   recibido: Number(form.recibido || 0),
   cambio: Number(cambioNum || 0),
   esCotizacion: form.esCotizacion,
@@ -1723,7 +1700,6 @@ const data = await apiFetch(endpoint, {
   tarjeta: "",
   recibido: "",
   cambio: "",
-  descuentoPct: "",
   esCotizacion: false,
   esCotizacionPedido: false,
 });
@@ -2614,29 +2590,7 @@ if (view === "movimientos") {
           />
         </label>
 
-        {isAdmin && (
-          <label style={labelStyle}>
-            Descuento (%):
-            <input
-              name="descuentoPct"
-              value={form.descuentoPct}
-              onChange={onChange}
-              type="number"
-              step="0.01"
-              min="0"
-              max="100"
-              style={inputStyle}
-              placeholder="Ej: 10"
-            />
-          </label>
-        )}
-
-        {isAdmin && descuentoPctNum > 0 && (
-          <div style={{ marginTop: 6, color: theme.muted, fontSize: 13 }}>
-            Descuento: <b>{money(descuentoMonto)}</b> — Total final:{" "}
-            <b>{money(totalFinalUI)}</b>
-          </div>
-        )}
+        
 
         {(form.tipoPago === "efectivo" || form.tipoPago === "mixto") && (
           <>
