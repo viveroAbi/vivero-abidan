@@ -858,15 +858,21 @@ function obtenerPrecioPorCategoria(producto, categoria) {
     }
 
     return [
-      ...prev,
-      {
-        producto_id: p.id,
-        codigo: p.codigo_cat || p.codigo || "",
-        nombre: p.nombre || "",
-        precio_unitario: precioAplicado,
-        cantidad: 1,
-      },
-    ];
+  ...prev,
+  {
+    producto_id: p.id,
+    codigo: p.codigo_cat || p.codigo || "",
+    nombre: p.nombre || "",
+
+    precio_publico: Number(p.precio_publico ?? p.precio ?? 0),
+    precio_mayoreo: Number(p.precio_mayoreo ?? p.precio_publico ?? p.precio ?? 0),
+    precio_vivero: Number(p.precio_vivero ?? p.precio_publico ?? p.precio ?? 0),
+    precio_especial: Number(p.precio_especial ?? p.precio_publico ?? p.precio ?? 0),
+
+    precio_unitario: precioAplicado,
+    cantidad: 1,
+  },
+];
   });
 }
 
@@ -1581,9 +1587,20 @@ async function onCreateUserSubmit(e) {
 
   // ====== VENTAS ======
   function onChange(e) {
-    const { name, value } = e.target;
-    setForm((f) => ({ ...f, [name]: value }));
+  const { name, value } = e.target;
+
+  setForm((f) => ({ ...f, [name]: value }));
+
+  // Si cambia la categoría manual, recalcular precios del carrito
+  if (name === "categoria") {
+    setCarrito((prev) =>
+      prev.map((it) => ({
+        ...it,
+        precio_unitario: obtenerPrecioPorCategoria(it, value),
+      }))
+    );
   }
+}
 
   function onChangeTipoPago(e) {
     const value = e.target.value;
