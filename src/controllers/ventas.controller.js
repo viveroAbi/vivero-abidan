@@ -154,7 +154,7 @@ export const crearVenta = async (req, res) => {
   const esCotizacionFinal = isCotizacion || isCotizacionPedido;
 
   if (!categoria || !tipoPago) {
-    return res.status(400).json({ message: "Falta categoria o tipoPago" });
+    return res.status(400).json({ error: "Falta categoria o tipoPago" });
   }
 
   if (!categoriasValidas.includes(categoria)) {
@@ -166,7 +166,7 @@ export const crearVenta = async (req, res) => {
   }
 
   if (!Array.isArray(items) || items.length === 0) {
-    return res.status(400).json({ message: "La venta debe traer items" });
+    return res.status(400).json({ error: "La venta debe traer items" });
   }
 
   if (!esCotizacionFinal && categoria === "publico" && tipoPago !== "efectivo") {
@@ -415,7 +415,7 @@ export const crearVenta = async (req, res) => {
   } catch (err) {
     await conn.rollback();
     console.error("ERROR POST /ventas:", err);
-    return res.status(500).json({ message: err.message });
+    return res.status(500).json({ error: err.message });
   } finally {
     conn.release();
   }
@@ -431,7 +431,7 @@ export const obtenerVenta = async (req, res) => {
     const [ventaRows] = await pool.query(`SELECT * FROM ventas WHERE id = ?`, [id]);
 
     if (ventaRows.length === 0) {
-      return res.status(404).json({ message: "Venta no encontrada" });
+      return res.status(404).json({ error: "Venta no encontrada" });
     }
 
     const [itemsRows] = await pool.query(
@@ -446,7 +446,7 @@ export const obtenerVenta = async (req, res) => {
     return res.json({ data: { venta: ventaRows[0], items: itemsRows } });
   } catch (err) {
     console.error("ERROR GET /ventas/:id:", err);
-    return res.status(500).json({ message: err.message });
+    return res.status(500).json({ error: err.message });
   }
 };
 
@@ -572,7 +572,7 @@ export const editarVenta = async (req, res) => {
   const esCotizacionFinal = isCotizacion || isCotizacionPedido;
 
   if (!categoria || !tipoPago) {
-    return res.status(400).json({ message: "Falta categoria o tipoPago" });
+    return res.status(400).json({ error: "Falta categoria o tipoPago" });
   }
 
   if (!categoriasValidas.includes(categoria)) {
@@ -584,7 +584,7 @@ export const editarVenta = async (req, res) => {
   }
 
   if (!Array.isArray(items) || items.length === 0) {
-    return res.status(400).json({ message: "Debe traer items" });
+    return res.status(400).json({ error: "Debe traer items" });
   }
 
   if (!esCotizacionFinal && categoria === "publico" && tipoPago !== "efectivo") {
@@ -827,7 +827,7 @@ export const editarVenta = async (req, res) => {
       if (recibidoN < totalConIVA) {
         await conn.rollback();
         return res.status(400).json({
-          message: "El recibido no puede ser menor al total",
+          error: "El recibido no puede ser menor al total",
         });
       }
 
@@ -886,7 +886,7 @@ export const editarVenta = async (req, res) => {
   } catch (err) {
     await conn.rollback();
     console.error("ERROR PUT /ventas/:id:", err);
-    return res.status(500).json({ message: err.message });
+    return res.status(500).json({ error: err.message });
   } finally {
     conn.release();
   }
@@ -1031,6 +1031,7 @@ export const actualizarItemsBorrador = async (req, res) => {
     conn.release();
   }
 };
+
 export const eliminarVenta = async (req, res) => {
   const { id } = req.params;
   const conn = await pool.getConnection();
