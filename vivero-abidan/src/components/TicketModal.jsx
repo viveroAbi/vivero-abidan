@@ -17,71 +17,80 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
   const items = Array.isArray(data?.items) ? data.items : [];
 
   const printStyles = (
-    <style>{`
-      @page {
-        size: 80mm auto;
-        margin: 0;
+  <style>{`
+    @page {
+      size: 80mm auto;
+      margin: 0;
+    }
+
+    @media print {
+      html, body {
+        width: 80mm !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #fff !important;
       }
 
-      @media print {
-        html, body {
-          margin: 0 !important;
-          padding: 0 !important;
-          background: #fff !important;
-        }
-
-        body * {
-          visibility: hidden !important;
-        }
-
-        #ticket, #ticket * {
-          visibility: visible !important;
-        }
-
-        .ticket-overlay {
-          position: static !important;
-          inset: auto !important;
-          background: #fff !important;
-          display: block !important;
-        }
-
-        .no-print {
-          display: none !important;
-        }
-
-        #ticket {
-          position: absolute !important;
-          left: 0 !important;
-          top: 0 !important;
-          width: 72mm !important;
-          max-width: 72mm !important;
-          margin: 0 !important;
-          padding: 2mm 3mm !important;
-          box-sizing: border-box !important;
-          overflow: visible !important;
-          background: #fff !important;
-          color: #000 !important;
-          box-shadow: none !important;
-          border: none !important;
-          page-break-inside: avoid !important;
-          break-inside: avoid !important;
-        }
-
-        img {
-          max-width: 100% !important;
-          height: auto !important;
-          display: block !important;
-          margin: 0 auto !important;
-        }
-
-        hr {
-          border: none !important;
-          border-top: 1px solid #999 !important;
-          margin: 6px 0 !important;
-        }
+      body * {
+        visibility: hidden !important;
       }
-    `}</style>
-  );
+
+      #ticket, #ticket * {
+        visibility: visible !important;
+      }
+
+      .ticket-overlay {
+        position: static !important;
+        inset: auto !important;
+        background: #fff !important;
+        display: block !important;
+      }
+
+      .no-print {
+        display: none !important;
+      }
+
+      #ticket {
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 72mm !important;
+        max-width: 72mm !important;
+        min-width: 72mm !important;
+        margin: 0 !important;
+        padding: 2mm 3mm !important;
+        box-sizing: border-box !important;
+        overflow: visible !important;
+        background: #fff !important;
+        color: #000 !important;
+        box-shadow: none !important;
+        border: none !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+      }
+
+      img, svg, canvas {
+        max-width: 100% !important;
+        height: auto !important;
+        display: block !important;
+        margin: 0 auto !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+      }
+
+      hr {
+        border: none !important;
+        border-top: 1px solid #999 !important;
+        margin: 4px 0 !important;
+      }
+
+      p, div, span, h1, h2, h3, h4, h5, h6 {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+      }
+    }
+  `}</style>
+);
 
   function imprimirSoloTicket() {
     requestAnimationFrame(() => {
@@ -165,19 +174,18 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
         <div
           id="ticket"
           style={{
-            width: "72mm",
-            maxWidth: "72mm",
-            background: "white",
-            color: "black",
-            padding: "3mm",
-            fontFamily: "monospace",
-            fontSize: 11,
-            lineHeight: 1.2,
-            boxSizing: "border-box",
-            overflow: "visible",
-            pageBreakInside: "avoid",
-            breakInside: "avoid",
-          }}
+  position: "relative",
+  width: "72mm",
+  maxWidth: "72mm",
+  background: "white",
+  color: "black",
+  padding: "3mm",
+  boxSizing: "border-box",
+  fontFamily: "monospace",
+  overflow: "visible",
+  pageBreakInside: "avoid",
+  breakInside: "avoid",
+}}
         >
           <pre
             style={{
@@ -222,17 +230,18 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
         <div
           id="ticket"
           style={{
-            position: "relative",
-            width: "72mm",
-            maxWidth: "72mm",
-            background: "white",
-            color: "black",
-            padding: "3mm",
-            boxSizing: "border-box",
-            fontFamily: "monospace",
-            pageBreakInside: "avoid",
-            breakInside: "avoid",
-          }}
+  position: "relative",
+  width: "72mm",
+  maxWidth: "72mm",
+  background: "white",
+  color: "black",
+  padding: "3mm",
+  boxSizing: "border-box",
+  fontFamily: "monospace",
+  overflow: "visible",
+  pageBreakInside: "avoid",
+  breakInside: "avoid",
+}}
         >
           {/* MARCA DE AGUA PEDIDO */}
           <div
@@ -255,7 +264,7 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
 
           <div style={{ position: "relative", zIndex: 1 }}>
             <h3 style={{ textAlign: "center", margin: 0 }}>VIVERO ABIDAN</h3>
-            <p style={{ textAlign: "center", fontSize: 12, marginTop: 6, marginBottom: 6 }}>
+            <p style={{ textAlign: "center", fontSize: 10, marginTop: 4, marginBottom: 4 }}>
               PEDIDO
             </p>
 
@@ -271,7 +280,7 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
             <hr />
 
             {/* LISTADO PEDIDO */}
-            <div style={{ fontSize: 12 }}>
+            <div style={{ fontSize: 11 }}>
               <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
                 <b style={{ width: 70 }}>Cantidad</b>
                 <b style={{ flex: 1 }}>Producto</b>
@@ -283,31 +292,34 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
                 </div>
               ) : (
                 items.map((it, idx) => {
-                  const cant = Number(it.cantidad || 0);
-                  const nombre = String(
-                    it.producto_nombre || it.nombre || it.codigo || "SIN NOMBRE"
-                  );
+  const cant = Number(it.cantidad || 0);
+  const pu = Number(it.precio_unitario || 0);
+  const nombre = String(
+    it.producto_nombre || it.nombre || it.codigo || "SIN NOMBRE"
+  );
 
-                  return (
-                    <div
-                      key={idx}
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        gap: 8,
-                        marginTop: 6,
-                        alignItems: "flex-start",
-                      }}
-                    >
-                      <span style={{ flex: 1, lineHeight: 1.15 }}>
-  {nombre}
-  <div style={{ fontSize: 11, fontWeight: "bold", color: "#000" }}>
-    {money(pu)}
-  </div>
-</span>
-                    </div>
-                  );
-                })
+  return (
+    <div
+      key={idx}
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        gap: 8,
+        marginTop: 6,
+        alignItems: "flex-start",
+      }}
+    >
+      <span style={{ width: 28 }}>{cant}</span>
+
+      <span style={{ flex: 1, lineHeight: 1.15 }}>
+        {nombre}
+        <div style={{ fontSize: 10, fontWeight: "bold", color: "#000" }}>
+          {money(pu)}
+        </div>
+      </span>
+    </div>
+  );
+})
               )}
             </div>
 
@@ -360,17 +372,18 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
       <div
         id="ticket"
         style={{
-          position: "relative",
-          width: "72mm",
-          maxWidth: "72mm",
-          background: "white",
-          color: "black",
-          padding: "3mm",
-          boxSizing: "border-box",
-          fontFamily: "monospace",
-          pageBreakInside: "avoid",
-          breakInside: "avoid",
-        }}
+  position: "relative",
+  width: "72mm",
+  maxWidth: "72mm",
+  background: "white",
+  color: "black",
+  padding: "3mm",
+  boxSizing: "border-box",
+  fontFamily: "monospace",
+  overflow: "visible",
+  pageBreakInside: "avoid",
+  breakInside: "avoid",
+}}
       >
         {/* MARCA DE AGUA */}
         {esCotizacionNormal && (
@@ -395,7 +408,7 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
 
         <div style={{ position: "relative", zIndex: 1 }}>
           <h3 style={{ textAlign: "center", margin: 0 }}>VIVERO ABIDAN</h3>
-          <p style={{ textAlign: "center", fontSize: 12, marginTop: 6 }}>
+          <p style={{ textAlign: "center", fontSize: 10, marginTop: 4, marginBottom: 4, lineHeight: 1.15 }}>
             Carretera Nacional Km 253
             <br />
             Col. Los Rodríguez, Santiago, N.L
@@ -409,7 +422,7 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
 
           <hr />
 
-          <p style={{ fontSize: 12, margin: 0 }}>
+          <p style={{ fontSize: 11, margin: 0, lineHeight: 1.15 }}>
             <b>No. Ticket:</b> {venta.id ?? "—"}
             <br />
             <b>Fecha:</b>{" "}
@@ -519,8 +532,8 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
                 )}`}
                 alt="QR WhatsApp Facturación"
                 style={{
-                  width: 130,
-                  height: 130,
+                  width: 80,
+                  height: 80,
                   objectFit: "contain",
                   imageRendering: "pixelated",
                 }}
@@ -547,7 +560,7 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
 
           <hr />
 
-          <p style={{ fontSize: 11, textAlign: "center", margin: 0 }}>
+          <p style={{ fontSize: 10, textAlign: "center", margin: 0, lineHeight: 1.1 }}>
             ESTIMADO CLIENTE
             <br />
             POR LA SEGURIDAD DE AMBAS PARTES
