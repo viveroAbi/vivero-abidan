@@ -1601,41 +1601,118 @@ async function onCreateUserSubmit(e) {
 }
 
   function onChangeTipoPago(e) {
-    const value = e.target.value;
+  const value = e.target.value;
 
-    setForm((f) => {
-     const total = Number(totalFinalUI || 0);
+  setForm((f) => {
+    const total = Number(totalFinalUI || 0);
 
-      if (value === "efectivo") {
-        return {
-          ...f,
-          tipoPago: value,
-          efectivo: total ? String(total) : "",
-          tarjeta: "0",
-        };
-      }
+    if (value === "efectivo") {
+      return {
+        ...f,
+        tipoPago: value,
+        efectivo: total ? String(total) : "",
+        tarjeta: "0",
+        recibido: "",
+        cambio: "",
+      };
+    }
 
-      if (value === "tarjeta_credito" || value === "tarjeta_debito") {
-        return {
-          ...f,
-          tipoPago: value,
-          efectivo: "0",
-          tarjeta: total ? String(total) : "",
-        };
-      }
+    if (value === "tarjeta_credito" || value === "tarjeta_debito") {
+      return {
+        ...f,
+        tipoPago: value,
+        efectivo: "0",
+        tarjeta: total ? String(total) : "",
+        recibido: "",
+        cambio: "",
+      };
+    }
 
-      if (value === "transferencia" || value === "cheque") {
-        return { ...f, tipoPago: value, efectivo: "0", tarjeta: "0" };
-      }
+    if (value === "transferencia" || value === "cheque") {
+      return {
+        ...f,
+        tipoPago: value,
+        efectivo: "0",
+        tarjeta: "0",
+        recibido: "",
+        cambio: "",
+      };
+    }
 
-      if (value === "mixto") {
-        return { ...f, tipoPago: value };
-      }
+    if (value === "mixto") {
+      return {
+        ...f,
+        tipoPago: value,
+        efectivo: "",
+        tarjeta: "",
+        recibido: "",
+        cambio: "",
+      };
+    }
 
-      return { ...f, tipoPago: value };
-    });
-  }
+    if (value === "a_cuenta") {
+      return {
+        ...f,
+        tipoPago: value,
+        efectivo: "0",
+        tarjeta: "0",
+        recibido: "",
+        cambio: "",
+      };
+    }
 
+    return { ...f, tipoPago: value };
+  });
+}
+function onChangeMixtoEfectivo(e) {
+  const value = e.target.value;
+
+  setForm((f) => {
+    if (value === "") {
+      return { ...f, efectivo: "", tarjeta: "" };
+    }
+
+    let efectivo = Number(value);
+    const total = Number(totalFinalUI || 0);
+
+    if (!Number.isFinite(efectivo)) efectivo = 0;
+    if (efectivo < 0) efectivo = 0;
+    if (efectivo > total) efectivo = total;
+
+    const tarjeta = Number((total - efectivo).toFixed(2));
+
+    return {
+      ...f,
+      efectivo: String(efectivo),
+      tarjeta: String(tarjeta),
+    };
+  });
+}
+
+function onChangeMixtoTarjeta(e) {
+  const value = e.target.value;
+
+  setForm((f) => {
+    if (value === "") {
+      return { ...f, tarjeta: "", efectivo: "" };
+    }
+
+    let tarjeta = Number(value);
+    const total = Number(totalFinalUI || 0);
+
+    if (!Number.isFinite(tarjeta)) tarjeta = 0;
+    if (tarjeta < 0) tarjeta = 0;
+    if (tarjeta > total) tarjeta = total;
+
+    const efectivo = Number((total - tarjeta).toFixed(2));
+
+    return {
+      ...f,
+      tarjeta: String(tarjeta),
+      efectivo: String(efectivo),
+    };
+  });
+}
   async function onSubmit(e) {
     e.preventDefault();
     setMessage("", "");
@@ -1655,18 +1732,23 @@ async function onCreateUserSubmit(e) {
   return;
 }
 
-    const sumaMixto = Number((efectivoNum + tarjetaNum).toFixed(2));
+   const sumaMixto = Number((efectivoNum + tarjetaNum).toFixed(2));
 const totalEsperado = Number(Number(totalFinalUI).toFixed(2));
 
-if (isMixto && sumaMixto !== totalEsperado) {
-  
-      setMessage(
-        "error",
-        "En pago mixto: efectivo + tarjeta debe ser igual al total."
-      );
-      return;
-    }
+if (isMixto) {
+  if (efectivoNum < 0 || tarjetaNum < 0) {
+    setMessage("error", "En pago mixto no se permiten cantidades negativas.");
+    return;
+  }
 
+  if (sumaMixto !== totalEsperado) {
+    setMessage(
+      "error",
+      "En pago mixto: efectivo + tarjeta debe ser igual al total."
+    );
+    return;
+  }
+}
     const items = carrito.map((it) => ({
   producto_id: it.producto_id,
   cantidad: Number(it.cantidad),
@@ -2606,26 +2688,35 @@ if (view === "movimientos") {
 
         
 
-        {(form.tipoPago === "efectivo" || form.tipoPago === "mixto") && (
-          <>
-            <label style={labelStyle}>
-              Recibido:
-              <input
-                name="recibido"
-                value={form.recibido}
-                onChange={onChange}
-                type="number"
-                step="0.01"
-                style={inputStyle}
-                placeholder="Ej: 500"
-              />
-            </label>
+        {form.tipoPago === "mixto" && (
+  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+    <label style={labelStyle}>
+      Efectivo:
+      <input
+        type="number"
+        min="0"
+        step="0.01"
+        name="efectivo"
+        value={form.efectivo}
+        onChange={onChangeMixtoEfectivo}
+        style={inputStyle}
+      />
+    </label>
 
-            <div style={{ marginTop: 6, color: theme.muted, fontSize: 13 }}>
-              Cambio: <b>{money(cambioNum)}</b>
-            </div>
-          </>
-        )}
+    <label style={labelStyle}>
+      Tarjeta:
+      <input
+        type="number"
+        min="0"
+        step="0.01"
+        name="tarjeta"
+        value={form.tarjeta}
+        onChange={onChangeMixtoTarjeta}
+        style={inputStyle}
+      />
+    </label>
+  </div>
+)}
         {(form.tipoPago === "efectivo") && clienteSeleccionado && cambioNum > 0 && (
   <label style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 6 }}>
     <input

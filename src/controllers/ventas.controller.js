@@ -18,6 +18,7 @@ const tiposPagoValidos = [
   "transferencia",
   "cheque",
   "mixto",
+  "a_cuenta",
 ];
 
 const getTipoPagoLabel = (tipoPago) =>
@@ -144,6 +145,9 @@ export const crearVenta = async (req, res) => {
     requiere_factura = 0,
     esCotizacion = false,
     esCotizacionPedido = false,
+    abono_inicial = 0,
+    fecha_vencimiento = null,
+    observaciones_credito = "",
     items = [],
   } = req.body;
 
@@ -169,14 +173,17 @@ export const crearVenta = async (req, res) => {
     return res.status(400).json({ error: "La venta debe traer items" });
   }
 
-  if (!esCotizacionFinal && categoria === "publico" && tipoPago !== "efectivo") {
+  if (!esCotizacionFinal && categoria === "publico" && !["efectivo", "a_cuenta"].includes(tipoPago)) {
     return res.status(400).json({
-      error: "Venta al público solo acepta efectivo",
+      error: "Venta al público solo acepta efectivo o a cuenta",
     });
   }
 
   const recibidoN = Number(recibido || 0);
   const cambioN = Number(cambio || 0);
+  const efectivoN = Number(efectivo || 0);
+  const tarjetaN = Number(tarjeta || 0);
+  const abonoInicialN = Number(abono_inicial || 0);
 
   if (!Number.isFinite(recibidoN) || recibidoN < 0) {
     return res.status(400).json({ error: "Recibido inválido" });
@@ -184,6 +191,10 @@ export const crearVenta = async (req, res) => {
 
   if (!Number.isFinite(cambioN) || cambioN < 0) {
     return res.status(400).json({ error: "Cambio inválido" });
+  }
+
+  if (!Number.isFinite(abonoInicialN) || abonoInicialN < 0) {
+    return res.status(400).json({ error: "Abono inicial inválido" });
   }
 
   const requiereFactura = Number(requiere_factura || 0) === 1;
@@ -214,9 +225,14 @@ export const crearVenta = async (req, res) => {
         cambio,
         es_cotizacion,
         es_cotizacion_pedido,
-        requiere_factura
+        requiere_factura,
+        abono_inicial,
+        saldo_pendiente,
+        fecha_deuda,
+        fecha_vencimiento,
+        observaciones_credito
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         categoria,
         clienteId,
@@ -225,13 +241,18 @@ export const crearVenta = async (req, res) => {
         0,
         0,
         0,
-        Number(efectivo || 0),
-        Number(tarjeta || 0),
+        efectivoN,
+        tarjetaN,
         recibidoN,
         cambioN,
         isCotizacion ? 1 : 0,
         isCotizacionPedido ? 1 : 0,
         requiereFactura ? 1 : 0,
+        abonoInicialN,
+        0,
+        tipoPago === "a_cuenta" ? new Date() : null,
+        fecha_vencimiento || null,
+        String(observaciones_credito || "").trim() || null,
       ]
     );
 
@@ -332,22 +353,31 @@ export const crearVenta = async (req, res) => {
     const totalConIVA = Number((totalSinIVA + totalIVA).toFixed(2));
 
     let saldoAplicado = 0;
+    let saldoPendiente = 0;
+    let clienteInfo = null;
 
     if (clienteId) {
       const [[cli]] = await conn.query(
-        "SELECT saldo_favor FROM clientes WHERE id = ? LIMIT 1 FOR UPDATE",
+        `SELECT id, nombre, notas, saldo_favor, saldo_actual, permite_credito, deuda_maxima
+         FROM clientes
+         WHERE id = ?
+         LIMIT 1
+         FOR UPDATE`,
         [clienteId]
       );
 
-      const saldoAntes = Number(cli?.saldo_favor || 0);
+      if (!cli) {
+        throw new Error("Cliente no encontrado");
+      }
+
+      clienteInfo = cli;
       saldoAplicado = 0;
-      void saldoAntes;
     }
 
     const totalACobrar = Number((totalConIVA - saldoAplicado).toFixed(2));
 
     if (tipoPago === "mixto") {
-      const suma = Number((Number(efectivo) + Number(tarjeta)).toFixed(2));
+      const suma = Number((efectivoN + tarjetaN).toFixed(2));
       if (suma !== Number(totalConIVA.toFixed(2))) {
         throw new Error("El pago mixto no coincide con el total final");
       }
@@ -355,7 +385,7 @@ export const crearVenta = async (req, res) => {
 
     if (
       (tipoPago === "tarjeta_credito" || tipoPago === "tarjeta_debito") &&
-      Number(Number(tarjeta).toFixed(2)) !== Number(totalConIVA.toFixed(2))
+      Number(tarjetaN.toFixed(2)) !== Number(totalConIVA.toFixed(2))
     ) {
       throw new Error("El monto en tarjeta debe ser igual al total final");
     }
@@ -385,6 +415,60 @@ export const crearVenta = async (req, res) => {
       }
     }
 
+    if (!esCotizacionFinal && tipoPago === "a_cuenta") {
+      if (!clienteId) {
+        throw new Error("Para pago a cuenta debes seleccionar un cliente");
+      }
+
+      if (!clienteInfo) {
+        throw new Error("Cliente no encontrado");
+      }
+
+      const permiteCredito = Number(clienteInfo.permite_credito || 0) === 1;
+      const deudaMaxima = Number(clienteInfo.deuda_maxima || 0);
+      const saldoActualCliente = Number(clienteInfo.saldo_actual || 0);
+
+      if (!permiteCredito) {
+        throw new Error("El cliente no tiene crédito habilitado");
+      }
+
+      if (abonoInicialN > totalConIVA) {
+        throw new Error("El abono inicial no puede ser mayor al total final");
+      }
+
+      saldoPendiente = Number((totalConIVA - abonoInicialN).toFixed(2));
+      const nuevoSaldoCliente = Number((saldoActualCliente + saldoPendiente).toFixed(2));
+
+      if (nuevoSaldoCliente > deudaMaxima) {
+        throw new Error(
+          `El cliente supera la deuda permitida. Límite: ${deudaMaxima.toFixed(2)}, saldo actual: ${saldoActualCliente.toFixed(2)}, pendiente nuevo: ${saldoPendiente.toFixed(2)}`
+        );
+      }
+
+      await conn.query(
+        `UPDATE clientes
+         SET saldo_actual = ?
+         WHERE id = ?`,
+        [nuevoSaldoCliente, clienteId]
+      );
+
+      await conn.query(
+        `UPDATE ventas
+         SET efectivo = ?, tarjeta = 0, recibido = ?, cambio = 0, abono_inicial = ?, saldo_pendiente = ?, fecha_deuda = ?, fecha_vencimiento = ?, observaciones_credito = ?
+         WHERE id = ?`,
+        [
+          abonoInicialN,
+          abonoInicialN,
+          abonoInicialN,
+          saldoPendiente,
+          new Date(),
+          fecha_vencimiento || null,
+          String(observaciones_credito || "").trim() || null,
+          ventaId,
+        ]
+      );
+    }
+
     await conn.query(
       `UPDATE ventas
        SET total = ?, descuento_pct = ?, descuento = ?, total_iva = ?, total_final = ?
@@ -410,6 +494,8 @@ export const crearVenta = async (req, res) => {
         tipoPagoLabel: getTipoPagoLabel(tipoPago),
         esCotizacion: isCotizacion,
         esCotizacionPedido: isCotizacionPedido,
+        abonoInicial: Number(abonoInicialN),
+        saldoPendiente: Number(saldoPendiente),
       },
     });
   } catch (err) {
@@ -562,6 +648,9 @@ export const editarVenta = async (req, res) => {
     requiere_factura = 0,
     esCotizacion = false,
     esCotizacionPedido = false,
+    abono_inicial = 0,
+    fecha_vencimiento = null,
+    observaciones_credito = "",
     items = [],
   } = req.body;
 
@@ -587,14 +676,17 @@ export const editarVenta = async (req, res) => {
     return res.status(400).json({ error: "Debe traer items" });
   }
 
-  if (!esCotizacionFinal && categoria === "publico" && tipoPago !== "efectivo") {
+  if (!esCotizacionFinal && categoria === "publico" && !["efectivo", "a_cuenta"].includes(tipoPago)) {
     return res.status(400).json({
-      error: "Venta al público solo acepta efectivo",
+      error: "Venta al público solo acepta efectivo o a cuenta",
     });
   }
 
   const recibidoN = Number(recibido || 0);
   const cambioN = Number(cambio || 0);
+  const efectivoN = Number(efectivo || 0);
+  const tarjetaN = Number(tarjeta || 0);
+  const abonoInicialN = Number(abono_inicial || 0);
 
   if (!Number.isFinite(recibidoN) || recibidoN < 0) {
     return res.status(400).json({ error: "Recibido inválido" });
@@ -602,6 +694,10 @@ export const editarVenta = async (req, res) => {
 
   if (!Number.isFinite(cambioN) || cambioN < 0) {
     return res.status(400).json({ error: "Cambio inválido" });
+  }
+
+  if (!Number.isFinite(abonoInicialN) || abonoInicialN < 0) {
+    return res.status(400).json({ error: "Abono inicial inválido" });
   }
 
   const requiereFactura = Number(requiere_factura || 0) === 1;
@@ -617,7 +713,7 @@ export const editarVenta = async (req, res) => {
     await conn.beginTransaction();
 
     const [ventaRows] = await conn.query(
-      `SELECT id, es_cotizacion, es_cotizacion_pedido
+      `SELECT id, cliente_id, tipo_pago, es_cotizacion, es_cotizacion_pedido, saldo_pendiente
        FROM ventas
        WHERE id = ?
        FOR UPDATE`,
@@ -633,6 +729,19 @@ export const editarVenta = async (req, res) => {
     const ventaAnteriorEraCotizacion =
       Number(ventaAnterior.es_cotizacion) === 1 ||
       Number(ventaAnterior.es_cotizacion_pedido) === 1;
+
+    if (ventaAnterior.tipo_pago === "a_cuenta" && ventaAnterior.cliente_id) {
+      const saldoPendienteAnterior = Number(ventaAnterior.saldo_pendiente || 0);
+
+      if (saldoPendienteAnterior > 0) {
+        await conn.query(
+          `UPDATE clientes
+           SET saldo_actual = GREATEST(COALESCE(saldo_actual, 0) - ?, 0)
+           WHERE id = ?`,
+          [saldoPendienteAnterior, ventaAnterior.cliente_id]
+        );
+      }
+    }
 
     const [itemsAnteriores] = await conn.query(
       `SELECT producto_id, cantidad
@@ -668,17 +777,23 @@ export const editarVenta = async (req, res) => {
 
     await conn.query(
       `UPDATE ventas
-       SET categoria = ?, cliente_id = ?, tipo_pago = ?, efectivo = ?, tarjeta = ?, es_cotizacion = ?, es_cotizacion_pedido = ?, requiere_factura = ?
+       SET categoria = ?, cliente_id = ?, tipo_pago = ?, efectivo = ?, tarjeta = ?, recibido = ?, cambio = ?, es_cotizacion = ?, es_cotizacion_pedido = ?, requiere_factura = ?, abono_inicial = ?, saldo_pendiente = 0, fecha_deuda = ?, fecha_vencimiento = ?, observaciones_credito = ?
        WHERE id = ?`,
       [
         categoria,
         clienteId,
         tipoPago,
-        Number(efectivo || 0),
-        Number(tarjeta || 0),
+        efectivoN,
+        tarjetaN,
+        recibidoN,
+        cambioN,
         isCotizacion ? 1 : 0,
         isCotizacionPedido ? 1 : 0,
         requiereFactura ? 1 : 0,
+        abonoInicialN,
+        tipoPago === "a_cuenta" ? new Date() : null,
+        fecha_vencimiento || null,
+        String(observaciones_credito || "").trim() || null,
         id,
       ]
     );
@@ -798,8 +913,25 @@ export const editarVenta = async (req, res) => {
     const totalSinIVA = Number(total.toFixed(2));
     const totalConIVA = Number((totalSinIVA + totalIVA).toFixed(2));
 
-    const efectivoN = Number(efectivo || 0);
-    const tarjetaN = Number(tarjeta || 0);
+    let saldoPendiente = 0;
+    let clienteInfo = null;
+
+    if (clienteId) {
+      const [[cli]] = await conn.query(
+        `SELECT id, nombre, notas, saldo_favor, saldo_actual, permite_credito, deuda_maxima
+         FROM clientes
+         WHERE id = ?
+         LIMIT 1
+         FOR UPDATE`,
+        [clienteId]
+      );
+
+      if (!cli) {
+        throw new Error("Cliente no encontrado");
+      }
+
+      clienteInfo = cli;
+    }
 
     if (tipoPago === "mixto") {
       const suma = Number((efectivoN + tarjetaN).toFixed(2));
@@ -849,6 +981,61 @@ export const editarVenta = async (req, res) => {
           [recibidoN, cambioReal, id]
         );
       }
+    } else if (!esCotizacionFinal && tipoPago === "a_cuenta") {
+      if (!clienteId) {
+        await conn.rollback();
+        return res.status(400).json({
+          error: "Para pago a cuenta debes seleccionar un cliente",
+        });
+      }
+
+      if (!clienteInfo) {
+        throw new Error("Cliente no encontrado");
+      }
+
+      const permiteCredito = Number(clienteInfo.permite_credito || 0) === 1;
+      const deudaMaxima = Number(clienteInfo.deuda_maxima || 0);
+      const saldoActualCliente = Number(clienteInfo.saldo_actual || 0);
+
+      if (!permiteCredito) {
+        throw new Error("El cliente no tiene crédito habilitado");
+      }
+
+      if (abonoInicialN > totalConIVA) {
+        throw new Error("El abono inicial no puede ser mayor al total final");
+      }
+
+      saldoPendiente = Number((totalConIVA - abonoInicialN).toFixed(2));
+      const nuevoSaldoCliente = Number((saldoActualCliente + saldoPendiente).toFixed(2));
+
+      if (nuevoSaldoCliente > deudaMaxima) {
+        throw new Error(
+          `El cliente supera la deuda permitida. Límite: ${deudaMaxima.toFixed(2)}, saldo actual: ${saldoActualCliente.toFixed(2)}, pendiente nuevo: ${saldoPendiente.toFixed(2)}`
+        );
+      }
+
+      await conn.query(
+        `UPDATE clientes
+         SET saldo_actual = ?
+         WHERE id = ?`,
+        [nuevoSaldoCliente, clienteId]
+      );
+
+      await conn.query(
+        `UPDATE ventas
+         SET efectivo = ?, tarjeta = 0, recibido = ?, cambio = 0, abono_inicial = ?, saldo_pendiente = ?, fecha_deuda = ?, fecha_vencimiento = ?, observaciones_credito = ?
+         WHERE id = ?`,
+        [
+          abonoInicialN,
+          abonoInicialN,
+          abonoInicialN,
+          saldoPendiente,
+          new Date(),
+          fecha_vencimiento || null,
+          String(observaciones_credito || "").trim() || null,
+          id,
+        ]
+      );
     } else {
       await conn.query(
         `UPDATE ventas SET recibido = 0, cambio = 0 WHERE id = ?`,
@@ -881,6 +1068,8 @@ export const editarVenta = async (req, res) => {
         tipoPagoLabel: getTipoPagoLabel(tipoPago),
         esCotizacion: isCotizacion,
         esCotizacionPedido: isCotizacionPedido,
+        abonoInicial: Number(abonoInicialN),
+        saldoPendiente: Number(saldoPendiente),
       },
     });
   } catch (err) {
