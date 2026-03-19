@@ -409,6 +409,12 @@ const totalNum = useMemo(() => Number(totalCarrito || 0), [totalCarrito]);
 const descuentoPctNum = 0;
 const descuentoMonto = 0;
 const totalFinalUI = totalNum;
+const saldoActualCliente = Number(clienteSeleccionado?.saldo_actual || 0);
+const deudaMaximaCliente = Number(clienteSeleccionado?.deuda_maxima || 0);
+const disponibleCreditoCliente = Number(
+  (deudaMaximaCliente - saldoActualCliente).toFixed(2)
+);
+const notasCliente = clienteSeleccionado?.notas || "";
 
 
   const efectivoNum = useMemo(
@@ -1756,6 +1762,31 @@ if (isMixto) {
     return;
   }
 }
+if (form.tipoPago === "a_cuenta" && !clienteSeleccionado?.id) {
+  setMessage("error", "Para pago a cuenta debes seleccionar un cliente.");
+  return;
+}
+
+if (
+  form.tipoPago === "a_cuenta" &&
+  clienteSeleccionado?.id &&
+  disponibleCreditoCliente < 0
+) {
+  setMessage("error", "El cliente ya superó su límite de crédito.");
+  return;
+}
+
+const abonoInicialNum = Number(form.efectivo || 0);
+const pendienteNuevo = Number((Number(totalFinalUI || 0) - abonoInicialNum).toFixed(2));
+
+if (
+  form.tipoPago === "a_cuenta" &&
+  clienteSeleccionado?.id &&
+  saldoActualCliente + pendienteNuevo > deudaMaximaCliente
+) {
+  setMessage("error", "La venta supera la deuda máxima permitida del cliente.");
+  return;
+}
 
     const items = carrito.map((it) => ({
   producto_id: it.producto_id,
@@ -2687,6 +2718,25 @@ if (view === "movimientos") {
         style={inputStyle}
       />
     </label>
+  </div>
+)}
+{form.tipoPago === "a_cuenta" && (
+  <div
+    style={{
+      marginTop: 10,
+      padding: 12,
+      border: "1px solid #d9e7d9",
+      borderRadius: 10,
+      background: "#f8fff8",
+      display: "grid",
+      gap: 8,
+    }}
+  >
+    <div><strong>Cliente:</strong> {clienteSeleccionado?.nombre || "Sin cliente seleccionado"}</div>
+    <div><strong>Saldo actual:</strong> ${saldoActualCliente.toFixed(2)}</div>
+    <div><strong>Deuda máxima:</strong> ${deudaMaximaCliente.toFixed(2)}</div>
+    <div><strong>Crédito disponible:</strong> ${disponibleCreditoCliente.toFixed(2)}</div>
+    <div><strong>Notas:</strong> {notasCliente || "Sin notas"}</div>
   </div>
 )}
 
