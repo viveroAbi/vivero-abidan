@@ -182,6 +182,8 @@ const [form, setForm] = useState({
   cambio: "",
   esCotizacion: false,
   esCotizacionPedido: false,
+  fecha_vencimiento: "",
+  observaciones_credito: "",
 });
 const [nuevoProducto, setNuevoProducto] = useState({
   nombre: "",
@@ -1138,6 +1140,8 @@ async function iniciarCamaraYDeteccion() {
   cambio: "",
   esCotizacion: false,
   esCotizacionPedido: false,
+  fecha_vencimiento: "",
+  observaciones_credito: "",
 });
 
   setEsCotizacionPedido(false);
@@ -1612,8 +1616,8 @@ async function onCreateUserSubmit(e) {
         tipoPago: value,
         efectivo: total ? String(total) : "",
         tarjeta: "0",
-        recibido: "",
-        cambio: "",
+        recibido: f.recibido || "",
+        cambio: f.cambio || "",
       };
     }
 
@@ -1623,8 +1627,8 @@ async function onCreateUserSubmit(e) {
         tipoPago: value,
         efectivo: "0",
         tarjeta: total ? String(total) : "",
-        recibido: "",
-        cambio: "",
+        recibido: f.recibido || "",
+        cambio: f.cambio || "",
       };
     }
 
@@ -1634,8 +1638,6 @@ async function onCreateUserSubmit(e) {
         tipoPago: value,
         efectivo: "0",
         tarjeta: "0",
-        recibido: "",
-        cambio: "",
       };
     }
 
@@ -1643,10 +1645,6 @@ async function onCreateUserSubmit(e) {
       return {
         ...f,
         tipoPago: value,
-        efectivo: "",
-        tarjeta: "",
-        recibido: "",
-        cambio: "",
       };
     }
 
@@ -1668,6 +1666,10 @@ function onChangeMixtoEfectivo(e) {
   const value = e.target.value;
 
   setForm((f) => {
+    if (f.tipoPago !== "mixto") {
+      return { ...f, efectivo: value };
+    }
+
     if (value === "") {
       return { ...f, efectivo: "", tarjeta: "" };
     }
@@ -1693,6 +1695,10 @@ function onChangeMixtoTarjeta(e) {
   const value = e.target.value;
 
   setForm((f) => {
+    if (f.tipoPago !== "mixto") {
+      return { ...f, tarjeta: value };
+    }
+
     if (value === "") {
       return { ...f, tarjeta: "", efectivo: "" };
     }
@@ -1713,6 +1719,7 @@ function onChangeMixtoTarjeta(e) {
     };
   });
 }
+
   async function onSubmit(e) {
     e.preventDefault();
     setMessage("", "");
@@ -1726,13 +1733,13 @@ function onChangeMixtoTarjeta(e) {
   !form.esCotizacion &&
   !esCotizacionPedido &&
   form.categoria === "publico" &&
-  form.tipoPago !== "efectivo"
+  !["efectivo", "a_cuenta"].includes(form.tipoPago)
 ) {
-  setMessage("error", "Venta al público solo acepta efectivo.");
+  setMessage("error", "Venta al público solo acepta efectivo o a cuenta.");
   return;
 }
 
-   const sumaMixto = Number((efectivoNum + tarjetaNum).toFixed(2));
+    const sumaMixto = Number((efectivoNum + tarjetaNum).toFixed(2));
 const totalEsperado = Number(Number(totalFinalUI).toFixed(2));
 
 if (isMixto) {
@@ -1749,6 +1756,7 @@ if (isMixto) {
     return;
   }
 }
+
     const items = carrito.map((it) => ({
   producto_id: it.producto_id,
   cantidad: Number(it.cantidad),
@@ -1767,6 +1775,9 @@ const payload = {
   cambio: Number(cambioNum || 0),
   esCotizacion: form.esCotizacion,
   guardarSaldoFavor,
+  abono_inicial: form.tipoPago === "a_cuenta" ? Number(form.efectivo || 0) : 0,
+  fecha_vencimiento: form.fecha_vencimiento || null,
+  observaciones_credito: form.observaciones_credito || "",
   items,
 };
     try {
@@ -2638,26 +2649,53 @@ if (view === "movimientos") {
         <label style={labelStyle}>
           Tipo de pago:
           <select
-            name="tipoPago"
-            value={form.tipoPago}
-            onChange={onChangeTipoPago}
-            style={inputStyle}
-          >
-            <option value="efectivo">Efectivo</option>
-            <option value="tarjeta_credito">Tarjeta (Crédito)</option>
-            <option value="tarjeta_debito">Tarjeta (Débito)</option>
-            <option value="transferencia">Transferencia</option>
-            <option value="cheque">Cheque</option>
-            <option value="mixto">Mixto</option>
-          </select>
+  name="tipoPago"
+  value={form.tipoPago}
+  onChange={onChangeTipoPago}
+  style={inputStyle}
+>
+  <option value="efectivo">Efectivo</option>
+  <option value="tarjeta_credito">Tarjeta (Crédito)</option>
+  <option value="tarjeta_debito">Tarjeta (Débito)</option>
+  <option value="transferencia">Transferencia</option>
+  <option value="cheque">Cheque</option>
+  <option value="mixto">Mixto</option>
+  <option value="a_cuenta">A cuenta</option>
+</select>
         </label>
+        {form.tipoPago === "a_cuenta" && (
+  <div style={{ display: "grid", gap: 10, marginTop: 10 }}>
+    <label style={labelStyle}>
+      Fecha de vencimiento:
+      <input
+        type="date"
+        name="fecha_vencimiento"
+        value={form.fecha_vencimiento}
+        onChange={onChange}
+        style={inputStyle}
+      />
+    </label>
+
+    <label style={labelStyle}>
+      Observaciones de crédito:
+      <input
+        type="text"
+        name="observaciones_credito"
+        value={form.observaciones_credito}
+        onChange={onChange}
+        placeholder="Notas del crédito"
+        style={inputStyle}
+      />
+    </label>
+  </div>
+)}
 
         <label style={labelStyle}>
           Efectivo:
           <input
             name="efectivo"
             value={form.efectivo}
-            onChange={onChange}
+            onChange={onChangeMixtoEfectivo}
             type="number"
             step="0.01"
             style={inputStyle}
@@ -2674,7 +2712,7 @@ if (view === "movimientos") {
           <input
             name="tarjeta"
             value={form.tarjeta}
-            onChange={onChange}
+            onChange={onChangeMixtoTarjeta}
             type="number"
             step="0.01"
             style={inputStyle}
@@ -2688,35 +2726,26 @@ if (view === "movimientos") {
 
         
 
-        {form.tipoPago === "mixto" && (
-  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-    <label style={labelStyle}>
-      Efectivo:
-      <input
-        type="number"
-        min="0"
-        step="0.01"
-        name="efectivo"
-        value={form.efectivo}
-        onChange={onChangeMixtoEfectivo}
-        style={inputStyle}
-      />
-    </label>
+        {(form.tipoPago === "efectivo" || form.tipoPago === "mixto") && (
+          <>
+            <label style={labelStyle}>
+              Recibido:
+              <input
+                name="recibido"
+                value={form.recibido}
+                onChange={onChange}
+                type="number"
+                step="0.01"
+                style={inputStyle}
+                placeholder="Ej: 500"
+              />
+            </label>
 
-    <label style={labelStyle}>
-      Tarjeta:
-      <input
-        type="number"
-        min="0"
-        step="0.01"
-        name="tarjeta"
-        value={form.tarjeta}
-        onChange={onChangeMixtoTarjeta}
-        style={inputStyle}
-      />
-    </label>
-  </div>
-)}
+            <div style={{ marginTop: 6, color: theme.muted, fontSize: 13 }}>
+              Cambio: <b>{money(cambioNum)}</b>
+            </div>
+          </>
+        )}
         {(form.tipoPago === "efectivo") && clienteSeleccionado && cambioNum > 0 && (
   <label style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 6 }}>
     <input
