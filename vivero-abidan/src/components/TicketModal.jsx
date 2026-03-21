@@ -26,6 +26,7 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
           margin: 0 !important;
           padding: 0 !important;
           background: #fff !important;
+          overflow: visible !important;
         }
 
         body * {
@@ -50,14 +51,14 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
         }
 
         #ticket {
-          position: absolute !important;
-          left: 0 !important;
-          top: 0 !important;
+          position: static !important;
+          left: auto !important;
+          top: auto !important;
           width: 72mm !important;
           max-width: 72mm !important;
           min-width: 72mm !important;
           max-height: none !important;
-          margin: 0 !important;
+          margin: 0 auto !important;
           padding: 2mm 3mm !important;
           box-sizing: border-box !important;
           overflow: visible !important;
@@ -65,8 +66,8 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
           color: #000 !important;
           box-shadow: none !important;
           border: none !important;
-          page-break-inside: avoid !important;
-          break-inside: avoid !important;
+          page-break-inside: auto !important;
+          break-inside: auto !important;
         }
 
         img, svg, canvas {
@@ -74,8 +75,8 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
           height: auto !important;
           display: block !important;
           margin: 0 auto !important;
-          page-break-inside: avoid !important;
-          break-inside: avoid !important;
+          page-break-inside: auto !important;
+          break-inside: auto !important;
         }
 
         hr {
@@ -85,8 +86,8 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
         }
 
         p, div, span, h1, h2, h3, h4, h5, h6, pre {
-          page-break-inside: avoid !important;
-          break-inside: avoid !important;
+          page-break-inside: auto !important;
+          break-inside: auto !important;
         }
       }
     `}</style>
@@ -117,9 +118,6 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
               padding: 0;
               background: #fff;
               font-family: monospace;
-            }
-
-            body {
               overflow: visible;
             }
 
@@ -134,6 +132,7 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
               height: auto;
               max-height: none;
               overflow: visible;
+              margin: 0 auto;
             }
 
             img, svg, canvas {
@@ -150,8 +149,8 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
             }
 
             p, div, span, h1, h2, h3, h4, h5, h6, pre {
-              break-inside: avoid;
-              page-break-inside: avoid;
+              break-inside: auto;
+              page-break-inside: auto;
             }
           </style>
         </head>
@@ -260,8 +259,8 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
             maxHeight: "90vh",
             overflowY: "auto",
             overflowX: "hidden",
-            pageBreakInside: "avoid",
-            breakInside: "avoid",
+            pageBreakInside: "auto",
+            breakInside: "auto",
           }}
         >
           <div id="ticket-contenido">
@@ -321,8 +320,8 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
             maxHeight: "90vh",
             overflowY: "auto",
             overflowX: "hidden",
-            pageBreakInside: "avoid",
-            breakInside: "avoid",
+            pageBreakInside: "auto",
+            breakInside: "auto",
           }}
         >
           <div id="ticket-contenido">
@@ -466,8 +465,8 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
           maxHeight: "90vh",
           overflowY: "auto",
           overflowX: "hidden",
-          pageBreakInside: "avoid",
-          breakInside: "avoid",
+          pageBreakInside: "auto",
+          breakInside: "auto",
         }}
       >
         <div id="ticket-contenido">
@@ -612,8 +611,8 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
                   textAlign: "center",
                   marginTop: 10,
                   marginBottom: 6,
-                  pageBreakInside: "avoid",
-                  breakInside: "avoid",
+                  pageBreakInside: "auto",
+                  breakInside: "auto",
                 }}
               >
                 <img
