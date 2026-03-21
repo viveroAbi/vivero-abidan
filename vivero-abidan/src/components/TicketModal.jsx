@@ -1,4 +1,3 @@
-// src/components/TicketModal.jsx
 export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 }) {
   const venta = data?.venta || {};
   const items = Array.isArray(data?.items) ? data.items : [];
@@ -8,6 +7,17 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
       @page {
         size: 80mm auto;
         margin: 0;
+      }
+
+      .ticket-overlay {
+        overflow-y: auto;
+        padding: 20px 0;
+      }
+
+      #ticket {
+        max-height: 90vh;
+        overflow-y: auto;
+        overflow-x: hidden;
       }
 
       @media print {
@@ -31,6 +41,8 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
           inset: auto !important;
           background: #fff !important;
           display: block !important;
+          overflow: visible !important;
+          padding: 0 !important;
         }
 
         .no-print {
@@ -44,6 +56,7 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
           width: 72mm !important;
           max-width: 72mm !important;
           min-width: 72mm !important;
+          max-height: none !important;
           margin: 0 !important;
           padding: 2mm 3mm !important;
           box-sizing: border-box !important;
@@ -118,6 +131,9 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
               box-sizing: border-box;
               color: #000;
               background: #fff;
+              height: auto;
+              max-height: none;
+              overflow: visible;
             }
 
             img, svg, canvas {
@@ -213,7 +229,6 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
     0
   );
 
-  // ===== TICKET DE CORTE =====
   if (data?.tipo === "corte") {
     return (
       <div
@@ -223,8 +238,10 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
           inset: 0,
           background: "rgba(0,0,0,0.6)",
           display: "grid",
-          placeItems: "center",
+          placeItems: "start center",
           zIndex: 1000,
+          overflowY: "auto",
+          padding: "20px 0",
         }}
       >
         {printStyles}
@@ -240,7 +257,9 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
             padding: "3mm",
             boxSizing: "border-box",
             fontFamily: "monospace",
-            overflow: "visible",
+            maxHeight: "90vh",
+            overflowY: "auto",
+            overflowX: "hidden",
             pageBreakInside: "avoid",
             breakInside: "avoid",
           }}
@@ -271,7 +290,6 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
     );
   }
 
-  // ===== TICKET DE PEDIDO =====
   if (esCotizacionPedido) {
     return (
       <div
@@ -281,8 +299,10 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
           inset: 0,
           background: "rgba(0,0,0,0.6)",
           display: "grid",
-          placeItems: "center",
+          placeItems: "start center",
           zIndex: 1000,
+          overflowY: "auto",
+          padding: "20px 0",
         }}
       >
         {printStyles}
@@ -298,7 +318,9 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
             padding: "3mm",
             boxSizing: "border-box",
             fontFamily: "monospace",
-            overflow: "visible",
+            maxHeight: "90vh",
+            overflowY: "auto",
+            overflowX: "hidden",
             pageBreakInside: "avoid",
             breakInside: "avoid",
           }}
@@ -414,7 +436,6 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
     );
   }
 
-  // ===== TICKET NORMAL =====
   return (
     <div
       className="ticket-overlay"
@@ -423,8 +444,10 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
         inset: 0,
         background: "rgba(0,0,0,0.6)",
         display: "grid",
-        placeItems: "center",
+        placeItems: "start center",
         zIndex: 1000,
+        overflowY: "auto",
+        padding: "20px 0",
       }}
     >
       {printStyles}
@@ -440,7 +463,9 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
           padding: "3mm",
           boxSizing: "border-box",
           fontFamily: "monospace",
-          overflow: "visible",
+          maxHeight: "90vh",
+          overflowY: "auto",
+          overflowX: "hidden",
           pageBreakInside: "avoid",
           breakInside: "avoid",
         }}
