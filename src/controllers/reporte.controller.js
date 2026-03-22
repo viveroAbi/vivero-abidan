@@ -2,10 +2,15 @@ import { pool } from "../config/db.js";
 
 // Helpers
 const money = (n) =>
-  Number(n || 0).toLocaleString("es-MX", { style: "currency", currency: "MXN" });
+  Number(n || 0).toLocaleString("es-MX", {
+    style: "currency",
+    currency: "MXN",
+  });
 
 const fmtFechaMX = (date) =>
-  new Intl.DateTimeFormat("es-MX", { timeZone: "America/Mexico_City" }).format(date);
+  new Intl.DateTimeFormat("es-MX", {
+    timeZone: "America/Mexico_City",
+  }).format(date);
 
 const fmtHoraMX = (date) =>
   new Intl.DateTimeFormat("es-MX", {
@@ -14,7 +19,7 @@ const fmtHoraMX = (date) =>
     minute: "2-digit",
   }).format(date);
 
-// Construye WHERE para ventas / gastos (si tu tabla gastos NO usa created_at, cambia la columna abajo)
+// Construye WHERE ajustando created_at a hora de México
 const buildWhere = ({
   fecha = null,
   periodo = "diario",
@@ -22,64 +27,72 @@ const buildWhere = ({
 }) => {
   const p = String(periodo || "diario").toLowerCase();
 
+  // Ajuste de UTC a hora de México
+  const colMX = `CONVERT_TZ(${columnaFecha}, '+00:00', '-06:00')`;
+  const nowMX = `CONVERT_TZ(UTC_TIMESTAMP(), '+00:00', '-06:00')`;
+
   // Con fecha base enviada por query (?fecha=YYYY-MM-DD)
   if (fecha) {
     if (p === "semanal") {
       return {
-        where: `YEARWEEK(${columnaFecha}, 1) = YEARWEEK(?, 1)`,
+        where: `YEARWEEK(${colMX}, 1) = YEARWEEK(?, 1)`,
         params: [fecha],
       };
     }
 
     if (p === "mensual") {
       return {
-        where: `YEAR(${columnaFecha}) = YEAR(?) AND MONTH(${columnaFecha}) = MONTH(?)`,
+        where: `YEAR(${colMX}) = YEAR(?) AND MONTH(${colMX}) = MONTH(?)`,
         params: [fecha, fecha],
       };
     }
 
     if (p === "anual") {
       return {
-        where: `YEAR(${columnaFecha}) = YEAR(?)`,
+        where: `YEAR(${colMX}) = YEAR(?)`,
         params: [fecha],
       };
     }
 
-    // diario
     return {
-      where: `DATE(${columnaFecha}) = ?`,
+      where: `DATE(${colMX}) = ?`,
       params: [fecha],
     };
   }
 
-  // Sin fecha => periodo actual
+  // Sin fecha => periodo actual en hora de México
   if (p === "semanal") {
     return {
-      where: `YEARWEEK(${columnaFecha}, 1) = YEARWEEK(CURDATE(), 1)`,
+      where: `YEARWEEK(${colMX}, 1) = YEARWEEK(${nowMX}, 1)`,
       params: [],
     };
   }
 
   if (p === "mensual") {
     return {
-      where: `YEAR(${columnaFecha}) = YEAR(CURDATE()) AND MONTH(${columnaFecha}) = MONTH(CURDATE())`,
+      where: `YEAR(${colMX}) = YEAR(${nowMX}) AND MONTH(${colMX}) = MONTH(${nowMX})`,
       params: [],
     };
   }
 
   if (p === "anual") {
     return {
-      where: `YEAR(${columnaFecha}) = YEAR(CURDATE())`,
+      where: `YEAR(${colMX}) = YEAR(${nowMX})`,
       params: [],
     };
   }
 
-  // diario
   return {
-    where: `DATE(${columnaFecha}) = CURDATE()`,
+    where: `DATE(${colMX}) = DATE(${nowMX})`,
     params: [],
   };
 };
+
+// Filtro común para ventas reales
+const filtroVentasReales = `
+  es_cotizacion = 0
+  AND COALESCE(es_cotizacion_pedido, 0) = 0
+`;
 
 // GET /api/reporte/diario?fecha=YYYY-MM-DD&periodo=diario|semanal|mensual|anual
 export const reporteDiario = async (req, res) => {
@@ -87,7 +100,6 @@ export const reporteDiario = async (req, res) => {
     const fecha = req.query.fecha || null;
     const periodo = String(req.query.periodo || "diario").toLowerCase();
 
-    // OJO: si en "gastos" tu columna es diferente, cambia "created_at" por la real.
     const { where: whereVentas, params: paramsVentas } = buildWhere({
       fecha,
       periodo,
@@ -103,9 +115,9 @@ export const reporteDiario = async (req, res) => {
     // ===== Ventas por forma de pago =====
     const [ventasPorPago] = await pool.query(
       `
-      SELECT tipo_pago, COALESCE(SUM(total_final),0) AS total
+      SELECT tipo_pago, COALESCE(SUM(total_final), 0) AS total
       FROM ventas
-      WHERE ${whereVentas} AND es_cotizacion=0
+      WHERE ${whereVentas} AND ${filtroVentasReales}
       GROUP BY tipo_pago
       `,
       paramsVentas
@@ -114,9 +126,9 @@ export const reporteDiario = async (req, res) => {
     // ===== Ventas por categoría =====
     const [ventasPorCategoria] = await pool.query(
       `
-      SELECT categoria, COALESCE(SUM(total_final),0) AS total, COUNT(*) AS cantidad
+      SELECT categoria, COALESCE(SUM(total_final), 0) AS total, COUNT(*) AS cantidad
       FROM ventas
-      WHERE ${whereVentas} AND es_cotizacion=0
+      WHERE ${whereVentas} AND ${filtroVentasReales}
       GROUP BY categoria
       ORDER BY total DESC
       `,
@@ -126,9 +138,9 @@ export const reporteDiario = async (req, res) => {
     // ===== Total ventas =====
     const [[totalVentas]] = await pool.query(
       `
-      SELECT COALESCE(SUM(total_final),0) AS total
+      SELECT COALESCE(SUM(total_final), 0) AS total
       FROM ventas
-      WHERE ${whereVentas} AND es_cotizacion=0
+      WHERE ${whereVentas} AND ${filtroVentasReales}
       `,
       paramsVentas
     );
@@ -136,7 +148,7 @@ export const reporteDiario = async (req, res) => {
     // ===== Gastos por categoría =====
     const [gastosPorCategoria] = await pool.query(
       `
-      SELECT categoria, COALESCE(SUM(monto),0) AS total
+      SELECT categoria, COALESCE(SUM(monto), 0) AS total
       FROM gastos
       WHERE ${whereGastos}
       GROUP BY categoria
@@ -148,7 +160,7 @@ export const reporteDiario = async (req, res) => {
     // ===== Gastos por subcategoría =====
     const [gastosPorSub] = await pool.query(
       `
-      SELECT categoria, subcategoria, COALESCE(SUM(monto),0) AS total
+      SELECT categoria, subcategoria, COALESCE(SUM(monto), 0) AS total
       FROM gastos
       WHERE ${whereGastos}
       GROUP BY categoria, subcategoria
@@ -160,7 +172,7 @@ export const reporteDiario = async (req, res) => {
     // ===== Total gastos =====
     const [[totalGastos]] = await pool.query(
       `
-      SELECT COALESCE(SUM(monto),0) AS total
+      SELECT COALESCE(SUM(monto), 0) AS total
       FROM gastos
       WHERE ${whereGastos}
       `,
@@ -170,18 +182,20 @@ export const reporteDiario = async (req, res) => {
     // ===== Caja (simple): efectivo ventas - efectivo gastos =====
     const [[ventasEfectivo]] = await pool.query(
       `
-      SELECT COALESCE(SUM(total_final),0) AS total
+      SELECT COALESCE(SUM(total_final), 0) AS total
       FROM ventas
-      WHERE ${whereVentas} AND es_cotizacion=0 AND tipo_pago='efectivo'
+      WHERE ${whereVentas}
+        AND ${filtroVentasReales}
+        AND tipo_pago = 'efectivo'
       `,
       paramsVentas
     );
 
     const [[gastosEfectivo]] = await pool.query(
       `
-      SELECT COALESCE(SUM(monto),0) AS total
+      SELECT COALESCE(SUM(monto), 0) AS total
       FROM gastos
-      WHERE ${whereGastos} AND metodo_pago='efectivo'
+      WHERE ${whereGastos} AND metodo_pago = 'efectivo'
       `,
       paramsGastos
     );
@@ -278,9 +292,9 @@ export const ticketCorteDiario = async (req, res) => {
     // ventas por pago
     const [ventasPorPago] = await pool.query(
       `
-      SELECT tipo_pago, COALESCE(SUM(total_final),0) AS total
+      SELECT tipo_pago, COALESCE(SUM(total_final), 0) AS total
       FROM ventas
-      WHERE ${whereVentas} AND es_cotizacion=0
+      WHERE ${whereVentas} AND ${filtroVentasReales}
       GROUP BY tipo_pago
       `,
       paramsVentas
@@ -289,9 +303,9 @@ export const ticketCorteDiario = async (req, res) => {
     // ventas por categoria
     const [ventasPorCategoria] = await pool.query(
       `
-      SELECT categoria, COALESCE(SUM(total_final),0) AS total, COUNT(*) AS cantidad
+      SELECT categoria, COALESCE(SUM(total_final), 0) AS total, COUNT(*) AS cantidad
       FROM ventas
-      WHERE ${whereVentas} AND es_cotizacion=0
+      WHERE ${whereVentas} AND ${filtroVentasReales}
       GROUP BY categoria
       ORDER BY total DESC
       `,
@@ -301,9 +315,9 @@ export const ticketCorteDiario = async (req, res) => {
     // total ventas
     const [[totalVentas]] = await pool.query(
       `
-      SELECT COALESCE(SUM(total_final),0) AS total
+      SELECT COALESCE(SUM(total_final), 0) AS total
       FROM ventas
-      WHERE ${whereVentas} AND es_cotizacion=0
+      WHERE ${whereVentas} AND ${filtroVentasReales}
       `,
       paramsVentas
     );
@@ -311,7 +325,7 @@ export const ticketCorteDiario = async (req, res) => {
     // gastos por categoria
     const [gastosPorCategoria] = await pool.query(
       `
-      SELECT categoria, COALESCE(SUM(monto),0) AS total
+      SELECT categoria, COALESCE(SUM(monto), 0) AS total
       FROM gastos
       WHERE ${whereGastos}
       GROUP BY categoria
@@ -323,7 +337,7 @@ export const ticketCorteDiario = async (req, res) => {
     // total gastos
     const [[totalGastos]] = await pool.query(
       `
-      SELECT COALESCE(SUM(monto),0) AS total
+      SELECT COALESCE(SUM(monto), 0) AS total
       FROM gastos
       WHERE ${whereGastos}
       `,
@@ -333,18 +347,20 @@ export const ticketCorteDiario = async (req, res) => {
     // caja = ventas efectivo - gastos efectivo
     const [[ventasEfectivo]] = await pool.query(
       `
-      SELECT COALESCE(SUM(total_final),0) AS total
+      SELECT COALESCE(SUM(total_final), 0) AS total
       FROM ventas
-      WHERE ${whereVentas} AND es_cotizacion=0 AND tipo_pago='efectivo'
+      WHERE ${whereVentas}
+        AND ${filtroVentasReales}
+        AND tipo_pago = 'efectivo'
       `,
       paramsVentas
     );
 
     const [[gastosEfectivo]] = await pool.query(
       `
-      SELECT COALESCE(SUM(monto),0) AS total
+      SELECT COALESCE(SUM(monto), 0) AS total
       FROM gastos
-      WHERE ${whereGastos} AND metodo_pago='efectivo'
+      WHERE ${whereGastos} AND metodo_pago = 'efectivo'
       `,
       paramsGastos
     );
@@ -429,18 +445,17 @@ export const ticketCorteDiario = async (req, res) => {
   }
 };
 
-// POST /api/cierres (o tu ruta)
+// POST /api/cierres
 export const crearCierre = async (req, res) => {
   try {
     const now = new Date();
 
-    // Fecha/hora MX (más consistente que toISOString si tu servidor está en UTC)
     const fechaMX = new Intl.DateTimeFormat("en-CA", {
       timeZone: "America/Mexico_City",
       year: "numeric",
       month: "2-digit",
       day: "2-digit",
-    }).format(now); // en-CA => YYYY-MM-DD
+    }).format(now);
 
     const horaMX = new Intl.DateTimeFormat("en-GB", {
       timeZone: "America/Mexico_City",
@@ -448,19 +463,23 @@ export const crearCierre = async (req, res) => {
       minute: "2-digit",
       second: "2-digit",
       hour12: false,
-    }).format(now); // HH:MM:SS
+    }).format(now);
 
     await pool.query("INSERT INTO cierres (fecha, hora) VALUES (?, ?)", [
       fechaMX,
       horaMX,
     ]);
 
-    return res.json({ mensaje: "✅ Cierre guardado", data: { fecha: fechaMX, hora: horaMX } });
+    return res.json({
+      mensaje: "✅ Cierre guardado",
+      data: { fecha: fechaMX, hora: horaMX },
+    });
   } catch (err) {
     console.error("ERROR cierre:", err);
     return res.status(500).json({ error: "Error en BD", message: err.message });
   }
 };
+
 // GET /api/reporte/productos?inicio=YYYY-MM-DD&fin=YYYY-MM-DD
 export const reporteProductos = async (req, res) => {
   try {
@@ -477,87 +496,81 @@ export const reporteProductos = async (req, res) => {
     const desde = `${fechaInicio} 00:00:00`;
     const hasta = `${fechaFin} 23:59:59`;
 
-    // ===============================
-    // TOP MÁS VENDIDOS
-    // ===============================
     const [masVendidos] = await pool.query(
-  `
-  SELECT 
-    p.id,
-    p.codigo,
-    p.nombre,
-    COALESCE(SUM(vi.cantidad), 0) AS cantidad_vendida,
-    COALESCE(SUM(vi.subtotal), 0) AS importe_vendido
-  FROM ventas_items vi
-  INNER JOIN ventas v ON v.id = vi.venta_id
-  INNER JOIN productos p ON p.id = vi.producto_id
-  WHERE v.created_at BETWEEN ? AND ?
-    AND v.es_cotizacion = 0
-  GROUP BY p.id, p.codigo, p.nombre
-  ORDER BY cantidad_vendida DESC, importe_vendido DESC
-  LIMIT 10
-  `,
-  [desde, hasta]
-);
-    // ===============================
-    // TOP MENOS VENDIDOS (de los que sí se vendieron)
-    // ===============================
+      `
+      SELECT 
+        p.id,
+        p.codigo,
+        p.nombre,
+        COALESCE(SUM(vi.cantidad), 0) AS cantidad_vendida,
+        COALESCE(SUM(vi.subtotal), 0) AS importe_vendido
+      FROM ventas_items vi
+      INNER JOIN ventas v ON v.id = vi.venta_id
+      INNER JOIN productos p ON p.id = vi.producto_id
+      WHERE v.created_at BETWEEN ? AND ?
+        AND v.es_cotizacion = 0
+        AND COALESCE(v.es_cotizacion_pedido, 0) = 0
+      GROUP BY p.id, p.codigo, p.nombre
+      ORDER BY cantidad_vendida DESC, importe_vendido DESC
+      LIMIT 10
+      `,
+      [desde, hasta]
+    );
+
     const [menosVendidos] = await pool.query(
-  `
-  SELECT 
-    p.id,
-    p.codigo,
-    p.nombre,
-    COALESCE(SUM(vi.cantidad), 0) AS cantidad_vendida,
-    COALESCE(SUM(vi.subtotal), 0) AS importe_vendido
-  FROM ventas_items vi
-  INNER JOIN ventas v ON v.id = vi.venta_id
-  INNER JOIN productos p ON p.id = vi.producto_id
-  WHERE v.created_at BETWEEN ? AND ?
-    AND v.es_cotizacion = 0
-  GROUP BY p.id, p.codigo, p.nombre
-  HAVING cantidad_vendida > 0
-  ORDER BY cantidad_vendida ASC, importe_vendido ASC
-  LIMIT 10
-  `,
-  [desde, hasta]
-);
+      `
+      SELECT 
+        p.id,
+        p.codigo,
+        p.nombre,
+        COALESCE(SUM(vi.cantidad), 0) AS cantidad_vendida,
+        COALESCE(SUM(vi.subtotal), 0) AS importe_vendido
+      FROM ventas_items vi
+      INNER JOIN ventas v ON v.id = vi.venta_id
+      INNER JOIN productos p ON p.id = vi.producto_id
+      WHERE v.created_at BETWEEN ? AND ?
+        AND v.es_cotizacion = 0
+        AND COALESCE(v.es_cotizacion_pedido, 0) = 0
+      GROUP BY p.id, p.codigo, p.nombre
+      HAVING cantidad_vendida > 0
+      ORDER BY cantidad_vendida ASC, importe_vendido ASC
+      LIMIT 10
+      `,
+      [desde, hasta]
+    );
 
-    // ===============================
-    // VENTAS POR DÍA (para gráfica)
-    // ===============================
     const [ventasPorDia] = await pool.query(
-  `
-  SELECT 
-    DATE(v.created_at) AS fecha,
-    COALESCE(SUM(vi.subtotal), 0) AS total,
-    COALESCE(SUM(vi.cantidad), 0) AS piezas
-  FROM ventas v
-  INNER JOIN ventas_items vi ON vi.venta_id = v.id
-  WHERE v.created_at BETWEEN ? AND ?
-    AND v.es_cotizacion = 0
-  GROUP BY DATE(v.created_at)
-  ORDER BY fecha ASC
-  `,
-  [desde, hasta]
-);
+      `
+      SELECT 
+        DATE(v.created_at) AS fecha,
+        COALESCE(SUM(vi.subtotal), 0) AS total,
+        COALESCE(SUM(vi.cantidad), 0) AS piezas
+      FROM ventas v
+      INNER JOIN ventas_items vi ON vi.venta_id = v.id
+      WHERE v.created_at BETWEEN ? AND ?
+        AND v.es_cotizacion = 0
+        AND COALESCE(v.es_cotizacion_pedido, 0) = 0
+      GROUP BY DATE(v.created_at)
+      ORDER BY fecha ASC
+      `,
+      [desde, hasta]
+    );
 
-    // ===============================
-    // RESUMEN
-    // ===============================
     const [resumenRows] = await pool.query(
-  `
-  SELECT
-    COALESCE(SUM(vi.cantidad), 0) AS piezas_vendidas,
-    COALESCE(SUM(vi.subtotal), 0) AS importe_total,
-    COUNT(DISTINCT v.id) AS total_ventas
-  FROM ventas v
-  INNER JOIN ventas_items vi ON vi.venta_id = v.id
-  WHERE v.created_at BETWEEN ? AND ?
-    AND v.es_cotizacion = 0
-  `,
-  [desde, hasta]
-);
+      `
+      SELECT
+        COALESCE(SUM(vi.cantidad), 0) AS piezas_vendidas,
+        COALESCE(SUM(vi.subtotal), 0) AS importe_total,
+        COUNT(DISTINCT v.id) AS total_ventas
+      FROM ventas v
+      INNER JOIN ventas_items vi ON vi.venta_id = v.id
+      WHERE v.created_at BETWEEN ? AND ?
+        AND v.es_cotizacion = 0
+        AND COALESCE(v.es_cotizacion_pedido, 0) = 0
+      `,
+      [desde, hasta]
+    );
+
     const resumen = resumenRows[0] || {
       piezas_vendidas: 0,
       importe_total: 0,
