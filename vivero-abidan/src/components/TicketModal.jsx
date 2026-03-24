@@ -215,7 +215,15 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
     return String(p).toUpperCase();
   };
 
+  const pickNum = (...values) => {
+    for (const v of values) {
+      if (v !== undefined && v !== null && v !== "") return Number(v || 0);
+    }
+    return 0;
+  };
+
   const formaPago = formaPagoLabel(data?.pago || venta?.forma_pago || venta?.tipo_pago);
+  const tipoPagoRaw = String(venta?.tipo_pago || venta?.forma_pago || data?.pago || "").toLowerCase();
   const totalFinal = Number(venta.total_final ?? venta.total ?? 0);
   const descuento = Number(venta.descuento ?? 0);
 
@@ -246,6 +254,64 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
     (acc, it) => acc + Number(it.cantidad || 0) * Number(it.precio_unitario || 0),
     0
   );
+
+  // Montos por método de pago
+  const pagoEfectivo = pickNum(
+    venta.efectivo,
+    venta.monto_efectivo,
+    venta.pago_efectivo,
+    data?.efectivo,
+    data?.monto_efectivo
+  );
+
+  const pagoTarjeta = pickNum(
+    venta.tarjeta,
+    venta.monto_tarjeta,
+    venta.pago_tarjeta,
+    data?.tarjeta,
+    data?.monto_tarjeta
+  );
+
+  const pagoTransferencia = pickNum(
+    venta.transferencia,
+    venta.monto_transferencia,
+    venta.pago_transferencia,
+    data?.transferencia,
+    data?.monto_transferencia
+  );
+
+  const pagoCheque = pickNum(
+    venta.cheque,
+    venta.monto_cheque,
+    venta.pago_cheque,
+    data?.cheque,
+    data?.monto_cheque
+  );
+
+  const pagoCredito = pickNum(
+    venta.tarjeta_credito,
+    venta.monto_tarjeta_credito,
+    venta.pago_tarjeta_credito,
+    data?.tarjeta_credito,
+    data?.monto_tarjeta_credito
+  );
+
+  const pagoDebito = pickNum(
+    venta.tarjeta_debito,
+    venta.monto_tarjeta_debito,
+    venta.pago_tarjeta_debito,
+    data?.tarjeta_debito,
+    data?.monto_tarjeta_debito
+  );
+
+  const pagosMixtos = [
+    { label: "EFECTIVO", value: pagoEfectivo },
+    { label: "TARJETA", value: pagoTarjeta },
+    { label: "TRANSFERENCIA", value: pagoTransferencia },
+    { label: "CHEQUE", value: pagoCheque },
+    { label: "TARJ. CREDITO", value: pagoCredito },
+    { label: "TARJ. DEBITO", value: pagoDebito },
+  ].filter((x) => Number(x.value || 0) > 0);
 
   const ticketBoxStyle = {
     position: "relative",
@@ -555,7 +621,28 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
             </div>
 
             <div style={{ marginTop: 6 }}>
-              {(venta.tipo_pago === "efectivo" || venta.tipo_pago === "mixto") && (
+              {tipoPagoRaw === "mixto" && (
+                <div style={{ fontSize: 11, marginBottom: 4 }}>
+                  {pagosMixtos.length > 0 ? (
+                    pagosMixtos.map((pago) => (
+                      <div
+                        key={pago.label}
+                        style={{ display: "flex", justifyContent: "space-between" }}
+                      >
+                        <span>{pago.label}:</span>
+                        <b>{moneyCompact(pago.value)}</b>
+                      </div>
+                    ))
+                  ) : (
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span>MIXTO:</span>
+                      <b>{moneyCompact(totalFinal)}</b>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {(tipoPagoRaw === "efectivo" || tipoPagoRaw === "mixto") && (
                 <div style={{ fontSize: 11 }}>
                   <div style={{ display: "flex", justifyContent: "space-between" }}>
                     <span>RECIBIDO:</span>
