@@ -101,7 +101,6 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
     if (!ticket) return;
 
     const contenido = ticket.innerHTML;
-
     const win = window.open("", "_blank", "width=420,height=900");
     if (!win) return;
 
@@ -172,18 +171,52 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
 
     win.document.close();
 
-    const lanzarImpresion = () => {
-      win.focus();
+    const esperarImagenesEImprimir = () => {
+      const imagenes = Array.from(win.document.images || []);
+
+      if (imagenes.length === 0) {
+        win.focus();
+        setTimeout(() => {
+          win.print();
+          win.close();
+        }, 500);
+        return;
+      }
+
+      let cargadas = 0;
+      const total = imagenes.length;
+
+      const revisar = () => {
+        cargadas += 1;
+        if (cargadas >= total) {
+          win.focus();
+          setTimeout(() => {
+            win.print();
+            win.close();
+          }, 700);
+        }
+      };
+
+      imagenes.forEach((img) => {
+        if (img.complete) {
+          revisar();
+        } else {
+          img.onload = revisar;
+          img.onerror = revisar;
+        }
+      });
+
       setTimeout(() => {
+        win.focus();
         win.print();
         win.close();
-      }, 400);
+      }, 2000);
     };
 
     if (win.document.readyState === "complete") {
-      lanzarImpresion();
+      esperarImagenesEImprimir();
     } else {
-      win.onload = lanzarImpresion;
+      win.onload = esperarImagenesEImprimir;
     }
   }
 
@@ -224,6 +257,7 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
   const formaPago = formaPagoLabel(
     data?.pago || venta?.forma_pago || venta?.tipo_pago
   );
+
   const tipoPagoRaw = String(
     venta?.tipo_pago || venta?.forma_pago || data?.pago || ""
   ).toLowerCase();
@@ -467,7 +501,10 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
                             alignItems: "start",
                           }}
                         >
-                          <div style={{ fontWeight: "bold" }}>{cant}</div>
+                          <div>
+                            <b>{cant}</b>
+                          </div>
+
                           <div
                             style={{
                               display: "flex",
@@ -645,7 +682,9 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
                           alignItems: "start",
                         }}
                       >
-                        <div style={{ fontWeight: "bold" }}>{cant}</div>
+                        <div>
+                          <b>{cant}</b>
+                        </div>
 
                         <div>{nombre}</div>
 
@@ -745,11 +784,14 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
                     "https://wa.me/528181167587?text=Hola,%20quiero%20solicitar%20mi%20factura.%20Adjunto%20mis%20datos."
                   )}`}
                   alt="QR WhatsApp Facturacion"
+                  crossOrigin="anonymous"
                   style={{
                     width: 82,
                     height: 82,
                     objectFit: "contain",
                     imageRendering: "pixelated",
+                    display: "block",
+                    margin: "0 auto",
                   }}
                 />
 
