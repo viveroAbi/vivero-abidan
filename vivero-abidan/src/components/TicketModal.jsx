@@ -247,6 +247,16 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
     return String(p).toUpperCase();
   };
 
+  const categoriaLabel = (c) => {
+    const s = String(c || "").toLowerCase().trim();
+    if (!s) return "PUBLICO";
+    if (s === "publico" || s === "público") return "PUBLICO";
+    if (s === "mayoreo") return "MAYOREO";
+    if (s === "vivero") return "VIVERO";
+    if (s === "especial" || s === "precio especial") return "PRECIO ESPECIAL";
+    return String(c).toUpperCase();
+  };
+
   const pickNum = (...values) => {
     for (const v of values) {
       if (v !== undefined && v !== null && v !== "") return Number(v || 0);
@@ -276,6 +286,11 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
     venta.cliente ||
     data?.cliente ||
     "PUBLICO EN GENERAL";
+
+  const categoriaVenta =
+    venta.categoria ||
+    data?.categoria ||
+    "publico";
 
   const cajeroNombre =
     venta.cajero_nombre ||
@@ -462,6 +477,9 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
                 <div>
                   <b>CLIENTE:</b> {clienteNombre}
                 </div>
+                <div>
+                  <b>CATEGORIA:</b> {categoriaLabel(categoriaVenta)}
+                </div>
               </div>
 
               <hr />
@@ -634,6 +652,9 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
               </div>
               <div>
                 <b>CLIENTE:</b> {String(clienteNombre).toUpperCase()}
+              </div>
+              <div>
+                <b>CATEGORIA:</b> {categoriaLabel(categoriaVenta)}
               </div>
               <div>
                 <b>FORMA DE PAGO:</b> {formaPago}
