@@ -2,8 +2,9 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
   const venta = data?.venta || {};
   const items = Array.isArray(data?.items) ? data.items : [];
 
+  // Tipografía más legible para clientes
   const thermalFont =
-    '"Courier New", "Lucida Console", "Consolas", monospace';
+    '"Arial", "Helvetica", sans-serif';
 
   const printStyles = (
     <style>{`
@@ -196,11 +197,12 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
       maximumFractionDigits: 2,
     });
 
+  // Ahora SIEMPRE pone el signo $
   const moneyCompact = (n) =>
-    Number(n || 0).toLocaleString("es-MX", {
+    `$${Number(n || 0).toLocaleString("es-MX", {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
-    });
+    })}`;
 
   const formaPagoLabel = (p) => {
     const s = String(p || "").toLowerCase();
@@ -255,7 +257,6 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
     0
   );
 
-  // Montos por método de pago
   const pagoEfectivo = pickNum(
     venta.efectivo,
     venta.monto_efectivo,
@@ -325,8 +326,8 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
     maxHeight: "90vh",
     overflowY: "auto",
     overflowX: "hidden",
-    fontSize: 11,
-    lineHeight: 1.15,
+    fontSize: 12,
+    lineHeight: 1.2,
     letterSpacing: "0.1px",
   };
 
@@ -351,10 +352,10 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
             <pre
               style={{
                 fontFamily: thermalFont,
-                fontSize: 11,
+                fontSize: 12,
                 whiteSpace: "pre-wrap",
                 margin: 0,
-                lineHeight: 1.15,
+                lineHeight: 1.2,
               }}
             >
               {data.texto}
@@ -400,26 +401,26 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
             </div>
 
             <div style={{ position: "relative", zIndex: 1 }}>
-              <div style={{ textAlign: "center", fontWeight: "bold", fontSize: 16 }}>
+              <div style={{ textAlign: "center", fontWeight: "bold", fontSize: 17 }}>
                 VIVERO ABIDAN
               </div>
-              <div style={{ textAlign: "center", fontSize: 11, marginTop: 2 }}>
+              <div style={{ textAlign: "center", fontSize: 12, marginTop: 2 }}>
                 PEDIDO
               </div>
 
               <hr />
 
-              <div style={{ fontSize: 11 }}>
+              <div style={{ fontSize: 12 }}>
                 <div><b>FECHA Y HORA:</b> {venta.created_at ? new Date(venta.created_at).toLocaleString() : "—"}</div>
                 <div><b>CLIENTE:</b> {clienteNombre}</div>
               </div>
 
               <hr />
 
-              <div style={{ fontSize: 11 }}>
+              <div style={{ fontSize: 12 }}>
                 <div style={{ display: "grid", gridTemplateColumns: "26px 1fr", gap: 6 }}>
                   <b>CANT</b>
-                  <b>PRODUCTO</b>
+                  <b>PRODUCTO / PRECIO</b>
                 </div>
 
                 {items.length === 0 ? (
@@ -436,10 +437,9 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
                       <div key={idx} style={{ marginTop: 6 }}>
                         <div style={{ display: "grid", gridTemplateColumns: "26px 1fr", gap: 6 }}>
                           <div>{cant}</div>
-                          <div>{nombre}</div>
-                        </div>
-                        <div style={{ paddingLeft: 32, fontSize: 10 }}>
-                          {moneyCompact(pu)}
+                          <div>
+                            {nombre} - <b>{moneyCompact(pu)}</b>
+                          </div>
                         </div>
                       </div>
                     );
@@ -449,7 +449,7 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
 
               <hr />
 
-              <div style={{ fontSize: 11 }}>
+              <div style={{ fontSize: 12 }}>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
                   <span>ARTICULOS:</span>
                   <b>{numeroArticulos}</b>
@@ -506,17 +506,17 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
           )}
 
           <div style={{ position: "relative", zIndex: 1 }}>
-            <div style={{ textAlign: "center", fontWeight: "bold", fontSize: 16 }}>
+            <div style={{ textAlign: "center", fontWeight: "bold", fontSize: 17 }}>
               VIVERO ABIDAN
             </div>
 
             <div
               style={{
                 textAlign: "center",
-                fontSize: 10,
+                fontSize: 11,
                 marginTop: 4,
                 marginBottom: 4,
-                lineHeight: 1.12,
+                lineHeight: 1.18,
               }}
             >
               CARRETERA NACIONAL KM 253
@@ -532,7 +532,7 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
 
             <hr />
 
-            <div style={{ fontSize: 11, lineHeight: 1.12 }}>
+            <div style={{ fontSize: 12, lineHeight: 1.18 }}>
               <div><b>NO. TICKET:</b> {venta.id ?? "—"}</div>
               <div><b>FECHA:</b> {venta.created_at ? new Date(venta.created_at).toLocaleString() : "—"}</div>
               <div><b>CLIENTE:</b> {String(clienteNombre).toUpperCase()}</div>
@@ -541,11 +541,11 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
 
             <hr />
 
-            <div style={{ fontSize: 11 }}>
+            <div style={{ fontSize: 12 }}>
               <div
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "26px 1fr 56px",
+                  gridTemplateColumns: "26px 1fr 62px",
                   gap: 6,
                   alignItems: "start",
                 }}
@@ -571,25 +571,27 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
                   ).toUpperCase();
 
                   return (
-                    <div key={idx} style={{ marginTop: 6 }}>
+                    <div key={idx} style={{ marginTop: 7 }}>
                       <div
                         style={{
                           display: "grid",
-                          gridTemplateColumns: "26px 1fr 56px",
+                          gridTemplateColumns: "26px 1fr 62px",
                           gap: 6,
                           alignItems: "start",
                         }}
                       >
                         <div>{cant}</div>
 
-                        <div style={{ lineHeight: 1.1 }}>
-                          {nombre}
-                          <div style={{ fontSize: 10, marginTop: 1 }}>
+                        <div style={{ lineHeight: 1.15 }}>
+                          <div>
+                            {nombre}
+                          </div>
+                          <div style={{ fontSize: 11, marginTop: 2, fontWeight: "bold" }}>
                             {moneyCompact(pu)}
                           </div>
                         </div>
 
-                        <div style={{ textAlign: "right" }}>
+                        <div style={{ textAlign: "right", fontWeight: "bold" }}>
                           {moneyCompact(imp)}
                         </div>
                       </div>
@@ -601,7 +603,7 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
 
             <hr />
 
-            <div style={{ fontSize: 11, lineHeight: 1.15 }}>
+            <div style={{ fontSize: 12, lineHeight: 1.2 }}>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <span>SUBTOTAL:</span>
                 <b>{moneyCompact(items.length ? totalItems : venta.total ?? 0)}</b>
@@ -622,7 +624,7 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
 
             <div style={{ marginTop: 6 }}>
               {tipoPagoRaw === "mixto" && (
-                <div style={{ fontSize: 11, marginBottom: 4 }}>
+                <div style={{ fontSize: 12, marginBottom: 4 }}>
                   {pagosMixtos.length > 0 ? (
                     pagosMixtos.map((pago) => (
                       <div
@@ -643,7 +645,7 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
               )}
 
               {(tipoPagoRaw === "efectivo" || tipoPagoRaw === "mixto") && (
-                <div style={{ fontSize: 11 }}>
+                <div style={{ fontSize: 12 }}>
                   <div style={{ display: "flex", justifyContent: "space-between" }}>
                     <span>RECIBIDO:</span>
                     <b>{moneyCompact(venta.recibido ?? recibido)}</b>
@@ -693,7 +695,7 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
 
             <hr />
 
-            <div style={{ fontSize: 10, textAlign: "center", lineHeight: 1.08 }}>
+            <div style={{ fontSize: 10, textAlign: "center", lineHeight: 1.1 }}>
               ESTIMADO CLIENTE
               <br />
               POR LA SEGURIDAD DE AMBAS PARTES
