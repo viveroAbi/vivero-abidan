@@ -39,6 +39,12 @@ const [cameraSupported, setCameraSupported] = useState(true);
 const videoRef = useRef(null);
 const streamRef = useRef(null);
 const scanIntervalRef = useRef(null);
+const cantidadAgregarRef = useRef(null);
+const clienteInputRef = useRef(null);
+const busquedaProductoRef = useRef(null);
+const barcodeSearchRef = useRef(null);
+const movProdInputRef = useRef(null);
+const movCantidadRef = useRef(null);
 const [barcodeSearch, setBarcodeSearch] = useState("");
 const [barcodeResultados, setBarcodeResultados] = useState([]);
 const [barcodeSeleccionados, setBarcodeSeleccionados] = useState([]);
@@ -63,6 +69,8 @@ function seleccionarClienteVenta(c) {
   setClienteSearch(c.nombre || "");
   setClienteSug([]);
   setShowClienteSug(false);
+  setClienteSugActiva(-1);
+  setClienteSugActiva(-1);
 
   const cat = normalizarCategoriaVenta(c.categoria_cliente || "publico");
 
@@ -79,6 +87,13 @@ function seleccionarClienteVenta(c) {
       precio_unitario: obtenerPrecioPorCategoria(it, cat),
     }))
   );
+
+  setTimeout(() => {
+    if (cantidadAgregarRef.current) {
+      cantidadAgregarRef.current.focus();
+      cantidadAgregarRef.current.select?.();
+    }
+  }, 0);
 }
   // ===== Productos: buscador en vivo =====
 
@@ -422,6 +437,7 @@ async function buscarSugerenciasProductos(texto) {
 function onChangeBusqueda(e) {
   const value = e.target.value;
   setBusqueda(value);
+  setSugerenciaActiva(-1);
   buscarSugerenciasProductos(value);
 }
 
@@ -431,6 +447,142 @@ function seleccionarSugerencia(producto) {
   setCantidadAgregar("1");
   setSugerencias([]);
   setShowSugerencias(false);
+  setSugerenciaActiva(-1);
+
+  setTimeout(() => {
+    if (cantidadAgregarRef.current) {
+      cantidadAgregarRef.current.focus();
+      cantidadAgregarRef.current.select?.();
+    }
+  }, 0);
+}
+
+function onKeyDownBusquedaProducto(e) {
+  if (!showSugerencias || sugerencias.length === 0) return;
+
+  if (e.key === "ArrowDown") {
+    e.preventDefault();
+    setSugerenciaActiva((prev) =>
+      prev < sugerencias.length - 1 ? prev + 1 : 0
+    );
+    return;
+  }
+
+  if (e.key === "ArrowUp") {
+    e.preventDefault();
+    setSugerenciaActiva((prev) =>
+      prev > 0 ? prev - 1 : sugerencias.length - 1
+    );
+    return;
+  }
+
+  if (e.key === "Enter") {
+    e.preventDefault();
+    const idx = sugerenciaActiva >= 0 ? sugerenciaActiva : 0;
+    if (sugerencias[idx]) seleccionarSugerencia(sugerencias[idx]);
+    return;
+  }
+
+  if (e.key === "Escape") {
+    setShowSugerencias(false);
+    setSugerenciaActiva(-1);
+  }
+}
+
+function onKeyDownBusquedaCliente(e) {
+  if (!showClienteSug || clienteSug.length === 0) return;
+
+  if (e.key === "ArrowDown") {
+    e.preventDefault();
+    setClienteSugActiva((prev) =>
+      prev < clienteSug.length - 1 ? prev + 1 : 0
+    );
+    return;
+  }
+
+  if (e.key === "ArrowUp") {
+    e.preventDefault();
+    setClienteSugActiva((prev) =>
+      prev > 0 ? prev - 1 : clienteSug.length - 1
+    );
+    return;
+  }
+
+  if (e.key === "Enter") {
+    e.preventDefault();
+    const idx = clienteSugActiva >= 0 ? clienteSugActiva : 0;
+    if (clienteSug[idx]) seleccionarClienteVenta(clienteSug[idx]);
+    return;
+  }
+
+  if (e.key === "Escape") {
+    setShowClienteSug(false);
+    setClienteSugActiva(-1);
+  }
+}
+
+function onKeyDownMovProducto(e) {
+  if (movProdSeleccionado || movProdSugerencias.length === 0) return;
+
+  if (e.key === "ArrowDown") {
+    e.preventDefault();
+    setMovProdSugActiva((prev) =>
+      prev < movProdSugerencias.length - 1 ? prev + 1 : 0
+    );
+    return;
+  }
+
+  if (e.key === "ArrowUp") {
+    e.preventDefault();
+    setMovProdSugActiva((prev) =>
+      prev > 0 ? prev - 1 : movProdSugerencias.length - 1
+    );
+    return;
+  }
+
+  if (e.key === "Enter") {
+    e.preventDefault();
+    const idx = movProdSugActiva >= 0 ? movProdSugActiva : 0;
+    if (movProdSugerencias[idx]) seleccionarProductoMovimiento(movProdSugerencias[idx]);
+    return;
+  }
+
+  if (e.key === "Escape") {
+    setMovProdSugerencias([]);
+    setMovProdSugActiva(-1);
+  }
+}
+
+function onKeyDownBarcodeBusqueda(e) {
+  if (!showBarcodeResultados || barcodeResultados.length === 0) return;
+
+  if (e.key === "ArrowDown") {
+    e.preventDefault();
+    setBarcodeResultadoActivo((prev) =>
+      prev < barcodeResultados.length - 1 ? prev + 1 : 0
+    );
+    return;
+  }
+
+  if (e.key === "ArrowUp") {
+    e.preventDefault();
+    setBarcodeResultadoActivo((prev) =>
+      prev > 0 ? prev - 1 : barcodeResultados.length - 1
+    );
+    return;
+  }
+
+  if (e.key === "Enter") {
+    e.preventDefault();
+    const idx = barcodeResultadoActivo >= 0 ? barcodeResultadoActivo : 0;
+    if (barcodeResultados[idx]) agregarProductoBarcode(barcodeResultados[idx]);
+    return;
+  }
+
+  if (e.key === "Escape") {
+    setShowBarcodeResultados(false);
+    setBarcodeResultadoActivo(-1);
+  }
 }
 
   // ---- AUTOCOMPLETE ----
@@ -440,6 +592,10 @@ const [showSugerencias, setShowSugerencias] = useState(false);
 const [loadingSugerencias, setLoadingSugerencias] = useState(false);
   const [buscando, setBuscando] = useState(false);
   const [cantidadAgregar, setCantidadAgregar] = useState("1");
+const [sugerenciaActiva, setSugerenciaActiva] = useState(-1);
+const [clienteSugActiva, setClienteSugActiva] = useState(-1);
+const [movProdSugActiva, setMovProdSugActiva] = useState(-1);
+const [barcodeResultadoActivo, setBarcodeResultadoActivo] = useState(-1);
 
   const isAdmin = user?.rol === "admin";
   const isMixto = form.tipoPago === "mixto";
@@ -622,6 +778,13 @@ function agregarProductoBarcode(p) {
   setBarcodeSearch("");
   setBarcodeResultados([]);
   setShowBarcodeResultados(false);
+  setBarcodeResultadoActivo(-1);
+
+  setTimeout(() => {
+    if (barcodeSearchRef.current) {
+      barcodeSearchRef.current.focus();
+    }
+  }, 0);
 }
 
 function cambiarCopiasBarcode(id, value) {
@@ -1249,6 +1412,14 @@ function seleccionarProductoMovimiento(p) {
   setMovProdSeleccionado(p);
   setMovProdSearch(`${p.codigo_cat || p.codigo} — ${p.nombre}`);
   setMovProdSugerencias([]);
+  setMovProdSugActiva(-1);
+
+  setTimeout(() => {
+    if (movCantidadRef.current) {
+      movCantidadRef.current.focus();
+      movCantidadRef.current.select?.();
+    }
+  }, 0);
 }
 
 function limpiarProductoMovimiento() {
@@ -1256,6 +1427,7 @@ function limpiarProductoMovimiento() {
   setMovProdSeleccionado(null);
   setMovProdSearch("");
   setMovProdSugerencias([]);
+  setMovProdSugActiva(-1);
 }
 async function refrescarProductoSeleccionadoMovimiento(productoId) {
   try {
@@ -1485,6 +1657,7 @@ useEffect(() => {
   const q = barcodeSearch.trim();
   if (q.length < 2) {
     setBarcodeResultados([]);
+    setBarcodeResultadoActivo(-1);
     return;
   }
 
@@ -1506,6 +1679,7 @@ useEffect(() => {
   if (q.length < 3) {
     setMovProdSugerencias([]);
     setMovProdBuscando(false);
+    setMovProdSugActiva(-1);
     return;
   }
 
@@ -1534,6 +1708,7 @@ useEffect(() => {
       );
 
       setMovProdSugerencias(filtrados.slice(0, 20));
+      setMovProdSugActiva(-1);
     } catch (err) {
       console.error(err);
       setMovProdSugerencias([]);
@@ -2356,17 +2531,20 @@ if (view === "movimientos") {
     Cliente (opcional):
     <div style={{ display: "flex", gap: 8 }}>
       <input
+        ref={clienteInputRef}
         type="text"
         value={clienteSearch}
         onChange={(e) => {
           const v = e.target.value;
           setClienteSearch(v);
+          setClienteSugActiva(-1);
 
           // si escribe algo nuevo, quitamos selección previa
           if (clienteSeleccionado) setClienteSeleccionado(null);
 
           buscarClientesVenta(v);
         }}
+        onKeyDown={onKeyDownBusquedaCliente}
         onFocus={() => {
           if (clienteSug.length) setShowClienteSug(true)
         }}
@@ -2420,11 +2598,12 @@ if (view === "movimientos") {
           Sin resultados
         </div>
       ) : (
-        clienteSug.map((c) => (
+        clienteSug.map((c, idx) => (
           <button
             key={c.id}
             type="button"
             onMouseDown={(e) => e.preventDefault()}
+            onMouseEnter={() => setClienteSugActiva(idx)}
             onClick={() => seleccionarClienteVenta(c)}
             style={{
               width: "100%",
@@ -2432,7 +2611,7 @@ if (view === "movimientos") {
               padding: "10px 12px",
               border: "none",
               borderBottom: "1px solid #edf2ef",
-              background: "#fff",
+              background: idx === clienteSugActiva ? "#e8f7ee" : "#fff",
               cursor: "pointer",
             }}
           >
@@ -2494,6 +2673,7 @@ if (view === "movimientos") {
           <div style={{ position: "relative", marginBottom: 10 }}>
   <div style={{ display: "flex", gap: 8 }}>
     <input
+  ref={cantidadAgregarRef}
   type="number"
   min="1"
   value={cantidadAgregar}
@@ -2508,9 +2688,11 @@ if (view === "movimientos") {
   }}
 />
     <input
+      ref={busquedaProductoRef}
       type="text"
       value={busqueda}
       onChange={onChangeBusqueda}
+      onKeyDown={onKeyDownBusquedaProducto}
       onFocus={() => {
         if (sugerencias.length) setShowSugerencias(true);
       }}
@@ -2571,11 +2753,12 @@ if (view === "movimientos") {
           Sin resultados
         </div>
       ) : (
-        sugerencias.map((p) => (
+        sugerencias.map((p, idx) => (
           <button
   key={p.id}
   type="button"
   onMouseDown={(e) => e.preventDefault()} // evita que el blur cierre antes del click
+  onMouseEnter={() => setSugerenciaActiva(idx)}
   onClick={() => seleccionarSugerencia(p)}
   style={{
     width: "100%",
@@ -2583,7 +2766,7 @@ if (view === "movimientos") {
     padding: "10px 12px",
     border: "none",
     borderBottom: "1px solid #edf2ef",
-    background: "#fff",
+    background: idx === sugerenciaActiva ? "#e8f7ee" : "#fff",
     cursor: "pointer",
   }}
 >
@@ -3401,10 +3584,12 @@ if (view === "movimientos") {
   Producto:
  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
     <input
+      ref={movProdInputRef}
       value={movProdSearch}
       onChange={(e) => {
         const value = e.target.value;
         setMovProdSearch(value);
+        setMovProdSugActiva(-1);
 
         // Si empieza a escribir otra cosa, quitar selección previa
         if (movProdSeleccionado) {
@@ -3412,6 +3597,7 @@ if (view === "movimientos") {
           setMovForm((f) => ({ ...f, producto_id: "" }));
         }
       }}
+      onKeyDown={onKeyDownMovProducto}
       style={inputStyle}
       placeholder="Escribe 3 letras del nombre o código..."
       autoComplete="off"
@@ -3473,16 +3659,18 @@ if (view === "movimientos") {
       )}
 
       {!movProdBuscando &&
-        movProdSugerencias.map((p) => (
+        movProdSugerencias.map((p, idx) => (
           <button
             key={p.id}
             type="button"
+            onMouseDown={(e) => e.preventDefault()}
+            onMouseEnter={() => setMovProdSugActiva(idx)}
             onClick={() => seleccionarProductoMovimiento(p)}
             style={{
               width: "100%",
               textAlign: "left",
               border: "none",
-              background: "transparent",
+              background: idx === movProdSugActiva ? "#e8f7ee" : "transparent",
               padding: 10,
               cursor: "pointer",
               borderBottom: `1px solid ${theme.border}`,
@@ -3512,6 +3700,7 @@ if (view === "movimientos") {
       <label style={labelStyle}>
   {movForm.tipo === "ajuste" ? "Nuevo stock:" : "Cantidad:"}
   <input
+    ref={movCantidadRef}
     type="number"
     min="0"
     step="1"
@@ -4152,11 +4341,14 @@ if (view === "movimientos") {
     {/* Buscador */}
     <div style={{ position: "relative", marginBottom: 14 }}>
       <input
+  ref={barcodeSearchRef}
   value={barcodeSearch}
   onChange={(e) => {
     setBarcodeSearch(e.target.value);
+    setBarcodeResultadoActivo(-1);
     setShowBarcodeResultados(true);
   }}
+  onKeyDown={onKeyDownBarcodeBusqueda}
   onFocus={() => {
     if (barcodeSearch.trim().length >= 2) setShowBarcodeResultados(true);
   }}
@@ -4193,17 +4385,18 @@ if (view === "movimientos") {
               Sin resultados.
             </div>
           ) : (
-            barcodeResultados.map((p) => (
+            barcodeResultados.map((p, idx) => (
               <button
   key={p.id}
   type="button"
   onMouseDown={(e) => e.preventDefault()} // ✅ evita que blur cierre antes del click
+  onMouseEnter={() => setBarcodeResultadoActivo(idx)}
   onClick={() => agregarProductoBarcode(p)}
   style={{
     width: "100%",
     textAlign: "left",
     border: "none",
-    background: "transparent",
+    background: idx === barcodeResultadoActivo ? "#e8f7ee" : "transparent",
     padding: 10,
     cursor: "pointer",
     borderBottom: `1px solid ${theme.border}`,
