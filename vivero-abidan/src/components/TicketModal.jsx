@@ -467,7 +467,7 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
                             alignItems: "start",
                           }}
                         >
-                          <div>{cant}</div>
+                          <div style={{ fontWeight: "bold" }}>{cant}</div>
                           <div
                             style={{
                               display: "flex",
@@ -645,7 +645,7 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
                           alignItems: "start",
                         }}
                       >
-                        <div>{cant}</div>
+                        <div style={{ fontWeight: "bold" }}>{cant}</div>
 
                         <div>{nombre}</div>
 
