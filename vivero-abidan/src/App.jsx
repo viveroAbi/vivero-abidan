@@ -88,7 +88,11 @@ function seleccionarClienteVenta(c) {
 
   // Reporte (placeholder por ahora)
   const [reporteTipo, setReporteTipo] = useState("diario");
+  const [reporteFecha, setReporteFecha] = useState(
+  new Date().toISOString().slice(0, 10)
+);
   const [reporteData, setReporteData] = useState(null);
+  
   const pagosFijos = [
   "efectivo",
   "transferencia",
@@ -1164,9 +1168,13 @@ async function iniciarCamaraYDeteccion() {
     const data = await apiFetch("/ventas/resumen");
     setResumen(data.data || null);
   }
-  async function cargarReporteDiario(tipo = reporteTipo) {
+  async function cargarReporteDiario(tipo = reporteTipo, fecha = reporteFecha) {
   const q = new URLSearchParams();
   q.set("periodo", tipo || "diario");
+
+  if (fecha) {
+    q.set("fecha", fecha);
+  }
 
   const data = await apiFetch(`/reporte/diario?${q.toString()}`);
   setReporteData(data.data);
@@ -1295,21 +1303,22 @@ await refrescarProductoSeleccionadoMovimiento(productoId);
 
 async function imprimirCorteTicket() {
   try {
-    // ✅ 1) guardar cierre (ruta correcta)
     await apiFetch("/reporte/cierres", {
       method: "POST",
       headers: authHeaders(),
     });
 
-    // ✅ 2) generar ticket del corte con período seleccionado (ruta correcta)
     const q = new URLSearchParams();
     q.set("periodo", reporteTipo || "diario");
+
+    if (reporteFecha) {
+      q.set("fecha", reporteFecha);
+    }
 
     const data = await apiFetch(`/reporte/corte/ticket?${q.toString()}`, {
       headers: authHeaders(),
     });
 
-    // ✅ 3) abrir modal para imprimir
     setTicketData({
       tipo: "corte",
       texto: data.data.texto,
@@ -1397,10 +1406,11 @@ async function guardarGasto(e) {
 }, [user, view]);
 useEffect(() => {
   if (view === "reporte") {
-    cargarReporteDiario(reporteTipo);
+    cargarReporteDiario(reporteTipo, reporteFecha);
   }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [view, reporteTipo]);
+}, [view, reporteTipo, reporteFecha]);
+  
 // Carga inicial al entrar a la vista de movimientos
 useEffect(() => {
   if (view === "movimientos") {
@@ -2978,8 +2988,17 @@ if (view === "movimientos") {
 {view === "reporte" && (
   <div style={{ ...cardStyle, padding: 16 }}>
     <h2 style={{ marginTop: 0 }}>Reporte</h2>
-    <div className="no-print" style={{ marginBottom: 12, maxWidth: 320 }}>
-  <label style={{ ...labelStyle, marginBottom: 6 }}>
+    <div
+  className="no-print"
+  style={{
+    marginBottom: 12,
+    display: "grid",
+    gap: 12,
+    gridTemplateColumns: isMobile ? "1fr" : "320px 220px",
+    alignItems: "end",
+  }}
+>
+  <label style={{ ...labelStyle, marginBottom: 0 }}>
     Tipo de reporte:
     <select
       value={reporteTipo}
@@ -2992,12 +3011,27 @@ if (view === "movimientos") {
       <option value="anual">Anual</option>
     </select>
   </label>
+
+  <label style={{ ...labelStyle, marginBottom: 0 }}>
+    Fecha:
+    <input
+      type="date"
+      value={reporteFecha}
+      onChange={(e) => setReporteFecha(e.target.value)}
+      style={inputStyle}
+    />
+  </label>
 </div>
 
     {/* ❌ ESTO NO SE IMPRIME */}
     <div className="no-print">
       <div style={{ color: theme.muted, fontSize: 13, marginBottom: 10 }}>
-  Corte {reporteTipo}: <b>{new Date().toLocaleString("es-MX")}</b>
+  Corte {reporteTipo}:{" "}
+  <b>
+    {reporteFecha
+      ? new Date(`${reporteFecha}T12:00:00`).toLocaleDateString("es-MX")
+      : new Date().toLocaleDateString("es-MX")}
+  </b>
 </div>
 
       <button
