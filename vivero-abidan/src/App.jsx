@@ -64,7 +64,7 @@ function seleccionarClienteVenta(c) {
   setClienteSug([]);
   setShowClienteSug(false);
 
-  const cat = String(c.categoria_cliente || "publico").toLowerCase();
+  const cat = normalizarCategoriaVenta(c.categoria_cliente || "publico");
 
   // Auto-llenar categoría desde cliente
   setForm((f) => ({
@@ -87,10 +87,53 @@ function seleccionarClienteVenta(c) {
 
 
   // Reporte (placeholder por ahora)
+  function hoyLocalInput() {
+    const d = new Date();
+    const offset = d.getTimezoneOffset();
+    const local = new Date(d.getTime() - offset * 60000);
+    return local.toISOString().slice(0, 10);
+  }
+
+  function normalizarCategoriaVenta(cat) {
+    const raw = String(cat || "").trim().toLowerCase();
+
+    const mapa = {
+      "publico": "publico",
+      "público": "publico",
+      "publico general": "publico",
+      "público general": "publico",
+      "general": "publico",
+      "mayoreo": "mayoreo",
+      "mayorista": "mayoreo",
+      "vivero": "vivero",
+      "especial": "especial",
+      "precio especial": "especial",
+    };
+
+    return mapa[raw] || "publico";
+  }
+
+  function formatFechaLocal(fecha) {
+    if (!fecha) return "—";
+
+    const d = new Date(fecha);
+
+    if (Number.isNaN(d.getTime())) return "—";
+
+    return d.toLocaleString("es-MX", {
+      timeZone: "America/Mexico_City",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    });
+  }
+
   const [reporteTipo, setReporteTipo] = useState("diario");
-  const [reporteFecha, setReporteFecha] = useState(
-  new Date().toISOString().slice(0, 10)
-);
+  const [reporteFecha, setReporteFecha] = useState(hoyLocalInput());
   const [reporteData, setReporteData] = useState(null);
   
   const pagosFijos = [
@@ -383,8 +426,9 @@ function onChangeBusqueda(e) {
 }
 
 function seleccionarSugerencia(producto) {
-  agregarProductoEscaneadoAlCarrito(producto);
+  agregarProductoEscaneadoAlCarrito(producto, cantidadAgregar);
   setBusqueda("");
+  setCantidadAgregar("1");
   setSugerencias([]);
   setShowSugerencias(false);
 }
@@ -395,6 +439,7 @@ const [sugerencias, setSugerencias] = useState([]);
 const [showSugerencias, setShowSugerencias] = useState(false);
 const [loadingSugerencias, setLoadingSugerencias] = useState(false);
   const [buscando, setBuscando] = useState(false);
+  const [cantidadAgregar, setCantidadAgregar] = useState("1");
 
   const isAdmin = user?.rol === "admin";
   const isMixto = form.tipoPago === "mixto";
@@ -814,15 +859,15 @@ useEffect(() => {
 function obtenerCategoriaPrecioActual() {
   // Si hay cliente seleccionado, manda su categoría
   if (clienteSeleccionado?.categoria_cliente) {
-    return String(clienteSeleccionado.categoria_cliente).toLowerCase();
+    return normalizarCategoriaVenta(clienteSeleccionado.categoria_cliente);
   }
 
   // Si no hay cliente, usa la categoría manual del formulario
-  return String(form.categoria || "publico").toLowerCase();
+  return normalizarCategoriaVenta(form.categoria || "publico");
 }
 
 function obtenerPrecioPorCategoria(producto, categoria) {
-  const cat = String(categoria || "publico").toLowerCase();
+  const cat = normalizarCategoriaVenta(categoria || "publico");
 
   const mapa = {
   publico: producto.precio_publico,
@@ -839,9 +884,10 @@ function obtenerPrecioPorCategoria(producto, categoria) {
   return Number.isFinite(precioCat) && precioCat > 0 ? precioCat : precioBase;
 }
 
-  function agregarProductoEscaneadoAlCarrito(p) {
+  function agregarProductoEscaneadoAlCarrito(p, cantidadInicial = 1) {
   const categoriaActual = obtenerCategoriaPrecioActual();
   const precioAplicado = obtenerPrecioPorCategoria(p, categoriaActual);
+  const cantidadNum = Math.max(Number(cantidadInicial || 1), 1);
 
   setCarrito((prev) => {
     const idx = prev.findIndex((item) => item.producto_id === p.id);
@@ -850,7 +896,7 @@ function obtenerPrecioPorCategoria(producto, categoria) {
       const copia = [...prev];
       copia[idx] = {
         ...copia[idx],
-        cantidad: Number(copia[idx].cantidad || 1) + 1,
+        cantidad: Number(copia[idx].cantidad || 0) + cantidadNum,
         precio_unitario: precioAplicado,
       };
       return copia;
@@ -869,7 +915,7 @@ function obtenerPrecioPorCategoria(producto, categoria) {
         precio_especial: Number(p.precio_especial ?? p.precio_publico ?? p.precio ?? 0),
 
         precio_unitario: precioAplicado,
-        cantidad: 1,
+        cantidad: cantidadNum,
       },
     ];
   });
@@ -925,7 +971,8 @@ function obtenerPrecioPorCategoria(producto, categoria) {
       throw new Error("No se encontró el producto");
     }
 
-    agregarProductoEscaneadoAlCarrito(p);
+    agregarProductoEscaneadoAlCarrito(p, cantidadAgregar);
+setCantidadAgregar("1");
     setCodigoScan("");
   } catch (err) {
     console.error("Error escaneando código:", err);
@@ -1087,7 +1134,7 @@ async function iniciarCamaraYDeteccion() {
     // 4) Cargar form
     setForm((f) => ({
   ...f,
-  categoria: ventaData.categoria || "publico",
+  categoria: normalizarCategoriaVenta(ventaData.categoria || "publico"),
   tipoPago: ventaData.tipo_pago || "efectivo",
   efectivo: String(ventaData.efectivo ?? ""),
   tarjeta: String(ventaData.tarjeta ?? ""),
@@ -1140,19 +1187,23 @@ async function iniciarCamaraYDeteccion() {
   setCarrito([]);
   setSugerencias([]);
   setSearch("");
+  setClienteSeleccionado(null);
+  setClienteSearch("");
+  setClienteSug([]);
+  setShowClienteSug(false);
 
   setForm({
-  categoria: "publico",
-  tipoPago: "efectivo",
-  efectivo: "",
-  tarjeta: "",
-  recibido: "",
-  cambio: "",
-  esCotizacion: false,
-  esCotizacionPedido: false,
-  fecha_vencimiento: "",
-  observaciones_credito: "",
-});
+    categoria: "publico",
+    tipoPago: "efectivo",
+    efectivo: "",
+    tarjeta: "",
+    recibido: "",
+    cambio: "",
+    esCotizacion: false,
+    esCotizacionPedido: false,
+    fecha_vencimiento: "",
+    observaciones_credito: "",
+  });
 
   setEsCotizacionPedido(false);
   setMessage("success", "Edición cancelada.");
@@ -1608,15 +1659,23 @@ async function onCreateUserSubmit(e) {
   function onChange(e) {
   const { name, value } = e.target;
 
-  setForm((f) => ({ ...f, [name]: value }));
+  if (name !== "categoria") {
+    setForm((f) => ({ ...f, [name]: value }));
+  }
 
   if (name === "categoria") {
+    const categoriaNormalizada = normalizarCategoriaVenta(value);
+
+    setForm((f) => ({ ...f, categoria: categoriaNormalizada }));
+
     setCarrito((prev) =>
       prev.map((it) => ({
         ...it,
-        precio_unitario: obtenerPrecioPorCategoria(it, value),
+        precio_unitario: obtenerPrecioPorCategoria(it, categoriaNormalizada),
       }))
     );
+
+    return;
   }
 }
 
@@ -1805,7 +1864,7 @@ if (
 }));
 
 const payload = {
-  categoria: form.categoria,
+  categoria: normalizarCategoriaVenta(form.categoria),
   tipoPago: form.tipoPago,
   cliente_id: clienteSeleccionado?.id || null,
   esCotizacionPedido: !!esCotizacionPedido,
@@ -1850,8 +1909,14 @@ const data = await apiFetch(endpoint, {
   cambio: "",
   esCotizacion: false,
   esCotizacionPedido: false,
+  fecha_vencimiento: "",
+  observaciones_credito: "",
 });
-setEsCotizacionPedido(false);
+      setClienteSeleccionado(null);
+      setClienteSearch("");
+      setClienteSug([]);
+      setShowClienteSug(false);
+      setEsCotizacionPedido(false);
 
 
       await recargarTodo();
@@ -2257,7 +2322,7 @@ if (view === "movimientos") {
               <b>#{b.id}</b> · {b.categoria || "sin categoría"}
             </div>
             <div style={{ color: theme.muted, fontSize: 12 }}>
-              {b.created_at ? new Date(b.created_at).toLocaleString() : ""}
+              {b.created_at ? formatFechaLocal(b.created_at) : ""}
             </div>
           </div>
 
@@ -2327,7 +2392,7 @@ if (view === "movimientos") {
   {clienteSeleccionado && (
     <div style={{ marginTop: 6, fontSize: 12, color: theme.muted }}>
       Cliente seleccionado: <b>{clienteSeleccionado.nombre}</b> · Categoría:{" "}
-      <b>{clienteSeleccionado.categoria_cliente || "publico"}</b>
+      <b>{normalizarCategoriaVenta(clienteSeleccionado.categoria_cliente || "publico")}</b>
     </div>
   )}
 
@@ -2373,7 +2438,7 @@ if (view === "movimientos") {
           >
             <div style={{ fontWeight: 700 }}>{c.nombre}</div>
             <div style={{ fontSize: 12, color: theme.muted }}>
-              {c.telefono || "-"} · {c.email || "-"} · cat: {c.categoria_cliente || "publico"}
+              {c.telefono || "-"} · {c.email || "-"} · cat: {normalizarCategoriaVenta(c.categoria_cliente || "publico")}
             </div>
           </button>
         ))
@@ -2428,6 +2493,20 @@ if (view === "movimientos") {
 
           <div style={{ position: "relative", marginBottom: 10 }}>
   <div style={{ display: "flex", gap: 8 }}>
+    <input
+  type="number"
+  min="1"
+  value={cantidadAgregar}
+  onChange={(e) => setCantidadAgregar(e.target.value)}
+  placeholder="Cant."
+  style={{
+    width: 90,
+    padding: "10px 12px",
+    borderRadius: 10,
+    border: "1px solid #cfd8d3",
+    outline: "none",
+  }}
+/>
     <input
       type="text"
       value={busqueda}
@@ -2643,9 +2722,44 @@ if (view === "movimientos") {
                 >
                   <div style={{ flex: 1, fontSize: 13 }}>
                     <b>{it.codigo}</b> — {it.nombre}
-                    <div style={{ color: theme.muted }}>
-                      {money(it.precio_unitario)}
-                    </div>
+                  <div style={{ color: theme.muted, marginTop: 4 }}>
+  {isAdmin ? (
+    <input
+      type="number"
+      min="0"
+      step="0.01"
+      value={it.precio_unitario}
+      onChange={(e) => {
+        const nuevoPrecio = e.target.value;
+        setCarrito((prev) =>
+          prev.map((x) =>
+            (x.producto_id ?? x._rowId) === (it.producto_id ?? it._rowId)
+              ? { ...x, precio_unitario: nuevoPrecio === "" ? "" : Number(nuevoPrecio) }
+              : x
+          )
+        );
+      }}
+      onBlur={() => {
+        setCarrito((prev) =>
+          prev.map((x) =>
+            (x.producto_id ?? x._rowId) === (it.producto_id ?? it._rowId)
+              ? {
+                  ...x,
+                  precio_unitario:
+                    x.precio_unitario === "" || Number(x.precio_unitario) < 0
+                      ? 0
+                      : Number(x.precio_unitario),
+                }
+              : x
+          )
+        );
+      }}
+      style={{ ...inputStyle, marginTop: 4, padding: 8, width: 110 }}
+    />
+  ) : (
+    <div>{money(it.precio_unitario)}</div>
+  )}
+</div>
                   </div>
 
                   <input
@@ -2939,7 +3053,7 @@ if (view === "movimientos") {
                   <b style={{ color: theme.green2 }}>{money(v.total_final)}</b>
                 </td>
                 <td style={tdStyle}>{v.tipo_pago}</td>
-                <td style={tdStyle}>{new Date(v.created_at).toLocaleString()}</td>
+                <td style={tdStyle}>{formatFechaLocal(v.created_at)}</td>
                 <td style={tdStyle}>
                   <button onClick={() => verTicket(v.id)} style={btn("primary")}>
                     🧾 Ticket
@@ -3486,7 +3600,7 @@ if (view === "movimientos") {
           {movimientos.map((m, i) => (
             <tr key={m.id || i}>
               <td style={tdStyle}>
-                {m.created_at ? new Date(m.created_at).toLocaleString() : "—"}
+                {m.created_at ? formatFechaLocal(m.created_at) : "—"}
               </td>
               <td style={tdStyle}>
                 <b>{m.tipo || "—"}</b>
