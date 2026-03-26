@@ -30,6 +30,7 @@ const getTipoPagoLabel = (tipoPago) =>
       transferencia: "Transferencia",
       cheque: "Cheque",
       mixto: "Mixto",
+      a_cuenta: "A cuenta",
     }[tipoPago] || tipoPago
   );
 
@@ -48,6 +49,8 @@ export const getVentas = async (req, res) => {
       FROM ventas v
       LEFT JOIN ventas_items vi ON vi.venta_id = v.id
       WHERE COALESCE(v.estado, '') <> 'borrador'
+        AND COALESCE(v.es_cotizacion, 0) = 0
+        AND COALESCE(v.es_cotizacion_pedido, 0) = 0
       GROUP BY v.id
       ORDER BY v.created_at DESC
     `);
@@ -69,6 +72,9 @@ export const getVentasHoy = async (req, res) => {
     const [rows] = await pool.query(`
       SELECT * FROM ventas
       WHERE DATE(created_at) = CURDATE()
+        AND COALESCE(estado, '') <> 'borrador'
+        AND COALESCE(es_cotizacion, 0) = 0
+        AND COALESCE(es_cotizacion_pedido, 0) = 0
       ORDER BY created_at DESC
     `);
 
@@ -92,6 +98,9 @@ export const getResumenVentas = async (req, res) => {
         COALESCE(SUM(total_final), 0) AS totalHoy
       FROM ventas
       WHERE DATE(created_at) = CURDATE()
+        AND COALESCE(estado, '') <> 'borrador'
+        AND COALESCE(es_cotizacion, 0) = 0
+        AND COALESCE(es_cotizacion_pedido, 0) = 0
     `);
 
     const [[general]] = await pool.query(`
@@ -99,6 +108,9 @@ export const getResumenVentas = async (req, res) => {
         COUNT(*) AS ventasTotales,
         COALESCE(SUM(total_final), 0) AS totalGeneral
       FROM ventas
+      WHERE COALESCE(estado, '') <> 'borrador'
+        AND COALESCE(es_cotizacion, 0) = 0
+        AND COALESCE(es_cotizacion_pedido, 0) = 0
     `);
 
     const [porCategoria] = await pool.query(`
@@ -107,6 +119,9 @@ export const getResumenVentas = async (req, res) => {
         COUNT(*) AS cantidad,
         COALESCE(SUM(total_final), 0) AS total
       FROM ventas
+      WHERE COALESCE(estado, '') <> 'borrador'
+        AND COALESCE(es_cotizacion, 0) = 0
+        AND COALESCE(es_cotizacion_pedido, 0) = 0
       GROUP BY categoria
       ORDER BY total DESC
     `);
@@ -173,7 +188,11 @@ export const crearVenta = async (req, res) => {
     return res.status(400).json({ error: "La venta debe traer items" });
   }
 
-  if (!esCotizacionFinal && categoria === "publico" && !["efectivo", "a_cuenta"].includes(tipoPago)) {
+  if (
+    !esCotizacionFinal &&
+    categoria === "publico" &&
+    !["efectivo", "a_cuenta"].includes(tipoPago)
+  ) {
     return res.status(400).json({
       error: "Venta al público solo acepta efectivo o a cuenta",
     });
@@ -441,7 +460,11 @@ export const crearVenta = async (req, res) => {
 
       if (nuevoSaldoCliente > deudaMaxima) {
         throw new Error(
-          `El cliente supera la deuda permitida. Límite: ${deudaMaxima.toFixed(2)}, saldo actual: ${saldoActualCliente.toFixed(2)}, pendiente nuevo: ${saldoPendiente.toFixed(2)}`
+          `El cliente supera la deuda permitida. Límite: ${deudaMaxima.toFixed(
+            2
+          )}, saldo actual: ${saldoActualCliente.toFixed(
+            2
+          )}, pendiente nuevo: ${saldoPendiente.toFixed(2)}`
         );
       }
 
@@ -676,7 +699,11 @@ export const editarVenta = async (req, res) => {
     return res.status(400).json({ error: "Debe traer items" });
   }
 
-  if (!esCotizacionFinal && categoria === "publico" && !["efectivo", "a_cuenta"].includes(tipoPago)) {
+  if (
+    !esCotizacionFinal &&
+    categoria === "publico" &&
+    !["efectivo", "a_cuenta"].includes(tipoPago)
+  ) {
     return res.status(400).json({
       error: "Venta al público solo acepta efectivo o a cuenta",
     });
@@ -1010,7 +1037,11 @@ export const editarVenta = async (req, res) => {
 
       if (nuevoSaldoCliente > deudaMaxima) {
         throw new Error(
-          `El cliente supera la deuda permitida. Límite: ${deudaMaxima.toFixed(2)}, saldo actual: ${saldoActualCliente.toFixed(2)}, pendiente nuevo: ${saldoPendiente.toFixed(2)}`
+          `El cliente supera la deuda permitida. Límite: ${deudaMaxima.toFixed(
+            2
+          )}, saldo actual: ${saldoActualCliente.toFixed(
+            2
+          )}, pendiente nuevo: ${saldoPendiente.toFixed(2)}`
         );
       }
 
