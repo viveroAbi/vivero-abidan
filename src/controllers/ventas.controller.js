@@ -69,14 +69,29 @@ export const getVentas = async (req, res) => {
 // ==========================
 export const getVentasHoy = async (req, res) => {
   try {
-    const [rows] = await pool.query(`
-      SELECT * FROM ventas
-      WHERE DATE(created_at) = CURDATE()
+    const ahoraMx = new Date(
+      new Date().toLocaleString("en-US", { timeZone: "America/Mexico_City" })
+    );
+
+    const inicioMx = new Date(ahoraMx);
+    inicioMx.setHours(0, 0, 0, 0);
+
+    const finMx = new Date(ahoraMx);
+    finMx.setHours(24, 0, 0, 0);
+
+    const [rows] = await pool.query(
+      `
+      SELECT *
+      FROM ventas
+      WHERE created_at >= ?
+        AND created_at < ?
         AND COALESCE(estado, '') <> 'borrador'
         AND COALESCE(es_cotizacion, 0) = 0
         AND COALESCE(es_cotizacion_pedido, 0) = 0
       ORDER BY created_at DESC
-    `);
+      `,
+      [inicioMx, finMx]
+    );
 
     return res.json({ mensaje: "Ventas de hoy", data: rows });
   } catch (err) {
@@ -92,16 +107,30 @@ export const getVentasHoy = async (req, res) => {
 // ==========================
 export const getResumenVentas = async (req, res) => {
   try {
-    const [[hoy]] = await pool.query(`
+    const ahoraMx = new Date(
+      new Date().toLocaleString("en-US", { timeZone: "America/Mexico_City" })
+    );
+
+    const inicioMx = new Date(ahoraMx);
+    inicioMx.setHours(0, 0, 0, 0);
+
+    const finMx = new Date(ahoraMx);
+    finMx.setHours(24, 0, 0, 0);
+
+    const [[hoy]] = await pool.query(
+      `
       SELECT 
         COUNT(*) AS ventasHoy,
         COALESCE(SUM(total_final), 0) AS totalHoy
       FROM ventas
-      WHERE DATE(created_at) = CURDATE()
+      WHERE created_at >= ?
+        AND created_at < ?
         AND COALESCE(estado, '') <> 'borrador'
         AND COALESCE(es_cotizacion, 0) = 0
         AND COALESCE(es_cotizacion_pedido, 0) = 0
-    `);
+      `,
+      [inicioMx, finMx]
+    );
 
     const [[general]] = await pool.query(`
       SELECT 
