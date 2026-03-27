@@ -269,6 +269,7 @@ const productosFiltrados = useMemo(() => {
 
 
   const [carrito, setCarrito] = useState([]);
+  const [itemVisibleCarrito, setItemVisibleCarrito] = useState(null);
 const [prodForm, setProdForm] = useState({
   id: null,
   nombre: "",
@@ -1062,25 +1063,25 @@ function obtenerPrecioPorCategoria(producto, categoria) {
         cantidad: Number(copia[idx].cantidad || 0) + cantidadNum,
         precio_unitario: precioAplicado,
       };
+
+      setItemVisibleCarrito(p.id); // ← deja visible el último agregado
       return copia;
     }
 
-    return [
-      ...prev,
-      {
-        producto_id: p.id,
-        codigo: p.codigo_cat || p.codigo || "",
-        nombre: p.nombre || "",
+    const nuevo = {
+      producto_id: p.id,
+      codigo: p.codigo_cat || p.codigo || "",
+      nombre: p.nombre || "",
+      precio_publico: Number(p.precio_publico ?? p.precio ?? 0),
+      precio_mayoreo: Number(p.precio_mayoreo ?? p.precio_publico ?? p.precio ?? 0),
+      precio_vivero: Number(p.precio_vivero ?? p.precio_publico ?? p.precio ?? 0),
+      precio_especial: Number(p.precio_especial ?? p.precio_publico ?? p.precio ?? 0),
+      precio_unitario: precioAplicado,
+      cantidad: cantidadNum,
+    };
 
-        precio_publico: Number(p.precio_publico ?? p.precio ?? 0),
-        precio_mayoreo: Number(p.precio_mayoreo ?? p.precio_publico ?? p.precio ?? 0),
-        precio_vivero: Number(p.precio_vivero ?? p.precio_publico ?? p.precio ?? 0),
-        precio_especial: Number(p.precio_especial ?? p.precio_publico ?? p.precio ?? 0),
-
-        precio_unitario: precioAplicado,
-        cantidad: cantidadNum,
-      },
-    ];
+    setItemVisibleCarrito(p.id); // ← el nuevo queda abierto
+    return [...prev, nuevo];
   });
 }
 
@@ -2892,96 +2893,96 @@ if (view === "movimientos") {
 </div>
 
           {carrito.length > 0 ? (
-            <div style={{ marginTop: 10 }}>
-              {carrito.map((it) => (
-                <div
-                  key={it.producto_id ?? it._rowId}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    padding: "8px 0",
-                  }}
-                >
-                  <div style={{ flex: 1, fontSize: 13 }}>
-                    <b>{it.codigo}</b> — {it.nombre}
-                  <div style={{ color: theme.muted, marginTop: 4 }}>
-  {isAdmin ? (
-    <input
-      type="number"
-      min="0"
-      step="0.01"
-      value={it.precio_unitario}
-      onChange={(e) => {
-        const nuevoPrecio = e.target.value;
-        setCarrito((prev) =>
-          prev.map((x) =>
-            (x.producto_id ?? x._rowId) === (it.producto_id ?? it._rowId)
-              ? { ...x, precio_unitario: nuevoPrecio === "" ? "" : Number(nuevoPrecio) }
-              : x
-          )
-        );
-      }}
-      onBlur={() => {
-        setCarrito((prev) =>
-          prev.map((x) =>
-            (x.producto_id ?? x._rowId) === (it.producto_id ?? it._rowId)
-              ? {
-                  ...x,
-                  precio_unitario:
-                    x.precio_unitario === "" || Number(x.precio_unitario) < 0
-                      ? 0
-                      : Number(x.precio_unitario),
-                }
-              : x
-          )
-        );
-      }}
-      style={{ ...inputStyle, marginTop: 4, padding: 8, width: 110 }}
-    />
-  ) : (
-    <div>{money(it.precio_unitario)}</div>
-  )}
-</div>
-                  </div>
+  <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
+    {[...carrito].reverse().map((it) => {
+      const itemKey = it.producto_id ?? it._rowId;
+      const abierto = itemVisibleCarrito === itemKey;
 
-                  <input
-                    type="number"
-                    min="0"
-                    value={it.cantidad}
-                    onChange={(e) =>
-                      cambiarCantidad(it.producto_id ?? it._rowId, e.target.value)
-                    }
-                    onBlur={() => {
-                      setCarrito((prev) =>
-                        prev.map((x) =>
-                          (x.producto_id ?? x._rowId) === (it.producto_id ?? it._rowId)
-                            ? {
-                                ...x,
-                                cantidad: x.cantidad === "" ? 1 : x.cantidad,
-                              }
-                            : x
-                        )
-                      );
-                    }}
-                    style={{ ...inputStyle, marginTop: 0, padding: 8, width: 80 }}
-                  />
-
-                  <button
-                    type="button"
-                    onClick={() => quitarDelCarrito(it.producto_id ?? it._rowId)}
-                    style={btn("danger")}
-                  >
-                    ✖
-                  </button>
-                </div>
-              ))}
+      return (
+        <div
+          key={itemKey}
+          style={{
+            border: `1px solid ${theme.border}`,
+            borderRadius: 12,
+            padding: 10,
+            background: "#fff",
+          }}
+        >
+          <div
+            onClick={() =>
+              setItemVisibleCarrito((prev) =>
+                prev === itemKey ? null : itemKey
+              )
+            }
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              cursor: "pointer",
+              fontWeight: 700,
+            }}
+          >
+            <div>
+              {it.codigo ? `${it.codigo} — ` : ""}
+              {it.nombre}
             </div>
-          ) : (
-            <div style={{ marginTop: 10, color: theme.muted, fontSize: 13 }}>
-              Carrito vacío.
+
+            <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+              <span>{abierto ? "▲" : "▼"}</span>
+            </div>
+          </div>
+
+          {abierto && (
+            <div
+              style={{
+                marginTop: 10,
+                display: "grid",
+                gridTemplateColumns: "1fr 80px 44px",
+                gap: 10,
+                alignItems: "center",
+              }}
+            >
+              <input
+                type="number"
+                value={it.precio_unitario}
+                onChange={(e) =>
+                  setCarrito((prev) =>
+                    prev.map((x) =>
+                      (x.producto_id ?? x._rowId) === itemKey
+                        ? { ...x, precio_unitario: Number(e.target.value || 0) }
+                        : x
+                    )
+                  )
+                }
+                style={{ ...inputStyle, marginTop: 0, padding: 8 }}
+              />
+
+              <input
+                type="number"
+                min="1"
+                value={it.cantidad}
+                onChange={(e) => cambiarCantidad(itemKey, e.target.value)}
+                style={{ ...inputStyle, marginTop: 0, padding: 8, width: 80 }}
+              />
+
+              <button
+                type="button"
+                onClick={() => quitarDelCarrito(itemKey)}
+                style={btn("danger")}
+              >
+                ✖
+              </button>
             </div>
           )}
+        </div>
+      );
+    })}
+  </div>
+) : (
+  <div style={{ marginTop: 10, color: theme.muted, fontSize: 13 }}>
+    Carrito vacío.
+  </div>
+)}
         </div>
 
         <label style={labelStyle}>
