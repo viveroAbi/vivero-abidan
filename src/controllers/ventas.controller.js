@@ -69,15 +69,22 @@ export const getVentas = async (req, res) => {
 // ==========================
 export const getVentasHoy = async (req, res) => {
   try {
-    const ahoraMx = new Date(
-      new Date().toLocaleString("en-US", { timeZone: "America/Mexico_City" })
-    );
+    const ahora = new Date();
 
-    const inicioMx = new Date(ahoraMx);
-    inicioMx.setHours(0, 0, 0, 0);
+    const partes = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/Mexico_City",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(ahora);
 
-    const finMx = new Date(ahoraMx);
-    finMx.setHours(24, 0, 0, 0);
+    const year = partes.find((p) => p.type === "year").value;
+    const month = partes.find((p) => p.type === "month").value;
+    const day = partes.find((p) => p.type === "day").value;
+
+    const inicioUtc = new Date(`${year}-${month}-${day}T06:00:00.000Z`);
+    const finUtc = new Date(inicioUtc);
+    finUtc.setUTCDate(finUtc.getUTCDate() + 1);
 
     const [rows] = await pool.query(
       `
@@ -90,7 +97,7 @@ export const getVentasHoy = async (req, res) => {
         AND COALESCE(es_cotizacion_pedido, 0) = 0
       ORDER BY created_at DESC
       `,
-      [inicioMx, finMx]
+      [inicioUtc, finUtc]
     );
 
     return res.json({ mensaje: "Ventas de hoy", data: rows });
@@ -102,20 +109,24 @@ export const getVentasHoy = async (req, res) => {
   }
 };
 
-// ==========================
-// GET /api/ventas/resumen
-// ==========================
 export const getResumenVentas = async (req, res) => {
   try {
-    const ahoraMx = new Date(
-      new Date().toLocaleString("en-US", { timeZone: "America/Mexico_City" })
-    );
+    const ahora = new Date();
 
-    const inicioMx = new Date(ahoraMx);
-    inicioMx.setHours(0, 0, 0, 0);
+    const partes = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/Mexico_City",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(ahora);
 
-    const finMx = new Date(ahoraMx);
-    finMx.setHours(24, 0, 0, 0);
+    const year = partes.find((p) => p.type === "year").value;
+    const month = partes.find((p) => p.type === "month").value;
+    const day = partes.find((p) => p.type === "day").value;
+
+    const inicioUtc = new Date(`${year}-${month}-${day}T06:00:00.000Z`);
+    const finUtc = new Date(inicioUtc);
+    finUtc.setUTCDate(finUtc.getUTCDate() + 1);
 
     const [[hoy]] = await pool.query(
       `
@@ -129,7 +140,7 @@ export const getResumenVentas = async (req, res) => {
         AND COALESCE(es_cotizacion, 0) = 0
         AND COALESCE(es_cotizacion_pedido, 0) = 0
       `,
-      [inicioMx, finMx]
+      [inicioUtc, finUtc]
     );
 
     const [[general]] = await pool.query(`
