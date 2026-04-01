@@ -269,8 +269,8 @@ const productosFiltrados = useMemo(() => {
 
 
   const [carrito, setCarrito] = useState([]);
-  const [ventasAbiertas, setVentasAbiertas] = useState(true);
-  const [carritoAbierto, setCarritoAbierto] = useState(true);
+const [ventasAbiertas, setVentasAbiertas] = useState(true);
+const [carritoAbierto, setCarritoAbierto] = useState(true);
 const [prodForm, setProdForm] = useState({
   id: null,
   nombre: "",
@@ -1064,6 +1064,7 @@ function obtenerPrecioPorCategoria(producto, categoria) {
         cantidad: Number(copia[idx].cantidad || 0) + cantidadNum,
         precio_unitario: precioAplicado,
       };
+
       return copia;
     }
 
@@ -1078,6 +1079,7 @@ function obtenerPrecioPorCategoria(producto, categoria) {
       precio_unitario: precioAplicado,
       cantidad: cantidadNum,
     };
+
     return [...prev, nuevo];
   });
 }
@@ -2350,6 +2352,46 @@ if (view === "movimientos") {
 </button>
         </div>
 
+        {/* RESUMEN oculto */}
+        {false && (
+          <div
+  style={{
+    display: "grid",
+    gap: 12,
+    gridTemplateColumns: isMobile
+      ? "repeat(2, minmax(0, 1fr))"
+      : "repeat(auto-fit, minmax(170px, 1fr))",
+    marginBottom: 16,
+  }}
+>
+            <Card
+              title="Ventas hoy"
+              value={resumen ? resumen.ventasHoy : "—"}
+              cardStyle={cardStyle}
+              theme={theme}
+            />
+            <Card
+              title="Total hoy"
+              value={resumen ? money(resumen.totalHoy) : "—"}
+              cardStyle={cardStyle}
+              theme={theme}
+            />
+            <Card
+              title="Ventas totales"
+              value={resumen ? resumen.ventasTotales : "—"}
+              cardStyle={cardStyle}
+              theme={theme}
+            />
+            <Card
+              title="Total general"
+              value={resumen ? money(resumen.totalGeneral) : "—"}
+              cardStyle={cardStyle}
+              theme={theme}
+            />
+          </div>
+        )}
+        
+
         {/* ===== VISTAS ===== */}
 {view === "ventas" && (
   <div
@@ -2357,9 +2399,9 @@ if (view === "movimientos") {
       display: "grid",
       gridTemplateColumns: isMobile
         ? "1fr"
-        : ventasAbiertas
-        ? "minmax(0, 1.65fr) minmax(360px, 560px)"
-        : "56px minmax(360px, 560px)",
+        : (ventasAbiertas
+            ? "minmax(0, 1.5fr) minmax(420px, 0.9fr)"
+            : "60px minmax(420px, 0.9fr)"),
       gap: 20,
       alignItems: "flex-start",
     }}
@@ -2371,9 +2413,10 @@ if (view === "movimientos") {
     padding: 16,
     width: "100%",
     minWidth: 0,
-    maxWidth: isMobile ? "100%" : 560,
+    maxWidth: isMobile ? "100%" : 640,
     boxSizing: "border-box",
-    order: isMobile ? 1 : 2,
+    justifySelf: isMobile ? "stretch" : "end",
+    gridColumn: isMobile ? "auto" : 2,
   }}
 >
       <h2 style={{ marginTop: 0 }}>
@@ -2624,9 +2667,29 @@ if (view === "movimientos") {
               marginBottom: 8,
               display: "flex",
               justifyContent: "space-between",
+              alignItems: "center",
             }}
           >
-            <span>🛒 Carrito</span>
+            <button
+              type="button"
+              onClick={() => setCarritoAbierto((v) => !v)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                background: "transparent",
+                border: "none",
+                cursor: "pointer",
+                padding: 0,
+                fontSize: 16,
+                fontWeight: 900,
+                color: theme.text,
+              }}
+            >
+              <span>{carritoAbierto ? "▼" : "▶"}</span>
+              <span>🛒 Carrito</span>
+              <span style={{ fontSize: 13, color: theme.muted }}>({carrito.length})</span>
+            </button>
             <span style={{ color: theme.green2 }}>{money(totalCarrito)}</span>
           </div>
 
@@ -2851,119 +2914,103 @@ if (view === "movimientos") {
   </small>
 </div>
 
-          <div style={{ marginTop: 10 }}>
-  <div
-    style={{
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      gap: 10,
-      marginBottom: carritoAbierto ? 10 : 0,
-    }}
-  >
-    <button
-      type="button"
-      onClick={() => setCarritoAbierto((v) => !v)}
-      style={{
-        background: "transparent",
-        border: "none",
-        padding: 0,
-        margin: 0,
-        display: "flex",
-        alignItems: "center",
-        gap: 8,
-        fontWeight: 800,
-        fontSize: 16,
-        cursor: "pointer",
-        color: theme.text,
-      }}
-    >
-      <span>{carritoAbierto ? "▼" : "▶"}</span>
-      <span>Lista del carrito</span>
-      <span style={{ color: theme.muted, fontSize: 13 }}>({carrito.length})</span>
-    </button>
+          {carritoAbierto && (
+            carrito.length > 0 ? (
+              <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
+                {[...carrito].reverse().map((it) => {
+                  const itemKey = it.producto_id ?? it._rowId;
+                  const subtotal = Number(it.cantidad || 0) * Number(it.precio_unitario || 0);
 
-    <div style={{ fontWeight: 800, color: theme.green }}>
-      {money(totalCarrito)}
-    </div>
-  </div>
+                  return (
+                    <div
+                      key={itemKey}
+                      style={{
+                        border: `1px solid ${theme.border}`,
+                        borderRadius: 12,
+                        padding: 10,
+                        background: "#fff",
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: isMobile
+                            ? "minmax(0, 1fr)"
+                            : "minmax(220px, 1.8fr) 90px 120px 120px 70px",
+                          gap: 10,
+                          alignItems: "center",
+                        }}
+                      >
+                        <div style={{ minWidth: 0, overflow: "hidden" }}>
+                          <div
+                            style={{
+                              fontWeight: 800,
+                              whiteSpace: "normal",
+                              wordBreak: "normal",
+                              overflowWrap: "break-word",
+                              lineHeight: 1.25,
+                            }}
+                          >
+                            {it.codigo ? `${it.codigo} — ` : ""}
+                            {it.nombre}
+                          </div>
+                        </div>
 
-  {carritoAbierto && (
-    carrito.length > 0 ? (
-      <div style={{ display: "grid", gap: 10 }}>
-        {[...carrito].reverse().map((it) => {
-          const itemKey = it.producto_id ?? it._rowId;
-          const importe = Number(it.cantidad || 0) * Number(it.precio_unitario || 0);
+                        <div>
+                          <div style={{ fontSize: 12, color: theme.muted, marginBottom: 4 }}>Cant.</div>
+                          <input
+                            type="number"
+                            min="1"
+                            value={it.cantidad}
+                            onChange={(e) => cambiarCantidad(itemKey, e.target.value)}
+                            style={{ ...inputStyle, marginTop: 0, padding: 8, width: "100%" }}
+                          />
+                        </div>
 
-          return (
-            <div
-              key={itemKey}
-              style={{
-                border: `1px solid ${theme.border}`,
-                borderRadius: 12,
-                padding: 10,
-                background: "#fff",
-              }}
-            >
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: isMobile ? "1fr" : "minmax(0, 1.6fr) 110px 120px 120px 54px",
-                  gap: 10,
-                  alignItems: "center",
-                }}
-              >
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontWeight: 700, wordBreak: "break-word" }}>
-                    {it.codigo ? `${it.codigo} — ` : ""}
-                    {it.nombre}
-                  </div>
-                </div>
+                        <div>
+                          <div style={{ fontSize: 12, color: theme.muted, marginBottom: 4 }}>Precio</div>
+                          <input
+                            type="number"
+                            value={it.precio_unitario}
+                            onChange={(e) =>
+                              setCarrito((prev) =>
+                                prev.map((x) =>
+                                  (x.producto_id ?? x._rowId) === itemKey
+                                    ? { ...x, precio_unitario: Number(e.target.value || 0) }
+                                    : x
+                                )
+                              )
+                            }
+                            style={{ ...inputStyle, marginTop: 0, padding: 8, width: "100%" }}
+                          />
+                        </div>
 
-                <input
-                  type="number"
-                  min="1"
-                  value={it.cantidad}
-                  onChange={(e) => cambiarCantidad(itemKey, e.target.value)}
-                  style={{ ...inputStyle, marginTop: 0, padding: 8 }}
-                />
+                        <div>
+                          <div style={{ fontSize: 12, color: theme.muted, marginBottom: 4 }}>Importe</div>
+                          <div style={{ fontWeight: 800, color: theme.green2 }}>{money(subtotal)}</div>
+                        </div>
 
-                <input
-                  type="number"
-                  value={it.precio_unitario}
-                  onChange={(e) =>
-                    setCarrito((prev) =>
-                      prev.map((x) =>
-                        (x.producto_id ?? x._rowId) === itemKey
-                          ? { ...x, precio_unitario: Number(e.target.value || 0) }
-                          : x
-                      )
-                    )
-                  }
-                  style={{ ...inputStyle, marginTop: 0, padding: 8 }}
-                />
-
-                <div style={{ fontWeight: 800, color: theme.green2 }}>
-                  {money(importe)}
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => quitarDelCarrito(itemKey)}
-                  style={btn("danger")}
-                >
-                  ✖
-                </button>
+                        <div style={{ display: "flex", justifyContent: isMobile ? "flex-start" : "flex-end" }}>
+                          <button
+                            type="button"
+                            onClick={() => quitarDelCarrito(itemKey)}
+                            style={{ ...btn("danger"), minWidth: 54, padding: "10px 12px" }}
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            </div>
-          );
-        })}
-      </div>
-    ) : (
-      <div style={{ color: theme.muted, fontSize: 13 }}>Carrito vacío.</div>
-    )
-  )}
-</div>        </div>
+            ) : (
+              <div style={{ marginTop: 10, color: theme.muted, fontSize: 13 }}>
+                Carrito vacío.
+              </div>
+            )
+          )}
+        </div>
 
         <label style={labelStyle}>
           Tipo de pago:
@@ -3162,59 +3209,66 @@ if (view === "movimientos") {
     {/* TABLA */}
 <div
   style={{
-    ...cardStyle,
     width: "100%",
     minWidth: 0,
-    order: isMobile ? 2 : 1,
-    overflow: "hidden",
+    gridColumn: 1,
   }}
 >
+  <div
+    style={{
+      ...cardStyle,
+      padding: 0,
+      overflow: "hidden",
+      width: "100%",
+    }}
+  >
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: ventasAbiertas ? "space-between" : "center",
+        padding: 12,
+        borderBottom: ventasAbiertas ? `1px solid ${theme.border}` : "none",
+        background: "#f8fbfa",
+      }}
+    >
+      {ventasAbiertas && <h2 style={{ margin: 0 }}>Ventas</h2>}
+      <button
+        type="button"
+        onClick={() => setVentasAbiertas((v) => !v)}
+        style={{
+          border: `1px solid ${theme.border}`,
+          background: "#fff",
+          borderRadius: 10,
+          width: 36,
+          height: 36,
+          cursor: "pointer",
+          fontSize: 18,
+          fontWeight: 700,
+        }}
+        title={ventasAbiertas ? "Cerrar ventas" : "Abrir ventas"}
+      >
+        {ventasAbiertas ? "◀" : "▶"}
+      </button>
+    </div>
+
+    {ventasAbiertas && (
       <div
         style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: ventasAbiertas ? "space-between" : "center",
+          overflowX: "auto",
+          WebkitOverflowScrolling: "touch",
+          width: "100%",
           padding: 12,
-          borderBottom: ventasAbiertas ? `1px solid ${theme.border}` : "none",
-          background: "#f8fbfa",
+          boxSizing: "border-box",
         }}
       >
-        {ventasAbiertas && <h2 style={{ margin: 0 }}>Ventas</h2>}
-
-        <button
-          type="button"
-          onClick={() => setVentasAbiertas((v) => !v)}
-          style={{
-            border: `1px solid ${theme.border}`,
-            background: "#fff",
-            borderRadius: 10,
-            width: 36,
-            height: 36,
-            cursor: "pointer",
-            fontSize: 18,
-            fontWeight: 700,
-          }}
-          title={ventasAbiertas ? "Ocultar ventas" : "Mostrar ventas"}
-        >
-          {ventasAbiertas ? "◀" : "▶"}
-        </button>
-      </div>
-
-      {ventasAbiertas && (
-        <div
-          style={{
-            overflowX: "auto",
-            WebkitOverflowScrolling: "touch",
-            width: "100%",
-          }}
-        >
-          <table
-            style={{
-              width: "100%",
-              minWidth: isMobile ? 950 : 0,
-              borderCollapse: "collapse",
-            }}
-          >
+        <table
+  style={{
+    width: "100%",
+    minWidth: isMobile ? 950 : 0, // ✅ scroll interno en móvil
+    borderCollapse: "collapse",
+  }}
+>
           <thead>
             <tr>
               {[
@@ -3291,8 +3345,9 @@ if (view === "movimientos") {
           </tbody>
         </table>
       </div>
-      )}
-    </div>
+    )}
+  </div>
+</div>
   </div>
 )}
 {view === "reporte" && (
