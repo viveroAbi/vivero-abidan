@@ -109,17 +109,17 @@ async function seleccionarClienteVenta(c) {
       }
     }, 0);
   } catch (err) {
-    console.error("Error cargando cliente completo:", err);
+  console.error("Error cargando cliente completo:", err);
 
-    setClienteSeleccionado({
-  ...c,
-  notas: c?.notas || "",
-});
-    setClienteSearch(c.nombre || "");
-    setClienteSug([]);
-    setShowClienteSug(false);
-    setClienteSugActiva(-1);
-  }
+  setClienteSeleccionado({
+    ...c,
+    notas: c?.notas || "",
+  });
+  setClienteSearch(c.nombre || "");
+  setClienteSug([]);
+  setShowClienteSug(false);
+  setClienteSugActiva(-1);
+}
 }
   // ===== Productos: buscador en vivo =====
 
