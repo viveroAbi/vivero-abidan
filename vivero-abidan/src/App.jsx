@@ -64,44 +64,59 @@ useEffect(() => {
   window.addEventListener("resize", onResize);
   return () => window.removeEventListener("resize", onResize);
 }, []);
-function seleccionarClienteVenta(c) {
-  setClienteSeleccionado(c);
-  setClienteSearch(c.nombre || "");
-  setClienteSug([]);
-  setShowClienteSug(false);
-  setClienteSugActiva(-1);
-  setClienteSugActiva(-1);
+async function seleccionarClienteVenta(c) {
+  try {
+    const id = Number(c?.id || 0);
+    if (!id) return;
 
-  const cat = normalizarCategoriaVenta(c.categoria_cliente || "publico");
+    const data = await apiFetch(`/clientes/${id}`);
+    const clienteCompleto = data?.data || c;
 
-  // Auto-llenar categoría desde cliente
-  setForm((f) => ({
-    ...f,
-    categoria: cat,
-  }));
+    setClienteSeleccionado(clienteCompleto);
+    setClienteSearch(clienteCompleto.nombre || "");
+    setClienteSug([]);
+    setShowClienteSug(false);
+    setClienteSugActiva(-1);
 
-  // Recalcular precios del carrito con la categoría del cliente
-  setCarrito((prev) =>
-  prev.map((it) => {
-    const nuevoPrecio = obtenerPrecioPorCategoria(it, cat);
-    const precioActual = Number(it.precio_unitario || it.precio || 0);
+    const cat = normalizarCategoriaVenta(
+      clienteCompleto.categoria_cliente || "publico"
+    );
 
-    return {
-      ...it,
-      precio_unitario:
-        Number.isFinite(Number(nuevoPrecio)) && Number(nuevoPrecio) > 0
-          ? Number(nuevoPrecio)
-          : precioActual,
-    };
-  })
-);
+    setForm((f) => ({
+      ...f,
+      categoria: cat,
+    }));
 
-  setTimeout(() => {
-    if (cantidadAgregarRef.current) {
-      cantidadAgregarRef.current.focus();
-      cantidadAgregarRef.current.select?.();
-    }
-  }, 0);
+    setCarrito((prev) =>
+      prev.map((it) => {
+        const nuevoPrecio = obtenerPrecioPorCategoria(it, cat);
+        const precioActual = Number(it.precio_unitario || it.precio || 0);
+
+        return {
+          ...it,
+          precio_unitario:
+            Number.isFinite(Number(nuevoPrecio)) && Number(nuevoPrecio) > 0
+              ? Number(nuevoPrecio)
+              : precioActual,
+        };
+      })
+    );
+
+    setTimeout(() => {
+      if (cantidadAgregarRef.current) {
+        cantidadAgregarRef.current.focus();
+        cantidadAgregarRef.current.select?.();
+      }
+    }, 0);
+  } catch (err) {
+    console.error("Error cargando cliente completo:", err);
+
+    setClienteSeleccionado(c);
+    setClienteSearch(c.nombre || "");
+    setClienteSug([]);
+    setShowClienteSug(false);
+    setClienteSugActiva(-1);
+  }
 }
   // ===== Productos: buscador en vivo =====
 
@@ -629,7 +644,7 @@ const deudaMaximaCliente = Number(clienteSeleccionado?.deuda_maxima || 0);
 const disponibleCreditoCliente = Number(
   (deudaMaximaCliente - saldoActualCliente).toFixed(2)
 );
-const notasCliente = clienteSeleccionado?.notas || "";
+const notasCliente = String(clienteSeleccionado?.notas || "").trim();
 
 
   const efectivoNum = useMemo(
