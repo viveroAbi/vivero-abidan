@@ -41,19 +41,7 @@ export default function Clientes() {
   const [timerId, setTimerId] = useState(null);
 
   function getNotaPendiente(c) {
-    const saldo = Number(c.saldo_actual || 0);
-    const deudaMax = Number(c.deuda_maxima || 0);
-    const notas = String(c.notas || "").trim();
-
-    if (saldo > 0) {
-      return `Adeudo pendiente: $${saldo.toFixed(2)}`;
-    }
-
-    if (Number(c.permite_credito || 0) === 1 && deudaMax > 0) {
-      return `Crédito disponible: $${(deudaMax - saldo).toFixed(2)}`;
-    }
-
-    return notas || "Sin notas";
+    return String(c.notas || "").trim() || "Sin notas";
   }
 
   async function cargar(searchOverride = search, activoOverride = activo) {
@@ -294,9 +282,7 @@ export default function Clientes() {
               <th style={{ textAlign: "left", padding: 10 }}>Crédito</th>
               <th style={{ textAlign: "left", padding: 10 }}>Deuda máxima</th>
               <th style={{ textAlign: "left", padding: 10 }}>Saldo actual</th>
-              <th style={{ textAlign: "left", padding: 10 }}>
-                Notas pendientes
-              </th>
+              <th style={{ textAlign: "left", padding: 10 }}>Notas pendientes</th>
               <th style={{ textAlign: "left", padding: 10 }}>Acciones</th>
             </tr>
           </thead>
@@ -329,7 +315,9 @@ export default function Clientes() {
                   <td style={{ padding: 10 }}>
                     ${Number(c.saldo_actual || 0).toFixed(2)}
                   </td>
-                  <td style={{ padding: 10 }}>{getNotaPendiente(c)}</td>
+                  <td style={{ padding: 10, maxWidth: 260, whiteSpace: "pre-wrap" }}>
+                    {getNotaPendiente(c)}
+                  </td>
                   <td style={{ padding: 10, display: "flex", gap: 8 }}>
                     <button type="button" onClick={() => abrirEditar(c)}>
                       Editar
@@ -407,9 +395,7 @@ export default function Clientes() {
 
               <input
                 value={form.direccion}
-                onChange={(e) =>
-                  setForm({ ...form, direccion: e.target.value })
-                }
+                onChange={(e) => setForm({ ...form, direccion: e.target.value })}
                 placeholder="Dirección"
                 style={{ padding: 10, gridColumn: "1 / -1" }}
               />
