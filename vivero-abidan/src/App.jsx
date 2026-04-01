@@ -647,7 +647,20 @@ const deudaMaximaCliente = Number(clienteSeleccionado?.deuda_maxima || 0);
 const disponibleCreditoCliente = Number(
   (deudaMaximaCliente - saldoActualCliente).toFixed(2)
 );
-const notasCliente = String(clienteSeleccionado?.notas || "").trim();
+
+const notaAutomaticaCliente = useMemo(() => {
+  if (!clienteSeleccionado) return "Sin cliente seleccionado";
+
+  if (saldoActualCliente > 0) {
+    return `Cliente con adeudo pendiente de $${saldoActualCliente.toFixed(2)}`;
+  }
+
+  if (disponibleCreditoCliente <= 0) {
+    return "Cliente sin crédito disponible";
+  }
+
+  return String(clienteSeleccionado?.notas || "").trim() || "Sin notas";
+}, [clienteSeleccionado, saldoActualCliente, disponibleCreditoCliente]);
 
 
   const efectivoNum = useMemo(
@@ -3142,7 +3155,7 @@ if (view === "movimientos") {
     <div><strong>Saldo actual:</strong> ${saldoActualCliente.toFixed(2)}</div>
     <div><strong>Deuda máxima:</strong> ${deudaMaximaCliente.toFixed(2)}</div>
     <div><strong>Crédito disponible:</strong> ${disponibleCreditoCliente.toFixed(2)}</div>
-    <div><strong>Notas:</strong> {notasCliente || "Sin notas"}</div>
+    <div><strong>Notas:</strong> {notaAutomaticaCliente}</div>
   </div>
 )}
 
