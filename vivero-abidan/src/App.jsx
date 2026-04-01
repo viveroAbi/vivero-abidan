@@ -4249,19 +4249,48 @@ if (view === "movimientos") {
 
       {/* MODAL DEL TICKET */}
       {showTicket && ticketData && typeof TicketModal === "function" ? (
-        <TicketModal
-  data={ticketData}
-  recibido={ticketData?.venta?.recibido ?? 0}
-  cambio={ticketData?.venta?.cambio ?? 0}
-  onClose={() => {
-    setShowTicket(false);
-    setTicketData(null);
+  <TicketModal
+    data={ticketData}
+    recibido={ticketData?.venta?.recibido ?? 0}
+    cambio={ticketData?.venta?.cambio ?? 0}
+    onClose={() => {
+      setShowTicket(false);
+      setTicketData(null);
+    }}
+  />
+) : null}
+
+<button
+  type="button"
+  onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+  style={{
+    position: "fixed",
+    top: 20,
+    right: 20,
+    zIndex: 9999,
+    width: 48,
+    height: 48,
+    borderRadius: "50%",
+    border: "1px solid #ccc",
+    background: "#fff",
+    cursor: "pointer",
+    fontSize: 22,
+    boxShadow: "0 4px 10px rgba(0,0,0,0.15)",
   }}
+>
+  ↑
+</button>
+
+<Drawer
+  open={drawerOpen}
+  onClose={() => setDrawerOpen(false)}
+  theme={theme}
+  cardStyle={cardStyle}
+  isAdmin={isAdmin}
+  setView={setView}
+  setReporteTipo={setReporteTipo}
+  btn={btn}
 />
-
-
-
-      ) : null}
 
       {cameraOpen && (
   <div

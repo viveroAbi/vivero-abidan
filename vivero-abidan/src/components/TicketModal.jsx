@@ -235,8 +235,9 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
     })}`;
 
   const formaPagoLabel = (p) => {
-    const s = String(p || "").toLowerCase();
+    const s = String(p || "").toLowerCase().trim();
     if (!s) return "—";
+    if (s.includes("a_cuenta") || s.includes("a cuenta")) return "A_CUENTA";
     if (s.includes("credito")) return "TARJETA CREDITO";
     if (s.includes("debito")) return "TARJETA DEBITO";
     if (s.includes("transfer")) return "TRANSFERENCIA";
@@ -264,13 +265,30 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
     return 0;
   };
 
+  const pickText = (...values) => {
+    for (const v of values) {
+      if (v !== undefined && v !== null && String(v).trim() !== "") {
+        return String(v).trim();
+      }
+    }
+    return "";
+  };
+
   const formaPago = formaPagoLabel(
     data?.pago || venta?.forma_pago || venta?.tipo_pago
   );
 
   const tipoPagoRaw = String(
     venta?.tipo_pago || venta?.forma_pago || data?.pago || ""
-  ).toLowerCase();
+  )
+    .toLowerCase()
+    .trim();
+
+  const esPagoACuenta =
+    tipoPagoRaw === "a_cuenta" ||
+    tipoPagoRaw === "a cuenta" ||
+    tipoPagoRaw.includes("a_cuenta") ||
+    tipoPagoRaw.includes("a cuenta");
 
   const totalFinal = Number(venta.total_final ?? venta.total ?? 0);
   const descuento = Number(venta.descuento ?? 0);
@@ -281,16 +299,22 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
   const esCotizacionNormal =
     Number(venta.es_cotizacion ?? venta.esCotizacion ?? 0) === 1;
 
-  const clienteNombre =
-    venta.cliente_nombre ||
-    venta.cliente ||
-    data?.cliente ||
-    "PUBLICO EN GENERAL";
+  const clienteNombreRaw = pickText(
+    venta?.cliente_nombre,
+    venta?.cliente,
+    venta?.nombre_cliente,
+    venta?.clienteNombre,
+    venta?.cliente_nombre_completo,
+    venta?.cliente?.nombre,
+    venta?.cliente?.razon_social,
+    data?.cliente_nombre,
+    data?.cliente,
+    data?.nombre_cliente
+  );
 
-  const categoriaVenta =
-    venta.categoria ||
-    data?.categoria ||
-    "publico";
+  const clienteNombre = clienteNombreRaw || "PUBLICO EN GENERAL";
+
+  const categoriaVenta = venta.categoria || data?.categoria || "publico";
 
   const cajeroNombre =
     venta.cajero_nombre ||
@@ -365,6 +389,40 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
     { label: "TARJ. CREDITO", value: pagoCredito },
     { label: "TARJ. DEBITO", value: pagoDebito },
   ].filter((x) => Number(x.value || 0) > 0);
+
+  const dejaACuenta = pickNum(
+    venta.abono,
+    venta.anticipo,
+    venta.deja,
+    venta.monto_abonado,
+    venta.monto_abono,
+    venta.recibido,
+    data?.abono,
+    data?.anticipo,
+    data?.deja,
+    data?.monto_abonado,
+    data?.monto_abono,
+    recibido
+  );
+
+  let restaACuenta = pickNum(
+    venta.resta,
+    venta.saldo_pendiente,
+    venta.adeudo_restante,
+    venta.total_restante,
+    venta.pendiente,
+    venta.saldo,
+    data?.resta,
+    data?.saldo_pendiente,
+    data?.adeudo_restante,
+    data?.total_restante,
+    data?.pendiente,
+    data?.saldo
+  );
+
+  if (!restaACuenta && esPagoACuenta) {
+    restaACuenta = Math.max(totalFinal - dejaACuenta, 0);
+  }
 
   const ticketBoxStyle = {
     position: "relative",
@@ -475,7 +533,7 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
                     : "—"}
                 </div>
                 <div>
-                  <b>CLIENTE:</b> {clienteNombre}
+                  <b>CLIENTE:</b> {String(clienteNombre).toUpperCase()}
                 </div>
                 <div>
                   <b>CATEGORIA:</b> {categoriaLabel(categoriaVenta)}
@@ -503,10 +561,7 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
                     const cant = Number(it.cantidad || 0);
                     const pu = Number(it.precio_unitario || 0);
                     const nombre = String(
-                      it.producto_nombre ||
-                        it.nombre ||
-                        it.codigo ||
-                        "SIN NOMBRE"
+                      it.producto_nombre || it.nombre || it.codigo || "SIN NOMBRE"
                     ).toUpperCase();
 
                     return (
@@ -679,9 +734,7 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
               </div>
 
               {items.length === 0 ? (
-                <div style={{ marginTop: 8 }}>
-                  (SIN PRODUCTOS EN EL TICKET)
-                </div>
+                <div style={{ marginTop: 8 }}>(SIN PRODUCTOS EN EL TICKET)</div>
               ) : (
                 items.map((it, idx) => {
                   const cant = Number(it.cantidad || 0);
@@ -789,6 +842,27 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
                   >
                     <span>CAMBIO:</span>
                     <b>{moneyCompact(venta.cambio ?? cambio)}</b>
+                  </div>
+                </div>
+              )}
+
+              {esPagoACuenta && (
+                <div style={{ fontSize: 12, marginTop: 4 }}>
+                  <div
+                    style={{ display: "flex", justifyContent: "space-between" }}
+                  >
+                    <span>DEJA:</span>
+                    <b>{moneyCompact(dejaACuenta)}</b>
+                  </div>
+                  <div
+                    style={{ display: "flex", justifyContent: "space-between" }}
+                  >
+                    <span>RESTA:</span>
+                    <b>{moneyCompact(restaACuenta)}</b>
+                  </div>
+
+                  <div style={{ marginTop: 14 }}>
+                    <b>FIRMA:</b> ________________________
                   </div>
                 </div>
               )}
