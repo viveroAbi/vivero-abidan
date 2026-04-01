@@ -2417,6 +2417,7 @@ if (view === "movimientos") {
     boxSizing: "border-box",
     justifySelf: isMobile ? "stretch" : "end",
     gridColumn: isMobile ? "auto" : 2,
+    gridRow: 1,
   }}
 >
       <h2 style={{ marginTop: 0 }}>
@@ -3245,6 +3246,8 @@ if (view === "movimientos") {
     width: "100%",
     minWidth: 0,
     gridColumn: 1,
+    gridRow: 1,
+    alignSelf: "start",
   }}
 >
   <div
