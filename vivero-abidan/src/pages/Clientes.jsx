@@ -322,6 +322,9 @@ export default function Clientes() {
                     <button type="button" onClick={() => abrirEditar(c)}>
                       Editar
                     </button>
+                    <button type="button" onClick={() => verAdeudos(c)}>
+  Ver adeudos
+</button>
 
                     {String(activo) === "1" ? (
                       <button type="button" onClick={() => desactivar(c.id)}>
