@@ -2916,7 +2916,18 @@ if (view === "movimientos") {
 
           {carritoAbierto && (
             carrito.length > 0 ? (
-              <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
+              <div
+                style={{
+                  marginTop: 10,
+                  display: "grid",
+                  gap: 8,
+                  maxHeight: 260,
+                  overflowY: "auto",
+                  borderTop: `1px solid ${theme.border}`,
+                  paddingTop: 10,
+                  paddingRight: 4,
+                }}
+              >
                 {[...carrito].reverse().map((it) => {
                   const itemKey = it.producto_id ?? it._rowId;
                   const subtotal = Number(it.cantidad || 0) * Number(it.precio_unitario || 0);
@@ -2936,19 +2947,20 @@ if (view === "movimientos") {
                           display: "grid",
                           gridTemplateColumns: isMobile
                             ? "minmax(0, 1fr)"
-                            : "minmax(220px, 1.8fr) 90px 120px 120px 70px",
-                          gap: 10,
+                            : "minmax(180px, 1.7fr) 80px 105px 105px 58px",
+                          gap: 8,
                           alignItems: "center",
                         }}
                       >
                         <div style={{ minWidth: 0, overflow: "hidden" }}>
                           <div
                             style={{
-                              fontWeight: 800,
+                              fontWeight: 700,
+                              fontSize: 13,
                               whiteSpace: "normal",
-                              wordBreak: "normal",
+                              wordBreak: "keep-all",
                               overflowWrap: "break-word",
-                              lineHeight: 1.25,
+                              lineHeight: 1.15,
                             }}
                           >
                             {it.codigo ? `${it.codigo} — ` : ""}
@@ -2957,18 +2969,25 @@ if (view === "movimientos") {
                         </div>
 
                         <div>
-                          <div style={{ fontSize: 12, color: theme.muted, marginBottom: 4 }}>Cant.</div>
+                          <div style={{ fontSize: 11, color: theme.muted, marginBottom: 4 }}>Cant.</div>
                           <input
                             type="number"
                             min="1"
                             value={it.cantidad}
                             onChange={(e) => cambiarCantidad(itemKey, e.target.value)}
-                            style={{ ...inputStyle, marginTop: 0, padding: 8, width: "100%" }}
+                            style={{
+                              ...inputStyle,
+                              marginTop: 0,
+                              padding: "6px 8px",
+                              fontSize: 13,
+                              height: 34,
+                              width: "100%",
+                            }}
                           />
                         </div>
 
                         <div>
-                          <div style={{ fontSize: 12, color: theme.muted, marginBottom: 4 }}>Precio</div>
+                          <div style={{ fontSize: 11, color: theme.muted, marginBottom: 4 }}>Precio</div>
                           <input
                             type="number"
                             value={it.precio_unitario}
@@ -2981,20 +3000,34 @@ if (view === "movimientos") {
                                 )
                               )
                             }
-                            style={{ ...inputStyle, marginTop: 0, padding: 8, width: "100%" }}
+                            style={{
+                              ...inputStyle,
+                              marginTop: 0,
+                              padding: "6px 8px",
+                              fontSize: 13,
+                              height: 34,
+                              width: "100%",
+                            }}
                           />
                         </div>
 
                         <div>
-                          <div style={{ fontSize: 12, color: theme.muted, marginBottom: 4 }}>Importe</div>
-                          <div style={{ fontWeight: 800, color: theme.green2 }}>{money(subtotal)}</div>
+                          <div style={{ fontSize: 11, color: theme.muted, marginBottom: 4 }}>Importe</div>
+                          <div style={{ fontWeight: 800, fontSize: 13, color: theme.green2 }}>{money(subtotal)}</div>
                         </div>
 
                         <div style={{ display: "flex", justifyContent: isMobile ? "flex-start" : "flex-end" }}>
                           <button
                             type="button"
                             onClick={() => quitarDelCarrito(itemKey)}
-                            style={{ ...btn("danger"), minWidth: 54, padding: "10px 12px" }}
+                            style={{
+                              ...btn("danger"),
+                              minWidth: 46,
+                              height: 34,
+                              padding: "6px 8px",
+                              fontSize: 16,
+                              lineHeight: 1,
+                            }}
                           >
                             ✕
                           </button>
