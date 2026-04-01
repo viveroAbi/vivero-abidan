@@ -6,6 +6,8 @@ import {
   updateCliente,
   deleteCliente,
   activateCliente,
+  getAdeudosCliente,
+  registrarAbonoCliente,
 } from "../services/clientes.api";
 
 const emptyForm = {
@@ -31,6 +33,14 @@ export default function Clientes() {
   const [editId, setEditId] = useState(null);
   const [form, setForm] = useState(emptyForm);
 
+  const [openAdeudos, setOpenAdeudos] = useState(false);
+  const [adeudosLoading, setAdeudosLoading] = useState(false);
+  const [clienteAdeudos, setClienteAdeudos] = useState(null);
+  const [adeudos, setAdeudos] = useState([]);
+  const [abonos, setAbonos] = useState({});
+  const [notaAbono, setNotaAbono] = useState({});
+  const [metodoAbono, setMetodoAbono] = useState({});
+
   const title = useMemo(
     () => (editId ? "Editar cliente" : "Nuevo cliente"),
     [editId]
@@ -41,7 +51,13 @@ export default function Clientes() {
   const [timerId, setTimerId] = useState(null);
 
   function getNotaPendiente(c) {
-    return String(c.notas || "").trim() || "Sin notas";
+    const saldo = Number(c.saldo_actual || 0);
+    const notas = String(c.notas || "").trim();
+
+    if (notas) return notas;
+    if (saldo > 0) return `Debe $${saldo.toFixed(2)}`;
+
+    return "Sin notas";
   }
 
   async function cargar(searchOverride = search, activoOverride = activo) {
@@ -80,7 +96,7 @@ export default function Clientes() {
         const data = await getClientes({ search: q, activo });
         setSugerencias(data.slice(0, 6));
         setShowSug(true);
-      } catch (e) {
+      } catch {
         setSugerencias([]);
         setShowSug(false);
       }
@@ -134,6 +150,15 @@ export default function Clientes() {
     setForm(emptyForm);
   };
 
+  const cerrarAdeudos = () => {
+    setOpenAdeudos(false);
+    setClienteAdeudos(null);
+    setAdeudos([]);
+    setAbonos({});
+    setNotaAbono({});
+    setMetodoAbono({});
+  };
+
   const guardar = async () => {
     if (!form.nombre.trim()) return alert("Nombre es obligatorio");
 
@@ -172,6 +197,52 @@ export default function Clientes() {
     try {
       await activateCliente(id);
       cargar();
+    } catch (e) {
+      alert(e.message);
+    }
+  };
+
+  const verAdeudos = async (cliente) => {
+    try {
+      setAdeudosLoading(true);
+      const data = await getAdeudosCliente(cliente.id);
+
+      setClienteAdeudos(data.cliente || cliente);
+      setAdeudos(Array.isArray(data.adeudos) ? data.adeudos : []);
+      setOpenAdeudos(true);
+    } catch (e) {
+      alert(e.message);
+    } finally {
+      setAdeudosLoading(false);
+    }
+  };
+
+  const cobrarAbono = async (ventaId) => {
+    try {
+      const monto = Number(abonos[ventaId] || 0);
+      const metodo_pago = String(metodoAbono[ventaId] || "efectivo");
+      const nota = String(notaAbono[ventaId] || "").trim();
+
+      if (!Number.isFinite(monto) || monto <= 0) {
+        return alert("Captura un monto válido");
+      }
+
+      await registrarAbonoCliente(clienteAdeudos.id, ventaId, {
+        monto,
+        metodo_pago,
+        nota,
+      });
+
+      const recargado = await getAdeudosCliente(clienteAdeudos.id);
+      setClienteAdeudos(recargado.cliente || clienteAdeudos);
+      setAdeudos(Array.isArray(recargado.adeudos) ? recargado.adeudos : []);
+
+      setAbonos((prev) => ({ ...prev, [ventaId]: "" }));
+      setNotaAbono((prev) => ({ ...prev, [ventaId]: "" }));
+      setMetodoAbono((prev) => ({ ...prev, [ventaId]: "efectivo" }));
+
+      await cargar();
+      alert("Abono registrado correctamente");
     } catch (e) {
       alert(e.message);
     }
@@ -282,7 +353,9 @@ export default function Clientes() {
               <th style={{ textAlign: "left", padding: 10 }}>Crédito</th>
               <th style={{ textAlign: "left", padding: 10 }}>Deuda máxima</th>
               <th style={{ textAlign: "left", padding: 10 }}>Saldo actual</th>
-              <th style={{ textAlign: "left", padding: 10 }}>Notas pendientes</th>
+              <th style={{ textAlign: "left", padding: 10 }}>
+                Notas pendientes
+              </th>
               <th style={{ textAlign: "left", padding: 10 }}>Acciones</th>
             </tr>
           </thead>
@@ -315,16 +388,23 @@ export default function Clientes() {
                   <td style={{ padding: 10 }}>
                     ${Number(c.saldo_actual || 0).toFixed(2)}
                   </td>
-                  <td style={{ padding: 10, maxWidth: 260, whiteSpace: "pre-wrap" }}>
+                  <td
+                    style={{
+                      padding: 10,
+                      maxWidth: 260,
+                      whiteSpace: "pre-wrap",
+                    }}
+                  >
                     {getNotaPendiente(c)}
                   </td>
-                  <td style={{ padding: 10, display: "flex", gap: 8 }}>
+                  <td style={{ padding: 10, display: "flex", gap: 8, flexWrap: "wrap" }}>
                     <button type="button" onClick={() => abrirEditar(c)}>
                       Editar
                     </button>
+
                     <button type="button" onClick={() => verAdeudos(c)}>
-  Ver adeudos
-</button>
+                      Ver adeudos
+                    </button>
 
                     {String(activo) === "1" ? (
                       <button type="button" onClick={() => desactivar(c.id)}>
@@ -354,6 +434,7 @@ export default function Clientes() {
             alignItems: "center",
             justifyContent: "center",
             padding: 20,
+            zIndex: 1000,
           }}
         >
           <div
@@ -398,7 +479,9 @@ export default function Clientes() {
 
               <input
                 value={form.direccion}
-                onChange={(e) => setForm({ ...form, direccion: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, direccion: e.target.value })
+                }
                 placeholder="Dirección"
                 style={{ padding: 10, gridColumn: "1 / -1" }}
               />
@@ -492,6 +575,211 @@ export default function Clientes() {
             >
               <button onClick={cerrarModal}>Cancelar</button>
               <button onClick={guardar}>Guardar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {openAdeudos && (
+        <div
+          onClick={cerrarAdeudos}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,.4)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 20,
+            zIndex: 1100,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: "#fff",
+              borderRadius: 12,
+              width: 980,
+              maxWidth: "100%",
+              maxHeight: "90vh",
+              overflow: "auto",
+              padding: 16,
+            }}
+          >
+            <h3 style={{ marginTop: 0 }}>
+              Adeudos de {clienteAdeudos?.nombre || "Cliente"}
+            </h3>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                gap: 10,
+                marginBottom: 16,
+                background: "#f7f7f7",
+                padding: 12,
+                borderRadius: 10,
+              }}
+            >
+              <div>
+                <strong>Saldo actual:</strong>{" "}
+                ${Number(clienteAdeudos?.saldo_actual || 0).toFixed(2)}
+              </div>
+              <div>
+                <strong>Deuda máxima:</strong>{" "}
+                ${Number(clienteAdeudos?.deuda_maxima || 0).toFixed(2)}
+              </div>
+              <div>
+                <strong>Crédito:</strong>{" "}
+                {Number(clienteAdeudos?.permite_credito || 0) === 1 ? "Sí" : "No"}
+              </div>
+            </div>
+
+            {adeudosLoading ? (
+              <div>Cargando adeudos...</div>
+            ) : adeudos.length === 0 ? (
+              <div>Este cliente no tiene adeudos pendientes.</div>
+            ) : (
+              <div style={{ display: "grid", gap: 12 }}>
+                {adeudos.map((a) => (
+                  <div
+                    key={a.id}
+                    style={{
+                      border: "1px solid #ddd",
+                      borderRadius: 10,
+                      padding: 12,
+                      background: "#fff",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
+                        gap: 10,
+                        marginBottom: 12,
+                      }}
+                    >
+                      <div>
+                        <strong>Venta:</strong> #{a.id}
+                      </div>
+                      <div>
+                        <strong>Total:</strong> $
+                        {Number(a.total_final || 0).toFixed(2)}
+                      </div>
+                      <div>
+                        <strong>Abonado:</strong> $
+                        {Number(a.abono_inicial || 0).toFixed(2)}
+                      </div>
+                      <div>
+                        <strong>Pendiente:</strong> $
+                        {Number(a.saldo_pendiente || 0).toFixed(2)}
+                      </div>
+                      <div>
+                        <strong>Fecha:</strong>{" "}
+                        {a.created_at
+                          ? new Date(a.created_at).toLocaleString()
+                          : "-"}
+                      </div>
+                      <div>
+                        <strong>Vencimiento:</strong>{" "}
+                        {a.fecha_vencimiento
+                          ? new Date(a.fecha_vencimiento).toLocaleDateString()
+                          : "-"}
+                      </div>
+                    </div>
+
+                    <div style={{ marginBottom: 10 }}>
+                      <strong>Observaciones:</strong>{" "}
+                      {String(a.observaciones_credito || "").trim() || "Sin observaciones"}
+                    </div>
+
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "1fr 1fr 2fr auto",
+                        gap: 10,
+                        alignItems: "end",
+                      }}
+                    >
+                      <div>
+                        <label style={{ display: "block", marginBottom: 6 }}>
+                          Abono
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={abonos[a.id] ?? ""}
+                          onChange={(e) =>
+                            setAbonos((prev) => ({
+                              ...prev,
+                              [a.id]: e.target.value,
+                            }))
+                          }
+                          placeholder="0.00"
+                          style={{ width: "100%", padding: 10 }}
+                        />
+                      </div>
+
+                      <div>
+                        <label style={{ display: "block", marginBottom: 6 }}>
+                          Método
+                        </label>
+                        <select
+                          value={metodoAbono[a.id] || "efectivo"}
+                          onChange={(e) =>
+                            setMetodoAbono((prev) => ({
+                              ...prev,
+                              [a.id]: e.target.value,
+                            }))
+                          }
+                          style={{ width: "100%", padding: 10 }}
+                        >
+                          <option value="efectivo">Efectivo</option>
+                          <option value="transferencia">Transferencia</option>
+                          <option value="tarjeta_credito">Tarjeta crédito</option>
+                          <option value="tarjeta_debito">Tarjeta débito</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label style={{ display: "block", marginBottom: 6 }}>
+                          Nota del cobro
+                        </label>
+                        <input
+                          value={notaAbono[a.id] ?? ""}
+                          onChange={(e) =>
+                            setNotaAbono((prev) => ({
+                              ...prev,
+                              [a.id]: e.target.value,
+                            }))
+                          }
+                          placeholder="Ej. abonó en caja"
+                          style={{ width: "100%", padding: 10 }}
+                        />
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => cobrarAbono(a.id)}
+                        style={{ padding: "10px 14px", height: 42 }}
+                      >
+                        Cobrar
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                marginTop: 16,
+              }}
+            >
+              <button onClick={cerrarAdeudos}>Cerrar</button>
             </div>
           </div>
         </div>

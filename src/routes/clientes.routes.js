@@ -5,17 +5,20 @@ import {
   createCliente,
   updateCliente,
   deleteCliente,
-  activarCliente, // ✅ nuevo
+  activarCliente,
+  getAdeudosCliente,
+  registrarAbonoAdeudo,
 } from "../controllers/clientes.controller.js";
 
 const router = Router();
 
 router.get("/", getClientes);
+router.get("/:id/adeudos", getAdeudosCliente);
 router.get("/:id", getClienteById);
 router.post("/", createCliente);
 router.put("/:id", updateCliente);
 router.delete("/:id", deleteCliente);
-// ✅ nueva ruta para reactivar cliente
 router.patch("/:id/activar", activarCliente);
+router.post("/:id/adeudos/:ventaId/abono", registrarAbonoAdeudo);
 
 export default router;

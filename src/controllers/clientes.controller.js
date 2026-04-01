@@ -18,7 +18,9 @@ function cleanText(value) {
 }
 
 function toBool01(value, defaultValue = 0) {
-  if (value === undefined || value === null || value === "") return defaultValue ? 1 : 0;
+  if (value === undefined || value === null || value === "") {
+    return defaultValue ? 1 : 0;
+  }
   return Number(value) ? 1 : 0;
 }
 
@@ -31,7 +33,7 @@ function toNumber(value, defaultValue = 0) {
 export const getClientes = async (req, res) => {
   try {
     const search = String(req.query.search || "").trim();
-    const activo = req.query.activo; // "1" | "0" | undefined
+    const activo = req.query.activo;
 
     let sql = `
       SELECT
@@ -169,7 +171,9 @@ export const createCliente = async (req, res) => {
     const notasFinal = cleanText(notas);
 
     const permiteCreditoFinal = toBool01(permite_credito, 0);
-    const deudaMaximaFinal = permiteCreditoFinal ? Math.max(toNumber(deuda_maxima, 0), 0) : 0;
+    const deudaMaximaFinal = permiteCreditoFinal
+      ? Math.max(toNumber(deuda_maxima, 0), 0)
+      : 0;
     const saldoActualFinal = Math.max(toNumber(saldo_actual, 0), 0);
     const activoFinal = toBool01(activo, 1);
 
@@ -400,7 +404,10 @@ export const deleteCliente = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const [exists] = await pool.query("SELECT id FROM clientes WHERE id = ?", [id]);
+    const [exists] = await pool.query(
+      "SELECT id FROM clientes WHERE id = ?",
+      [id]
+    );
     if (!exists.length) {
       return res.status(404).json({ error: "Cliente no encontrado" });
     }
@@ -421,7 +428,10 @@ export const activarCliente = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const [exists] = await pool.query("SELECT id FROM clientes WHERE id = ?", [id]);
+    const [exists] = await pool.query(
+      "SELECT id FROM clientes WHERE id = ?",
+      [id]
+    );
     if (!exists.length) {
       return res.status(404).json({ error: "Cliente no encontrado" });
     }
@@ -432,5 +442,215 @@ export const activarCliente = async (req, res) => {
   } catch (err) {
     console.error("ERROR activarCliente:", err);
     return res.status(500).json({ error: "Error al activar cliente" });
+  }
+};
+
+// GET /api/clientes/:id/adeudos
+export const getAdeudosCliente = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const [clienteRows] = await pool.query(
+      `
+      SELECT id, nombre, saldo_actual, deuda_maxima, permite_credito
+      FROM clientes
+      WHERE id = ?
+      LIMIT 1
+      `,
+      [id]
+    );
+
+    if (!clienteRows.length) {
+      return res.status(404).json({ error: "Cliente no encontrado" });
+    }
+
+    const [rows] = await pool.query(
+      `
+      SELECT
+        id,
+        cliente_id,
+        tipo_pago,
+        total_final,
+        abono_inicial,
+        saldo_pendiente,
+        fecha_vencimiento,
+        observaciones_credito,
+        created_at
+      FROM ventas
+      WHERE cliente_id = ?
+        AND tipo_pago = 'a_cuenta'
+        AND COALESCE(saldo_pendiente, 0) > 0
+      ORDER BY created_at DESC, id DESC
+      `,
+      [id]
+    );
+
+    return res.json({
+      mensaje: "Adeudos del cliente",
+      data: {
+        cliente: clienteRows[0],
+        adeudos: rows,
+      },
+    });
+  } catch (err) {
+    console.error("ERROR GET /clientes/:id/adeudos:", err);
+    return res.status(500).json({
+      error: "Error al obtener adeudos",
+      message: err.sqlMessage || err.message,
+    });
+  }
+};
+
+// POST /api/clientes/:id/adeudos/:ventaId/abono
+export const registrarAbonoAdeudo = async (req, res) => {
+  const conn = await pool.getConnection();
+
+  try {
+    const clienteId = Number(req.params.id);
+    const ventaId = Number(req.params.ventaId);
+
+    const monto = Number(req.body.monto || 0);
+    const metodo_pago = String(req.body.metodo_pago || "efectivo").trim();
+    const nota = cleanText(req.body.nota);
+
+    if (!Number.isFinite(clienteId) || clienteId <= 0) {
+      return res.status(400).json({ error: "Cliente inválido" });
+    }
+
+    if (!Number.isFinite(ventaId) || ventaId <= 0) {
+      return res.status(400).json({ error: "Venta inválida" });
+    }
+
+    if (!Number.isFinite(monto) || monto <= 0) {
+      return res.status(400).json({ error: "Monto inválido" });
+    }
+
+    await conn.beginTransaction();
+
+    const [ventaRows] = await conn.query(
+      `
+      SELECT
+        id,
+        cliente_id,
+        tipo_pago,
+        total_final,
+        abono_inicial,
+        saldo_pendiente
+      FROM ventas
+      WHERE id = ?
+        AND cliente_id = ?
+      FOR UPDATE
+      `,
+      [ventaId, clienteId]
+    );
+
+    if (!ventaRows.length) {
+      await conn.rollback();
+      return res.status(404).json({ error: "Adeudo no encontrado" });
+    }
+
+    const venta = ventaRows[0];
+
+    if (venta.tipo_pago !== "a_cuenta") {
+      await conn.rollback();
+      return res.status(400).json({ error: "La venta no es a cuenta" });
+    }
+
+    const saldoPendienteActual = Number(venta.saldo_pendiente || 0);
+
+    if (saldoPendienteActual <= 0) {
+      await conn.rollback();
+      return res.status(400).json({ error: "La venta ya está liquidada" });
+    }
+
+    if (monto > saldoPendienteActual) {
+      await conn.rollback();
+      return res.status(400).json({
+        error: `El abono no puede ser mayor al saldo pendiente (${saldoPendienteActual.toFixed(
+          2
+        )})`,
+      });
+    }
+
+    const [clienteRows] = await conn.query(
+      `
+      SELECT id, saldo_actual
+      FROM clientes
+      WHERE id = ?
+      FOR UPDATE
+      `,
+      [clienteId]
+    );
+
+    if (!clienteRows.length) {
+      await conn.rollback();
+      return res.status(404).json({ error: "Cliente no encontrado" });
+    }
+
+    const cliente = clienteRows[0];
+    const saldoClienteActual = Number(cliente.saldo_actual || 0);
+
+    const nuevoSaldoPendiente = Number(
+      (saldoPendienteActual - monto).toFixed(2)
+    );
+
+    const nuevoSaldoCliente = Number(
+      Math.max(saldoClienteActual - monto, 0).toFixed(2)
+    );
+
+    await conn.query(
+      `
+      INSERT INTO ventas_abonos (
+        venta_id,
+        cliente_id,
+        monto,
+        metodo_pago,
+        nota
+      ) VALUES (?, ?, ?, ?, ?)
+      `,
+      [ventaId, clienteId, monto, metodo_pago, nota]
+    );
+
+    await conn.query(
+      `
+      UPDATE ventas
+      SET
+        saldo_pendiente = ?,
+        abono_inicial = COALESCE(abono_inicial, 0) + ?
+      WHERE id = ?
+      `,
+      [nuevoSaldoPendiente, monto, ventaId]
+    );
+
+    await conn.query(
+      `
+      UPDATE clientes
+      SET saldo_actual = ?
+      WHERE id = ?
+      `,
+      [nuevoSaldoCliente, clienteId]
+    );
+
+    await conn.commit();
+
+    return res.json({
+      mensaje: "Abono registrado",
+      data: {
+        venta_id: ventaId,
+        cliente_id: clienteId,
+        abonado: monto,
+        saldo_pendiente: nuevoSaldoPendiente,
+        saldo_actual_cliente: nuevoSaldoCliente,
+      },
+    });
+  } catch (err) {
+    await conn.rollback();
+    console.error("ERROR POST /clientes/:id/adeudos/:ventaId/abono:", err);
+    return res.status(500).json({
+      error: "Error al registrar abono",
+      message: err.sqlMessage || err.message,
+    });
+  } finally {
+    conn.release();
   }
 };
