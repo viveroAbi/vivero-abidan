@@ -299,20 +299,28 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
   const esCotizacionNormal =
     Number(venta.es_cotizacion ?? venta.esCotizacion ?? 0) === 1;
 
+  // ✅ AQUÍ ESTÁ LA PARTE IMPORTANTE DEL CLIENTE
   const clienteNombreRaw = pickText(
     venta?.cliente_nombre,
-    venta?.cliente,
-    venta?.nombre_cliente,
     venta?.clienteNombre,
+    venta?.nombre_cliente,
     venta?.cliente_nombre_completo,
+    venta?.cliente_razon_social,
     venta?.cliente?.nombre,
     venta?.cliente?.razon_social,
+    data?.venta?.cliente_nombre,
     data?.cliente_nombre,
     data?.cliente,
     data?.nombre_cliente
   );
 
-  const clienteNombre = clienteNombreRaw || "PUBLICO EN GENERAL";
+  const clienteTieneId = Number(venta?.cliente_id || 0) > 0;
+
+  const clienteNombre = clienteNombreRaw
+    ? clienteNombreRaw.toUpperCase()
+    : clienteTieneId
+    ? "CLIENTE REGISTRADO"
+    : "PUBLICO EN GENERAL";
 
   const categoriaVenta = venta.categoria || data?.categoria || "publico";
 
@@ -391,6 +399,7 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
   ].filter((x) => Number(x.value || 0) > 0);
 
   const dejaACuenta = pickNum(
+    venta.abono_inicial,
     venta.abono,
     venta.anticipo,
     venta.deja,
@@ -533,7 +542,7 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
                     : "—"}
                 </div>
                 <div>
-                  <b>CLIENTE:</b> {String(clienteNombre).toUpperCase()}
+                  <b>CLIENTE:</b> {clienteNombre}
                 </div>
                 <div>
                   <b>CATEGORIA:</b> {categoriaLabel(categoriaVenta)}
@@ -706,7 +715,7 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
                   : "—"}
               </div>
               <div>
-                <b>CLIENTE:</b> {String(clienteNombre).toUpperCase()}
+                <b>CLIENTE:</b> {clienteNombre}
               </div>
               <div>
                 <b>CATEGORIA:</b> {categoriaLabel(categoriaVenta)}
