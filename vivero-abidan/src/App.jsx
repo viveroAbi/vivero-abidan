@@ -82,11 +82,19 @@ function seleccionarClienteVenta(c) {
 
   // Recalcular precios del carrito con la categoría del cliente
   setCarrito((prev) =>
-    prev.map((it) => ({
+  prev.map((it) => {
+    const nuevoPrecio = obtenerPrecioPorCategoria(it, cat);
+    const precioActual = Number(it.precio_unitario || it.precio || 0);
+
+    return {
       ...it,
-      precio_unitario: obtenerPrecioPorCategoria(it, cat),
-    }))
-  );
+      precio_unitario:
+        Number.isFinite(Number(nuevoPrecio)) && Number(nuevoPrecio) > 0
+          ? Number(nuevoPrecio)
+          : precioActual,
+    };
+  })
+);
 
   setTimeout(() => {
     if (cantidadAgregarRef.current) {
@@ -1325,10 +1333,16 @@ async function iniciarCamaraYDeteccion() {
     producto_id: it.producto_id != null ? Number(it.producto_id) : null,
     codigo: it.codigo || "",
     nombre: it.nombre || it.producto_nombre || "",
-    precio_unitario: Number(it.precio_unitario || 0),
+
+    precio_publico: Number(it.precio_publico ?? it.precio_unitario ?? it.precio ?? 0),
+    precio_mayoreo: Number(it.precio_mayoreo ?? it.precio_unitario ?? it.precio ?? 0),
+    precio_vivero: Number(it.precio_vivero ?? it.precio_unitario ?? it.precio ?? 0),
+    precio_especial: Number(it.precio_especial ?? it.precio_unitario ?? it.precio ?? 0),
+
+    precio: Number(it.precio ?? it.precio_unitario ?? 0),
+    precio_unitario: Number(it.precio_unitario ?? it.precio ?? 0),
     cantidad: Number(it.cantidad || 1),
 
-    // ✅ id local para render estable cuando producto_id venga null
     _rowId: `${it.producto_id ?? "manual"}-${idx}-${Date.now()}`
   }))
 );
@@ -2035,7 +2049,7 @@ if (
     const items = carrito.map((it) => ({
   producto_id: it.producto_id,
   cantidad: Number(it.cantidad),
-  precio_unitario: Number(it.precio_unitario),
+  precio_unitario: Number(it.precio_unitario || it.precio || 0),
 }));
 
 const payload = {
