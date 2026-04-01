@@ -1,12 +1,57 @@
 import { pool } from "../config/db.js";
 
+const categoriasValidas = [
+  "publico",
+  "revendedor",
+  "jardinero",
+  "paisajista",
+  "arquitecto",
+  "mayoreo",
+  "vivero",
+  "especial",
+];
+
+function cleanText(value) {
+  if (value === undefined || value === null) return null;
+  const txt = String(value).trim();
+  return txt === "" ? null : txt;
+}
+
+function toBool01(value, defaultValue = 0) {
+  if (value === undefined || value === null || value === "") return defaultValue ? 1 : 0;
+  return Number(value) ? 1 : 0;
+}
+
+function toNumber(value, defaultValue = 0) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : defaultValue;
+}
+
 // GET /api/clientes?search=texto&activo=1
 export const getClientes = async (req, res) => {
   try {
-    const search = (req.query.search || "").trim();
+    const search = String(req.query.search || "").trim();
     const activo = req.query.activo; // "1" | "0" | undefined
 
-    let sql = `SELECT * FROM clientes WHERE 1=1`;
+    let sql = `
+      SELECT
+        id,
+        nombre,
+        telefono,
+        email,
+        direccion,
+        rfc,
+        notas,
+        categoria_cliente,
+        permite_credito,
+        deuda_maxima,
+        saldo_actual,
+        activo,
+        created_at,
+        updated_at
+      FROM clientes
+      WHERE 1=1
+    `;
     const params = [];
 
     if (activo === "1" || activo === "0") {
@@ -15,20 +60,25 @@ export const getClientes = async (req, res) => {
     }
 
     if (search) {
-      sql += ` AND (nombre LIKE ? OR telefono LIKE ? OR email LIKE ?)`;
+      sql += ` AND (nombre LIKE ? OR telefono LIKE ? OR email LIKE ? OR rfc LIKE ?)`;
       const like = `%${search}%`;
-      params.push(like, like, like);
+      params.push(like, like, like, like);
     }
 
-    sql += ` ORDER BY nombre ASC`;
+    sql += ` ORDER BY nombre ASC, id DESC`;
 
     const [rows] = await pool.query(sql, params);
-    return res.json({ mensaje: "Listado de clientes", data: rows });
+
+    return res.json({
+      mensaje: "Listado de clientes",
+      data: rows,
+    });
   } catch (err) {
     console.error("ERROR GET /clientes:", err);
-    return res
-      .status(500)
-      .json({ error: "Error en BD", message: err.sqlMessage || err.message });
+    return res.status(500).json({
+      error: "Error en BD",
+      message: err.sqlMessage || err.message,
+    });
   }
 };
 
@@ -36,18 +86,44 @@ export const getClientes = async (req, res) => {
 export const getClienteById = async (req, res) => {
   try {
     const { id } = req.params;
-    const [rows] = await pool.query("SELECT * FROM clientes WHERE id = ?", [id]);
+
+    const [rows] = await pool.query(
+      `
+      SELECT
+        id,
+        nombre,
+        telefono,
+        email,
+        direccion,
+        rfc,
+        notas,
+        categoria_cliente,
+        permite_credito,
+        deuda_maxima,
+        saldo_actual,
+        activo,
+        created_at,
+        updated_at
+      FROM clientes
+      WHERE id = ?
+      `,
+      [id]
+    );
 
     if (!rows.length) {
       return res.status(404).json({ error: "Cliente no encontrado" });
     }
 
-    return res.json({ mensaje: "Cliente", data: rows[0] });
+    return res.json({
+      mensaje: "Cliente",
+      data: rows[0],
+    });
   } catch (err) {
     console.error("ERROR GET /clientes/:id:", err);
-    return res
-      .status(500)
-      .json({ error: "Error en BD", message: err.sqlMessage || err.message });
+    return res.status(500).json({
+      error: "Error en BD",
+      message: err.sqlMessage || err.message,
+    });
   }
 };
 
@@ -68,20 +144,15 @@ export const createCliente = async (req, res) => {
       activo = 1,
     } = req.body;
 
-    if (!nombre || !String(nombre).trim()) {
+    const nombreFinal = cleanText(nombre);
+
+    if (!nombreFinal) {
       return res.status(400).json({ error: "El nombre es obligatorio" });
     }
 
-    const categoriasValidas = [
-      "publico",
-      "revendedor",
-      "jardinero",
-      "paisajista",
-      "arquitecto",
-      "mayoreo",
-      "vivero",
-      "especial",
-    ];
+    if (nombreFinal.length < 2) {
+      return res.status(400).json({ error: "Nombre inválido" });
+    }
 
     const categoriaFinal = String(categoria_cliente || "publico")
       .trim()
@@ -91,13 +162,20 @@ export const createCliente = async (req, res) => {
       return res.status(400).json({ error: "Categoría de cliente inválida" });
     }
 
-    const permiteCreditoFinal = Number(permite_credito) ? 1 : 0;
-    const deudaMaximaFinal = permiteCreditoFinal ? Number(deuda_maxima || 0) : 0;
-    const saldoActualFinal = Number(saldo_actual || 0);
-    const activoFinal = Number(activo) ? 1 : 0;
+    const telefonoFinal = cleanText(telefono);
+    const emailFinal = cleanText(email);
+    const direccionFinal = cleanText(direccion);
+    const rfcFinal = cleanText(rfc);
+    const notasFinal = cleanText(notas);
+
+    const permiteCreditoFinal = toBool01(permite_credito, 0);
+    const deudaMaximaFinal = permiteCreditoFinal ? Math.max(toNumber(deuda_maxima, 0), 0) : 0;
+    const saldoActualFinal = Math.max(toNumber(saldo_actual, 0), 0);
+    const activoFinal = toBool01(activo, 1);
 
     const [result] = await pool.query(
-      `INSERT INTO clientes (
+      `
+      INSERT INTO clientes (
         nombre,
         telefono,
         email,
@@ -109,14 +187,15 @@ export const createCliente = async (req, res) => {
         deuda_maxima,
         saldo_actual,
         activo
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `,
       [
-        String(nombre).trim(),
-        telefono ? String(telefono).trim() : null,
-        email ? String(email).trim() : null,
-        direccion ? String(direccion).trim() : null,
-        rfc ? String(rfc).trim() : null,
-        notas ? String(notas).trim() : null,
+        nombreFinal,
+        telefonoFinal,
+        emailFinal,
+        direccionFinal,
+        rfcFinal,
+        notasFinal,
         categoriaFinal,
         permiteCreditoFinal,
         deudaMaximaFinal,
@@ -125,9 +204,28 @@ export const createCliente = async (req, res) => {
       ]
     );
 
-    const [rows] = await pool.query("SELECT * FROM clientes WHERE id = ?", [
-      result.insertId,
-    ]);
+    const [rows] = await pool.query(
+      `
+      SELECT
+        id,
+        nombre,
+        telefono,
+        email,
+        direccion,
+        rfc,
+        notas,
+        categoria_cliente,
+        permite_credito,
+        deuda_maxima,
+        saldo_actual,
+        activo,
+        created_at,
+        updated_at
+      FROM clientes
+      WHERE id = ?
+      `,
+      [result.insertId]
+    );
 
     return res.json({
       mensaje: "Cliente creado",
@@ -161,57 +259,50 @@ export const updateCliente = async (req, res) => {
       activo,
     } = req.body;
 
-    const [exists] = await pool.query("SELECT id FROM clientes WHERE id = ?", [id]);
+    const [exists] = await pool.query(
+      "SELECT id, permite_credito FROM clientes WHERE id = ?",
+      [id]
+    );
+
     if (!exists.length) {
       return res.status(404).json({ error: "Cliente no encontrado" });
     }
-
-    if (nombre !== undefined && String(nombre).trim().length < 2) {
-      return res.status(400).json({ error: "Nombre inválido" });
-    }
-
-    const categoriasValidas = [
-      "publico",
-      "revendedor",
-      "jardinero",
-      "paisajista",
-      "arquitecto",
-      "mayoreo",
-      "vivero",
-      "especial",
-    ];
 
     const fields = [];
     const params = [];
 
     if (nombre !== undefined) {
+      const nombreFinal = cleanText(nombre);
+      if (!nombreFinal || nombreFinal.length < 2) {
+        return res.status(400).json({ error: "Nombre inválido" });
+      }
       fields.push("nombre = ?");
-      params.push(String(nombre).trim());
+      params.push(nombreFinal);
     }
 
     if (telefono !== undefined) {
       fields.push("telefono = ?");
-      params.push(telefono ? String(telefono).trim() : null);
+      params.push(cleanText(telefono));
     }
 
     if (email !== undefined) {
       fields.push("email = ?");
-      params.push(email ? String(email).trim() : null);
+      params.push(cleanText(email));
     }
 
     if (direccion !== undefined) {
       fields.push("direccion = ?");
-      params.push(direccion ? String(direccion).trim() : null);
+      params.push(cleanText(direccion));
     }
 
     if (rfc !== undefined) {
       fields.push("rfc = ?");
-      params.push(rfc ? String(rfc).trim() : null);
+      params.push(cleanText(rfc));
     }
 
     if (notas !== undefined) {
       fields.push("notas = ?");
-      params.push(notas ? String(notas).trim() : null);
+      params.push(cleanText(notas));
     }
 
     if (categoria_cliente !== undefined) {
@@ -225,24 +316,36 @@ export const updateCliente = async (req, res) => {
       params.push(categoriaFinal);
     }
 
+    let permiteCreditoFinal =
+      permite_credito !== undefined
+        ? toBool01(permite_credito, 0)
+        : Number(exists[0].permite_credito || 0);
+
     if (permite_credito !== undefined) {
       fields.push("permite_credito = ?");
-      params.push(Number(permite_credito) ? 1 : 0);
+      params.push(permiteCreditoFinal);
     }
 
     if (deuda_maxima !== undefined) {
+      const deudaMaximaFinal = permiteCreditoFinal
+        ? Math.max(toNumber(deuda_maxima, 0), 0)
+        : 0;
+
       fields.push("deuda_maxima = ?");
-      params.push(Number(deuda_maxima || 0));
+      params.push(deudaMaximaFinal);
+    } else if (permite_credito !== undefined && permiteCreditoFinal === 0) {
+      fields.push("deuda_maxima = ?");
+      params.push(0);
     }
 
     if (saldo_actual !== undefined) {
       fields.push("saldo_actual = ?");
-      params.push(Number(saldo_actual || 0));
+      params.push(Math.max(toNumber(saldo_actual, 0), 0));
     }
 
     if (activo !== undefined) {
       fields.push("activo = ?");
-      params.push(Number(activo) ? 1 : 0);
+      params.push(toBool01(activo, 1));
     }
 
     if (!fields.length) {
@@ -256,14 +359,39 @@ export const updateCliente = async (req, res) => {
       params
     );
 
-    const [rows] = await pool.query("SELECT * FROM clientes WHERE id = ?", [id]);
+    const [rows] = await pool.query(
+      `
+      SELECT
+        id,
+        nombre,
+        telefono,
+        email,
+        direccion,
+        rfc,
+        notas,
+        categoria_cliente,
+        permite_credito,
+        deuda_maxima,
+        saldo_actual,
+        activo,
+        created_at,
+        updated_at
+      FROM clientes
+      WHERE id = ?
+      `,
+      [id]
+    );
 
-    return res.json({ mensaje: "Cliente actualizado", data: rows[0] });
+    return res.json({
+      mensaje: "Cliente actualizado",
+      data: rows[0],
+    });
   } catch (err) {
     console.error("ERROR PUT /clientes/:id:", err);
-    return res
-      .status(500)
-      .json({ error: "Error en BD", message: err.sqlMessage || err.message });
+    return res.status(500).json({
+      error: "Error en BD",
+      message: err.sqlMessage || err.message,
+    });
   }
 };
 
@@ -282,9 +410,10 @@ export const deleteCliente = async (req, res) => {
     return res.json({ mensaje: "Cliente desactivado" });
   } catch (err) {
     console.error("ERROR DELETE /clientes/:id:", err);
-    return res
-      .status(500)
-      .json({ error: "Error en BD", message: err.sqlMessage || err.message });
+    return res.status(500).json({
+      error: "Error en BD",
+      message: err.sqlMessage || err.message,
+    });
   }
 };
 
