@@ -652,10 +652,20 @@ export const getTicketVenta = async (req, res) => {
     const { id } = req.params;
 
     const [ventaRows] = await pool.query(
-      "SELECT * FROM ventas WHERE id = ?",
-      [id]
-    );
-
+  `
+  SELECT 
+    v.*,
+    c.nombre AS cliente_nombre,
+    c.telefono AS cliente_telefono,
+    c.email AS cliente_email,
+    c.rfc AS cliente_rfc,
+    c.notas AS cliente_notas
+  FROM ventas v
+  LEFT JOIN clientes c ON c.id = v.cliente_id
+  WHERE v.id = ?
+  `,
+  [id]
+);
     if (!ventaRows.length) {
       return res.status(404).json({ error: "Venta no encontrada" });
     }
