@@ -42,16 +42,18 @@ export const getVentas = async (req, res) => {
     const [rows] = await pool.query(`
       SELECT 
         v.*,
+        c.nombre AS cliente_nombre,
         COALESCE(
           GROUP_CONCAT(CONCAT(vi.producto_nombre, ' x', vi.cantidad) SEPARATOR ', '),
           ''
         ) AS productos_resumen
       FROM ventas v
       LEFT JOIN ventas_items vi ON vi.venta_id = v.id
+      LEFT JOIN clientes c ON c.id = v.cliente_id
       WHERE COALESCE(v.estado, '') <> 'borrador'
         AND COALESCE(v.es_cotizacion, 0) = 0
         AND COALESCE(v.es_cotizacion_pedido, 0) = 0
-      GROUP BY v.id
+      GROUP BY v.id, c.nombre
       ORDER BY v.created_at DESC
     `);
 
@@ -88,14 +90,17 @@ export const getVentasHoy = async (req, res) => {
 
     const [rows] = await pool.query(
       `
-      SELECT *
-      FROM ventas
-      WHERE created_at >= ?
-        AND created_at < ?
-        AND COALESCE(estado, '') <> 'borrador'
-        AND COALESCE(es_cotizacion, 0) = 0
-        AND COALESCE(es_cotizacion_pedido, 0) = 0
-      ORDER BY created_at DESC
+      SELECT 
+        v.*,
+        c.nombre AS cliente_nombre
+      FROM ventas v
+      LEFT JOIN clientes c ON c.id = v.cliente_id
+      WHERE v.created_at >= ?
+        AND v.created_at < ?
+        AND COALESCE(v.estado, '') <> 'borrador'
+        AND COALESCE(v.es_cotizacion, 0) = 0
+        AND COALESCE(v.es_cotizacion_pedido, 0) = 0
+      ORDER BY v.created_at DESC
       `,
       [inicioUtc, finUtc]
     );
@@ -577,7 +582,21 @@ export const obtenerVenta = async (req, res) => {
   const { id } = req.params;
 
   try {
-    const [ventaRows] = await pool.query(`SELECT * FROM ventas WHERE id = ?`, [id]);
+    const [ventaRows] = await pool.query(
+      `
+      SELECT 
+        v.*,
+        c.nombre AS cliente_nombre,
+        c.telefono AS cliente_telefono,
+        c.email AS cliente_email,
+        c.rfc AS cliente_rfc,
+        c.notas AS cliente_notas
+      FROM ventas v
+      LEFT JOIN clientes c ON c.id = v.cliente_id
+      WHERE v.id = ?
+      `,
+      [id]
+    );
 
     if (ventaRows.length === 0) {
       return res.status(404).json({ error: "Venta no encontrada" });
@@ -652,25 +671,27 @@ export const getTicketVenta = async (req, res) => {
     const { id } = req.params;
 
     const [ventaRows] = await pool.query(
-  `
-  SELECT 
-    v.*,
-    c.nombre AS cliente_nombre,
-    c.telefono AS cliente_telefono,
-    c.email AS cliente_email,
-    c.rfc AS cliente_rfc,
-    c.notas AS cliente_notas
-  FROM ventas v
-  LEFT JOIN clientes c ON c.id = v.cliente_id
-  WHERE v.id = ?
-  `,
-  [id]
-);
+      `
+      SELECT 
+        v.*,
+        c.nombre AS cliente_nombre,
+        c.telefono AS cliente_telefono,
+        c.email AS cliente_email,
+        c.rfc AS cliente_rfc,
+        c.notas AS cliente_notas
+      FROM ventas v
+      LEFT JOIN clientes c ON c.id = v.cliente_id
+      WHERE v.id = ?
+      `,
+      [id]
+    );
+
     if (!ventaRows.length) {
       return res.status(404).json({ error: "Venta no encontrada" });
     }
 
     const venta = ventaRows[0];
+    console.log("VENTA TICKET:", venta);
 
     const [items] = await pool.query(
       `
