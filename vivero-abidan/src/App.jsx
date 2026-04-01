@@ -111,7 +111,10 @@ async function seleccionarClienteVenta(c) {
   } catch (err) {
     console.error("Error cargando cliente completo:", err);
 
-    setClienteSeleccionado(c);
+    setClienteSeleccionado({
+  ...c,
+  notas: c?.notas || "",
+});
     setClienteSearch(c.nombre || "");
     setClienteSug([]);
     setShowClienteSug(false);
