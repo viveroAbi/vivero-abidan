@@ -2353,44 +2353,7 @@ if (view === "movimientos") {
 </button>
         </div>
 
-        {/* RESUMEN (solo admin) */}
-        {isAdmin && (
-          <div
-  style={{
-    display: "grid",
-    gap: 12,
-    gridTemplateColumns: isMobile
-      ? "repeat(2, minmax(0, 1fr))"
-      : "repeat(auto-fit, minmax(170px, 1fr))",
-    marginBottom: 16,
-  }}
->
-            <Card
-              title="Ventas hoy"
-              value={resumen ? resumen.ventasHoy : "—"}
-              cardStyle={cardStyle}
-              theme={theme}
-            />
-            <Card
-              title="Total hoy"
-              value={resumen ? money(resumen.totalHoy) : "—"}
-              cardStyle={cardStyle}
-              theme={theme}
-            />
-            <Card
-              title="Ventas totales"
-              value={resumen ? resumen.ventasTotales : "—"}
-              cardStyle={cardStyle}
-              theme={theme}
-            />
-            <Card
-              title="Total general"
-              value={resumen ? money(resumen.totalGeneral) : "—"}
-              cardStyle={cardStyle}
-              theme={theme}
-            />
-          </div>
-        )}
+        {/* RESUMEN oculto por solicitud del usuario */}
         
 
         {/* ===== VISTAS ===== */}
