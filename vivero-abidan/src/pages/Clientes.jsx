@@ -115,12 +115,13 @@ export default function Clientes() {
     if (!form.nombre.trim()) return alert("Nombre es obligatorio");
 
     const payload = {
-      ...form,
-      permite_credito: form.permite_credito ? 1 : 0,
-      deuda_maxima: form.permite_credito
-        ? Number(form.deuda_maxima || 0)
-        : 0,
-    };
+  ...form,
+  notas: String(form.notas || "").trim(),
+  permite_credito: form.permite_credito ? 1 : 0,
+  deuda_maxima: form.permite_credito
+    ? Number(form.deuda_maxima || 0)
+    : 0,
+};
 
     try {
       if (editId) {
@@ -391,12 +392,18 @@ export default function Clientes() {
                 style={{ padding: 10, background: "#f7f7f7" }}
               />
 
-              <input
-                value={form.notas}
-                onChange={(e) => setForm({ ...form, notas: e.target.value })}
-                placeholder="Notas"
-                style={{ padding: 10, gridColumn: "1 / -1" }}
-              />
+              <textarea
+  value={form.notas || ""}
+  onChange={(e) => setForm({ ...form, notas: e.target.value })}
+  placeholder="Notas"
+  rows={3}
+  style={{
+    padding: 10,
+    gridColumn: "1 / -1",
+    resize: "vertical",
+    fontFamily: "inherit",
+  }}
+/>
             </div>
 
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 14 }}>
