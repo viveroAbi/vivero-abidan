@@ -269,7 +269,8 @@ const productosFiltrados = useMemo(() => {
 
 
   const [carrito, setCarrito] = useState([]);
-  const [itemVisibleCarrito, setItemVisibleCarrito] = useState(null);
+  const [ventasAbiertas, setVentasAbiertas] = useState(true);
+  const [carritoAbierto, setCarritoAbierto] = useState(true);
 const [prodForm, setProdForm] = useState({
   id: null,
   nombre: "",
@@ -1063,8 +1064,6 @@ function obtenerPrecioPorCategoria(producto, categoria) {
         cantidad: Number(copia[idx].cantidad || 0) + cantidadNum,
         precio_unitario: precioAplicado,
       };
-
-      setItemVisibleCarrito(p.id); // ← deja visible el último agregado
       return copia;
     }
 
@@ -1079,8 +1078,6 @@ function obtenerPrecioPorCategoria(producto, categoria) {
       precio_unitario: precioAplicado,
       cantidad: cantidadNum,
     };
-
-    setItemVisibleCarrito(p.id); // ← el nuevo queda abierto
     return [...prev, nuevo];
   });
 }
@@ -2353,32 +2350,31 @@ if (view === "movimientos") {
 </button>
         </div>
 
-        {/* RESUMEN oculto por solicitud del usuario */}
-        
-
         {/* ===== VISTAS ===== */}
 {view === "ventas" && (
   <div
-  style={{
-    display: "flex",
-    gap: 20,
-    flexWrap: "wrap",
-    alignItems: "flex-start",
-  }}
->
+    style={{
+      display: "grid",
+      gridTemplateColumns: isMobile
+        ? "1fr"
+        : ventasAbiertas
+        ? "minmax(0, 1.65fr) minmax(360px, 560px)"
+        : "56px minmax(360px, 560px)",
+      gap: 20,
+      alignItems: "flex-start",
+    }}
+  >
     {/* FORM */}
 <div
   style={{
     ...cardStyle,
     padding: 16,
-    flex: "1 1 360px",
     width: "100%",
     minWidth: 0,
     maxWidth: isMobile ? "100%" : 560,
     boxSizing: "border-box",
     order: isMobile ? 1 : 2,
   }}
-
 >
       <h2 style={{ marginTop: 0 }}>
   {editandoVentaId
@@ -2855,98 +2851,119 @@ if (view === "movimientos") {
   </small>
 </div>
 
-          {carrito.length > 0 ? (
-  <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
-    {[...carrito].reverse().map((it) => {
-      const itemKey = it.producto_id ?? it._rowId;
-      const abierto = itemVisibleCarrito === itemKey;
+          <div style={{ marginTop: 10 }}>
+  <div
+    style={{
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 10,
+      marginBottom: carritoAbierto ? 10 : 0,
+    }}
+  >
+    <button
+      type="button"
+      onClick={() => setCarritoAbierto((v) => !v)}
+      style={{
+        background: "transparent",
+        border: "none",
+        padding: 0,
+        margin: 0,
+        display: "flex",
+        alignItems: "center",
+        gap: 8,
+        fontWeight: 800,
+        fontSize: 16,
+        cursor: "pointer",
+        color: theme.text,
+      }}
+    >
+      <span>{carritoAbierto ? "▼" : "▶"}</span>
+      <span>Lista del carrito</span>
+      <span style={{ color: theme.muted, fontSize: 13 }}>({carrito.length})</span>
+    </button>
 
-      return (
-        <div
-          key={itemKey}
-          style={{
-            border: `1px solid ${theme.border}`,
-            borderRadius: 12,
-            padding: 10,
-            background: "#fff",
-          }}
-        >
-          <div
-            onClick={() =>
-              setItemVisibleCarrito((prev) =>
-                prev === itemKey ? null : itemKey
-              )
-            }
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              cursor: "pointer",
-              fontWeight: 700,
-            }}
-          >
-            <div>
-              {it.codigo ? `${it.codigo} — ` : ""}
-              {it.nombre}
-            </div>
+    <div style={{ fontWeight: 800, color: theme.green }}>
+      {money(totalCarrito)}
+    </div>
+  </div>
 
-            <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-              <span>{abierto ? "▲" : "▼"}</span>
-            </div>
-          </div>
+  {carritoAbierto && (
+    carrito.length > 0 ? (
+      <div style={{ display: "grid", gap: 10 }}>
+        {[...carrito].reverse().map((it) => {
+          const itemKey = it.producto_id ?? it._rowId;
+          const importe = Number(it.cantidad || 0) * Number(it.precio_unitario || 0);
 
-          {abierto && (
+          return (
             <div
+              key={itemKey}
               style={{
-                marginTop: 10,
-                display: "grid",
-                gridTemplateColumns: "1fr 80px 44px",
-                gap: 10,
-                alignItems: "center",
+                border: `1px solid ${theme.border}`,
+                borderRadius: 12,
+                padding: 10,
+                background: "#fff",
               }}
             >
-              <input
-                type="number"
-                value={it.precio_unitario}
-                onChange={(e) =>
-                  setCarrito((prev) =>
-                    prev.map((x) =>
-                      (x.producto_id ?? x._rowId) === itemKey
-                        ? { ...x, precio_unitario: Number(e.target.value || 0) }
-                        : x
-                    )
-                  )
-                }
-                style={{ ...inputStyle, marginTop: 0, padding: 8 }}
-              />
-
-              <input
-                type="number"
-                min="1"
-                value={it.cantidad}
-                onChange={(e) => cambiarCantidad(itemKey, e.target.value)}
-                style={{ ...inputStyle, marginTop: 0, padding: 8, width: 80 }}
-              />
-
-              <button
-                type="button"
-                onClick={() => quitarDelCarrito(itemKey)}
-                style={btn("danger")}
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: isMobile ? "1fr" : "minmax(0, 1.6fr) 110px 120px 120px 54px",
+                  gap: 10,
+                  alignItems: "center",
+                }}
               >
-                ✖
-              </button>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, wordBreak: "break-word" }}>
+                    {it.codigo ? `${it.codigo} — ` : ""}
+                    {it.nombre}
+                  </div>
+                </div>
+
+                <input
+                  type="number"
+                  min="1"
+                  value={it.cantidad}
+                  onChange={(e) => cambiarCantidad(itemKey, e.target.value)}
+                  style={{ ...inputStyle, marginTop: 0, padding: 8 }}
+                />
+
+                <input
+                  type="number"
+                  value={it.precio_unitario}
+                  onChange={(e) =>
+                    setCarrito((prev) =>
+                      prev.map((x) =>
+                        (x.producto_id ?? x._rowId) === itemKey
+                          ? { ...x, precio_unitario: Number(e.target.value || 0) }
+                          : x
+                      )
+                    )
+                  }
+                  style={{ ...inputStyle, marginTop: 0, padding: 8 }}
+                />
+
+                <div style={{ fontWeight: 800, color: theme.green2 }}>
+                  {money(importe)}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => quitarDelCarrito(itemKey)}
+                  style={btn("danger")}
+                >
+                  ✖
+                </button>
+              </div>
             </div>
-          )}
-        </div>
-      );
-    })}
-  </div>
-) : (
-  <div style={{ marginTop: 10, color: theme.muted, fontSize: 13 }}>
-    Carrito vacío.
-  </div>
-)}
-        </div>
+          );
+        })}
+      </div>
+    ) : (
+      <div style={{ color: theme.muted, fontSize: 13 }}>Carrito vacío.</div>
+    )
+  )}
+</div>        </div>
 
         <label style={labelStyle}>
           Tipo de pago:
@@ -3145,28 +3162,59 @@ if (view === "movimientos") {
     {/* TABLA */}
 <div
   style={{
-    flex: "2 1 700px",
+    ...cardStyle,
     width: "100%",
     minWidth: 0,
     order: isMobile ? 2 : 1,
+    overflow: "hidden",
   }}
 >
-      <h2 style={{ marginTop: 0 }}>Ventas</h2>
       <div
-  style={{
-    ...cardStyle,
-    overflowX: "auto",
-    WebkitOverflowScrolling: "touch",
-    width: "100%",
-  }}
->
-        <table
-  style={{
-    width: "100%",
-    minWidth: isMobile ? 950 : 0, // ✅ scroll interno en móvil
-    borderCollapse: "collapse",
-  }}
->
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: ventasAbiertas ? "space-between" : "center",
+          padding: 12,
+          borderBottom: ventasAbiertas ? `1px solid ${theme.border}` : "none",
+          background: "#f8fbfa",
+        }}
+      >
+        {ventasAbiertas && <h2 style={{ margin: 0 }}>Ventas</h2>}
+
+        <button
+          type="button"
+          onClick={() => setVentasAbiertas((v) => !v)}
+          style={{
+            border: `1px solid ${theme.border}`,
+            background: "#fff",
+            borderRadius: 10,
+            width: 36,
+            height: 36,
+            cursor: "pointer",
+            fontSize: 18,
+            fontWeight: 700,
+          }}
+          title={ventasAbiertas ? "Ocultar ventas" : "Mostrar ventas"}
+        >
+          {ventasAbiertas ? "◀" : "▶"}
+        </button>
+      </div>
+
+      {ventasAbiertas && (
+        <div
+          style={{
+            overflowX: "auto",
+            WebkitOverflowScrolling: "touch",
+            width: "100%",
+          }}
+        >
+          <table
+            style={{
+              width: "100%",
+              minWidth: isMobile ? 950 : 0,
+              borderCollapse: "collapse",
+            }}
+          >
           <thead>
             <tr>
               {[
@@ -3243,6 +3291,7 @@ if (view === "movimientos") {
           </tbody>
         </table>
       </div>
+      )}
     </div>
   </div>
 )}
