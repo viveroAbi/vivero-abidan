@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   getClientes,
+  getClienteById,
   createCliente,
   updateCliente,
   deleteCliente,
@@ -88,23 +89,33 @@ export default function Clientes() {
     setOpen(true);
   };
 
-  const abrirEditar = (c) => {
-    setEditId(c.id);
-    setForm({
-      nombre: c.nombre || "",
-      telefono: c.telefono || "",
-      email: c.email || "",
-      direccion: c.direccion || "",
-      rfc: c.rfc || "",
-      notas: c.notas || "",
-      categoria_cliente: c.categoria_cliente || "publico",
-      permite_credito: Number(c.permite_credito || 0) === 1,
-      deuda_maxima: c.deuda_maxima ?? "",
-      saldo_actual: Number(c.saldo_actual || 0),
-    });
-    setOpen(true);
-  };
+  const abrirEditar = async (c) => {
+  try {
+    setLoading(true);
 
+    const cliente = await getClienteById(c.id);
+
+    setEditId(cliente.id);
+    setForm({
+      nombre: cliente.nombre || "",
+      telefono: cliente.telefono || "",
+      email: cliente.email || "",
+      direccion: cliente.direccion || "",
+      rfc: cliente.rfc || "",
+      notas: cliente.notas || "",
+      categoria_cliente: cliente.categoria_cliente || "publico",
+      permite_credito: Number(cliente.permite_credito || 0) === 1,
+      deuda_maxima: cliente.deuda_maxima ?? "",
+      saldo_actual: Number(cliente.saldo_actual || 0),
+    });
+
+    setOpen(true);
+  } catch (e) {
+    alert(e.message);
+  } finally {
+    setLoading(false);
+  }
+};
   const cerrarModal = () => {
     setOpen(false);
     setEditId(null);

@@ -39,6 +39,19 @@ export async function getClientes({ search = "", activo = "1" } = {}) {
   return Array.isArray(data.data) ? data.data : [];
 }
 
+export async function getClienteById(id) {
+  const res = await fetch(`${API_URL}/clientes/${id}`, {
+    method: "GET",
+    cache: "no-store",
+    headers: {
+      ...getAuthHeaders(),
+    },
+  });
+
+  const data = await manejarRespuesta(res, "Error al obtener cliente");
+  return data.data;
+}
+
 export async function createCliente(payload) {
   const res = await fetch(`${API_URL}/clientes`, {
     method: "POST",
