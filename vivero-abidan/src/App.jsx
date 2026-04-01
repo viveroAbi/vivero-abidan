@@ -2037,10 +2037,15 @@ if (
 const abonoInicialNum = Number(form.efectivo || 0);
 const pendienteNuevo = Number((Number(totalFinalUI || 0) - abonoInicialNum).toFixed(2));
 
+const pendienteAnterior = editandoVentaId ? saldoActualCliente : 0;
+const saldoProyectado = Number(
+  (saldoActualCliente - pendienteAnterior + pendienteNuevo).toFixed(2)
+);
+
 if (
   form.tipoPago === "a_cuenta" &&
   clienteSeleccionado?.id &&
-  saldoActualCliente + pendienteNuevo > deudaMaximaCliente
+  saldoProyectado > deudaMaximaCliente
 ) {
   setMessage("error", "La venta supera la deuda máxima permitida del cliente.");
   return;
