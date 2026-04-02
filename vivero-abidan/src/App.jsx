@@ -670,10 +670,7 @@ const notaAutomaticaCliente = useMemo(() => {
 
   const efectivoNum = useMemo(() => Number(form.efectivo || 0), [form.efectivo]);
   const tarjetaNum = useMemo(() => Number(form.tarjeta || 0), [form.tarjeta]);
-  const transferenciaNum = useMemo(
-    () => Number(form.transferencia || 0),
-    [form.transferencia]
-  );
+  const transferenciaNum = useMemo(() => Number(form.transferencia || 0), [form.transferencia]);
   const chequeNum = useMemo(() => Number(form.cheque || 0), [form.cheque]);
   const recibidoNum = useMemo(() => Number(form.recibido || 0), [form.recibido]);
 
@@ -2203,8 +2200,8 @@ async function onCreateUserSubmit(e) {
         tipoPago: value,
         efectivo: "",
         tarjeta: "",
-        transferencia: "0",
-        cheque: "0",
+        transferencia: "",
+        cheque: "",
         recibido: "",
         cambio: "",
       };
@@ -2251,8 +2248,6 @@ function onChangeMixtoEfectivo(e) {
       ...f,
       efectivo: String(efectivo),
       tarjeta: String(tarjeta),
-      transferencia: "0",
-      cheque: "0",
     };
   });
 }
@@ -2281,8 +2276,6 @@ function onChangeMixtoTarjeta(e) {
       ...f,
       tarjeta: String(tarjeta),
       efectivo: String(efectivo),
-      transferencia: "0",
-      cheque: "0",
     };
   });
 }
@@ -2306,11 +2299,11 @@ function onChangeMixtoTarjeta(e) {
     return;
   }
 
-  const sumaMixto = Number((efectivoNum + tarjetaNum).toFixed(2));
+  const sumaMixto = Number((efectivoNum + tarjetaNum + transferenciaNum + chequeNum).toFixed(2));
   const totalEsperado = Number(Number(totalFinalUI).toFixed(2));
 
   if (isMixto) {
-    if (efectivoNum < 0 || tarjetaNum < 0) {
+    if (efectivoNum < 0 || tarjetaNum < 0 || transferenciaNum < 0 || chequeNum < 0) {
       setMessage("error", "En pago mixto no se permiten cantidades negativas.");
       return;
     }
@@ -2318,7 +2311,7 @@ function onChangeMixtoTarjeta(e) {
     if (sumaMixto !== totalEsperado) {
       setMessage(
         "error",
-        "En pago mixto: efectivo + tarjeta debe ser igual al total."
+        "En pago mixto: efectivo + tarjeta + transferencia + cheque debe ser igual al total."
       );
       return;
     }
@@ -3569,7 +3562,9 @@ if (view === "movimientos") {
     />
   </label>
 
-  {(form.tipoPago === "transferencia" || form.tipoPago === "a_cuenta") && (
+  {(form.tipoPago === "transferencia" ||
+    form.tipoPago === "a_cuenta" ||
+    form.tipoPago === "mixto") && (
     <label style={labelStyle}>
       Transferencia:
       <input
@@ -3583,7 +3578,9 @@ if (view === "movimientos") {
     </label>
   )}
 
-  {(form.tipoPago === "cheque" || form.tipoPago === "a_cuenta") && (
+  {(form.tipoPago === "cheque" ||
+    form.tipoPago === "a_cuenta" ||
+    form.tipoPago === "mixto") && (
     <label style={labelStyle}>
       Cheque:
       <input
@@ -3614,6 +3611,27 @@ if (view === "movimientos") {
       </div>
       <div>
         <strong>Resta:</strong> {money(restaACuenta)}
+      </div>
+    </div>
+  )}
+
+  {form.tipoPago === "mixto" && (
+    <div
+      style={{
+        marginTop: 4,
+        padding: 12,
+        border: "1px solid #d9e7d9",
+        borderRadius: 10,
+        background: "#f8fff8",
+        display: "grid",
+        gap: 8,
+      }}
+    >
+      <div>
+        <strong>Total capturado:</strong> {money(totalPagadoMixtoCompleto)}
+      </div>
+      <div>
+        <strong>Falta:</strong> {money(Math.max(totalFinalUI - totalPagadoMixtoCompleto, 0))}
       </div>
     </div>
   )}
