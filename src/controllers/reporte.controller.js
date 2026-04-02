@@ -105,16 +105,16 @@ export const reporteDiario = async (req, res) => {
     const periodo = String(req.query.periodo || "diario").toLowerCase();
 
     const { where: whereVentas, params: paramsVentas } = buildWhere({
-      fecha,
-      periodo,
-      columnaFecha: "created_at",
-    });
+  fecha,
+  periodo,
+  columnaFecha: "v.created_at",
+});
 
     const { where: whereGastos, params: paramsGastos } = buildWhere({
-      fecha,
-      periodo,
-      columnaFecha: "created_at",
-    });
+  fecha,
+  periodo,
+  columnaFecha: "g.created_at",
+});
 
     // ===== Ventas por forma de pago =====
     const [ventasPorPago] = await pool.query(
@@ -151,15 +151,15 @@ export const reporteDiario = async (req, res) => {
 
     // ===== Gastos por categoría =====
     const [gastosPorCategoria] = await pool.query(
-      `
-      SELECT categoria, COALESCE(SUM(monto), 0) AS total
-      FROM gastos
-      WHERE ${whereGastos}
-      GROUP BY categoria
-      ORDER BY total DESC
-      `,
-      paramsGastos
-    );
+  `
+  SELECT g.categoria, COALESCE(SUM(g.monto), 0) AS total
+  FROM gastos g
+  WHERE ${whereGastos}
+  GROUP BY g.categoria
+  ORDER BY total DESC
+  `,
+  paramsGastos
+);
 
     // ===== Gastos por subcategoría =====
     const [gastosPorSub] = await pool.query(
@@ -175,13 +175,13 @@ export const reporteDiario = async (req, res) => {
 
     // ===== Total gastos =====
     const [[totalGastos]] = await pool.query(
-      `
-      SELECT COALESCE(SUM(monto), 0) AS total
-      FROM gastos
-      WHERE ${whereGastos}
-      `,
-      paramsGastos
-    );
+  `
+  SELECT COALESCE(SUM(g.monto), 0) AS total
+  FROM gastos g
+  WHERE ${whereGastos}
+  `,
+  paramsGastos
+);
 
     // ===== Caja (simple): efectivo ventas - efectivo gastos =====
     const [[ventasEfectivo]] = await pool.query(
@@ -195,14 +195,14 @@ export const reporteDiario = async (req, res) => {
       paramsVentas
     );
 
-    const [[gastosEfectivo]] = await pool.query(
-      `
-      SELECT COALESCE(SUM(monto), 0) AS total
-      FROM gastos
-      WHERE ${whereGastos} AND metodo_pago = 'efectivo'
-      `,
-      paramsGastos
-    );
+   const [[gastosEfectivo]] = await pool.query(
+  `
+  SELECT COALESCE(SUM(g.monto), 0) AS total
+  FROM gastos g
+  WHERE ${whereGastos} AND g.metodo_pago = 'efectivo'
+  `,
+  paramsGastos
+);
 
     const caja = Number(ventasEfectivo.total) - Number(gastosEfectivo.total);
 
