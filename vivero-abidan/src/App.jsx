@@ -745,7 +745,7 @@ const cambioNum = useMemo(() => {
 async function buscarProductos(q = "", cat = "") {
   try {
     const params = new URLSearchParams();
-    params.set("limit", "5000");
+    params.set("limit", "50");
 
     if (q && q.trim()) params.set("q", q.trim());
     if (cat && cat.trim()) params.set("categoria", cat.trim());

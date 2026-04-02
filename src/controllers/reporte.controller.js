@@ -621,6 +621,7 @@ export const crearCierre = async (req, res) => {
 
 // GET /api/reporte/productos?inicio=YYYY-MM-DD&fin=YYYY-MM-DD
 // GET /api/reporte/productos?inicio=YYYY-MM-DD&fin=YYYY-MM-DD
+// GET /api/reporte/productos?inicio=YYYY-MM-DD&fin=YYYY-MM-DD
 export const reporteProductos = async (req, res) => {
   try {
     const { inicio, fin } = req.query;
@@ -633,7 +634,6 @@ export const reporteProductos = async (req, res) => {
     const fechaInicio = inicio || `${yyyy}-${mm}-01`;
     const fechaFin = fin || `${yyyy}-${mm}-${dd}`;
 
-    // ✅ convertir created_at de UTC a hora de México
     const colMX = `CONVERT_TZ(v.created_at, '+00:00', '-06:00')`;
 
     const [masVendidos] = await pool.query(
