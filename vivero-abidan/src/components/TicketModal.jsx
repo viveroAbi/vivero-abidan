@@ -482,70 +482,51 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
   };
 
   const HeaderEmpresa = ({ subtitulo }) => (
-    <div style={{ textAlign: "center", marginBottom: 4 }}>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 6,
-          marginBottom: 4,
-        }}
-      >
-        <img
-          src={logoSrc}
-          alt="Logo Vivero Abidan"
-          crossOrigin="anonymous"
-          onError={(e) => {
-            e.currentTarget.style.display = "none";
-          }}
-          style={{
-            width: 22,
-            height: 22,
-            objectFit: "contain",
-            background: "#fff",
-            flexShrink: 0,
-          }}
-        />
+  <div style={{ textAlign: "center", marginBottom: 4 }}>
+    <img
+      src={logoSrc}
+      alt="Logo Vivero Abidan"
+      crossOrigin="anonymous"
+      onError={(e) => {
+        e.currentTarget.style.display = "none";
+      }}
+      style={{
+        width: "100%",
+        maxWidth: "58mm",
+        maxHeight: "20mm",
+        objectFit: "contain",
+        background: "#fff",
+        display: "block",
+        margin: "0 auto 4px auto",
+      }}
+    />
 
-        <div
-          style={{
-            fontSize: 18,
-            fontWeight: 700,
-            lineHeight: 1,
-            letterSpacing: "0.3px",
-          }}
-        >
-          VIVERO ABIDAN
-        </div>
-      </div>
-
-      <div
-        style={{
-          fontSize: 11,
-          lineHeight: 1.15,
-          fontWeight: 700,
-        }}
-      >
-        CARRETERA NACIONAL KM 253
-        <br />
-        COL. LOS RODRIGUEZ, SANTIAGO, N.L.
-      </div>
-
-      {subtitulo ? (
-        <div
-          style={{
-            marginTop: 4,
-            fontSize: 11,
-            fontWeight: 700,
-            letterSpacing: "0.4px",
-          }}
-        >
-          {subtitulo}
-        </div>
-      ) : null}
+    <div
+      style={{
+        fontSize: 11,
+        lineHeight: 1.15,
+        fontWeight: 700,
+      }}
+    >
+      CARRETERA NACIONAL KM 253
+      <br />
+      COL. LOS RODRIGUEZ, SANTIAGO, N.L.
     </div>
-  );
+
+    {subtitulo ? (
+      <div
+        style={{
+          marginTop: 4,
+          fontSize: 11,
+          fontWeight: 700,
+          letterSpacing: "0.4px",
+        }}
+      >
+        {subtitulo}
+      </div>
+    ) : null}
+  </div>
+);
 
   if (data?.tipo === "corte") {
     return (
