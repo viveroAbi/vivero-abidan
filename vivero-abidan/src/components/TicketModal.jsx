@@ -92,6 +92,12 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
           page-break-inside: auto !important;
           word-break: break-word !important;
         }
+
+        pre {
+          white-space: pre-wrap !important;
+          word-break: break-word !important;
+          overflow-wrap: anywhere !important;
+        }
       }
     `}</style>
   );
@@ -160,6 +166,12 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
               break-inside: auto;
               page-break-inside: auto;
               word-break: break-word;
+            }
+
+            pre {
+              white-space: pre-wrap;
+              word-break: break-word;
+              overflow-wrap: anywhere;
             }
           </style>
         </head>
@@ -482,6 +494,8 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
                 whiteSpace: "pre-wrap",
                 margin: 0,
                 lineHeight: 1.2,
+                wordBreak: "break-word",
+                overflowWrap: "anywhere",
               }}
             >
               {data.texto}

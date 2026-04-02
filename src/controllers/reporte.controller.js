@@ -89,6 +89,10 @@ const buildWhere = ({
 };
 
 // Filtro común para ventas reales
+const filtroVentasRealesAliasV = `
+  v.es_cotizacion = 0
+  AND COALESCE(v.es_cotizacion_pedido, 0) = 0
+`;
 const filtroVentasReales = `
   es_cotizacion = 0
   AND COALESCE(es_cotizacion_pedido, 0) = 0
@@ -289,7 +293,7 @@ export const ticketCorteDiario = async (req, res) => {
     const baseDate = fecha ? new Date(`${fecha}T12:00:00`) : new Date();
     const now = new Date();
 
-    // ventas por pago
+    // ===== Ventas por pago =====
     const [ventasPorPago] = await pool.query(
       `
       SELECT tipo_pago, COALESCE(SUM(total_final), 0) AS total
@@ -300,7 +304,7 @@ export const ticketCorteDiario = async (req, res) => {
       paramsVentas
     );
 
-    // ventas por categoria
+    // ===== Ventas por categoría =====
     const [ventasPorCategoria] = await pool.query(
       `
       SELECT categoria, COALESCE(SUM(total_final), 0) AS total, COUNT(*) AS cantidad
@@ -312,7 +316,7 @@ export const ticketCorteDiario = async (req, res) => {
       paramsVentas
     );
 
-    // total ventas
+    // ===== Total ventas =====
     const [[totalVentas]] = await pool.query(
       `
       SELECT COALESCE(SUM(total_final), 0) AS total
@@ -322,7 +326,27 @@ export const ticketCorteDiario = async (req, res) => {
       paramsVentas
     );
 
-    // gastos por categoria
+    // ===== Detalle de productos vendidos =====
+    const [detalleProductos] = await pool.query(
+      `
+      SELECT
+        p.id,
+        p.codigo,
+        p.nombre,
+        COALESCE(SUM(vi.cantidad), 0) AS cantidad,
+        COALESCE(SUM(vi.subtotal), 0) AS total
+      FROM ventas_items vi
+      INNER JOIN ventas v ON v.id = vi.venta_id
+      INNER JOIN productos p ON p.id = vi.producto_id
+      WHERE ${whereVentas}
+        AND ${filtroVentasRealesAliasV}
+      GROUP BY p.id, p.codigo, p.nombre
+      ORDER BY cantidad DESC, p.nombre ASC
+      `,
+      paramsVentas
+    );
+
+    // ===== Gastos por categoría =====
     const [gastosPorCategoria] = await pool.query(
       `
       SELECT categoria, COALESCE(SUM(monto), 0) AS total
@@ -334,7 +358,7 @@ export const ticketCorteDiario = async (req, res) => {
       paramsGastos
     );
 
-    // total gastos
+    // ===== Total gastos =====
     const [[totalGastos]] = await pool.query(
       `
       SELECT COALESCE(SUM(monto), 0) AS total
@@ -344,7 +368,7 @@ export const ticketCorteDiario = async (req, res) => {
       paramsGastos
     );
 
-    // caja = ventas efectivo - gastos efectivo
+    // ===== Caja = ventas efectivo - gastos efectivo =====
     const [[ventasEfectivo]] = await pool.query(
       `
       SELECT COALESCE(SUM(total_final), 0) AS total
@@ -430,6 +454,18 @@ export const ticketCorteDiario = async (req, res) => {
     }
 
     lines.push("------------------------------");
+    lines.push("DETALLE DE PRODUCTOS");
+
+    if (!detalleProductos.length) {
+      lines.push("Sin productos vendidos");
+    } else {
+      detalleProductos.forEach((p) => {
+        const codigo = p.codigo ? `${p.codigo} - ` : "";
+        lines.push(`${p.cantidad} x ${codigo}${p.nombre}: ${money(p.total)}`);
+      });
+    }
+
+    lines.push("------------------------------");
     lines.push(`TOTAL EN CAJA: ${money(caja)}`);
     lines.push("------------------------------");
     lines.push("FIRMA: _______________________");
@@ -437,11 +473,17 @@ export const ticketCorteDiario = async (req, res) => {
 
     return res.json({
       mensaje: `Ticket corte ${periodo}`,
-      data: { texto: lines.join("\n") },
+      data: {
+        texto: lines.join("\n"),
+        detalleProductos,
+      },
     });
   } catch (err) {
     console.error("ERROR ticket corte:", err);
-    return res.status(500).json({ error: "Error en BD", message: err.message });
+    return res.status(500).json({
+      error: "Error en BD",
+      message: err.message,
+    });
   }
 };
 

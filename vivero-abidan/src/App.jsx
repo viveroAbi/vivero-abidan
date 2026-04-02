@@ -3347,7 +3347,7 @@ if (view === "movimientos") {
                   : "Guardando..."
                 : editandoVentaId
                 ? "Actualizar venta"
-                : "Guardar venta"}
+                : "Imprimir venta"}
             </button>
 
             {editandoVentaId && (
