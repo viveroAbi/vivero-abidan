@@ -2,8 +2,8 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
   const venta = data?.venta || {};
   const items = Array.isArray(data?.items) ? data.items : [];
 
-  const thermalFont = 'sans-serif';
-  const logoSrc = "/logo-vivero-abidan.png";
+  const thermalFont = "sans-serif";
+  const logoSrc = "/vivero-abidan.jpeg";
 
   const printStyles = (
     <style>{`
@@ -545,16 +545,20 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
             </div>
 
             <div style={{ position: "relative", zIndex: 1 }}>
-              <div style={{ textAlign: "center", marginBottom: 6 }}>
+              <div style={{ textAlign: "center", marginBottom: 4 }}>
                 <img
                   src={logoSrc}
-                  alt="Vivero Abidan"
+                  alt="Logo"
                   crossOrigin="anonymous"
+                  onError={(e) => {
+                    e.currentTarget.style.display = "none";
+                  }}
                   style={{
                     width: "100%",
-                    maxWidth: "66mm",
+                    maxWidth: "72mm",
+                    maxHeight: "22mm",
                     height: "auto",
-                    margin: "0 auto 6px auto",
+                    margin: "0 auto 4px auto",
                     objectFit: "contain",
                     display: "block",
                   }}
@@ -567,7 +571,6 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
                     marginTop: 2,
                     fontFamily: thermalFont,
                     fontWeight: 700,
-                    letterSpacing: "0.3px",
                   }}
                 >
                   PEDIDO
@@ -716,16 +719,20 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
           )}
 
           <div style={{ position: "relative", zIndex: 1 }}>
-            <div style={{ textAlign: "center", marginBottom: 6 }}>
+            <div style={{ textAlign: "center", marginBottom: 4 }}>
               <img
                 src={logoSrc}
-                alt="Vivero Abidan"
+                alt="Logo"
                 crossOrigin="anonymous"
+                onError={(e) => {
+                  e.currentTarget.style.display = "none";
+                }}
                 style={{
                   width: "100%",
-                  maxWidth: "66mm",
+                  maxWidth: "72mm",
+                  maxHeight: "22mm",
                   height: "auto",
-                  margin: "0 auto 6px auto",
+                  margin: "0 auto 4px auto",
                   objectFit: "contain",
                   display: "block",
                 }}
@@ -734,13 +741,12 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
               <div
                 style={{
                   textAlign: "center",
-                  fontSize: 10,
+                  fontSize: 11,
                   marginTop: 2,
                   marginBottom: 2,
-                  lineHeight: 1.18,
+                  lineHeight: 1.15,
                   fontFamily: thermalFont,
-                  fontWeight: 600,
-                  letterSpacing: "0.2px",
+                  fontWeight: 700,
                 }}
               >
                 CARRETERA NACIONAL KM 253
@@ -936,9 +942,9 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
               <div
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "84px 1fr",
-                  gap: 8,
-                  alignItems: "center",
+                  gridTemplateColumns: "76px 1fr",
+                  gap: 10,
+                  alignItems: "start",
                   marginTop: 12,
                   marginBottom: 6,
                 }}
@@ -951,8 +957,8 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
                     alt="QR WhatsApp Facturacion"
                     crossOrigin="anonymous"
                     style={{
-                      width: 78,
-                      height: 78,
+                      width: 74,
+                      height: 74,
                       objectFit: "contain",
                       imageRendering: "pixelated",
                     }}
@@ -962,15 +968,14 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
                 <div
                   style={{
                     textAlign: "left",
-                    lineHeight: 1.12,
+                    lineHeight: 1.14,
                     fontFamily: thermalFont,
-                    letterSpacing: "0.15px",
                   }}
                 >
                   <div
                     style={{
                       fontWeight: 700,
-                      fontSize: 10,
+                      fontSize: 12,
                       textTransform: "uppercase",
                     }}
                   >
@@ -979,8 +984,8 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
 
                   <div
                     style={{
-                      fontSize: 10,
                       fontWeight: 700,
+                      fontSize: 12,
                       textTransform: "uppercase",
                     }}
                   >
@@ -990,7 +995,7 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
                   <div
                     style={{
                       marginTop: 4,
-                      fontSize: 9,
+                      fontSize: 10,
                       textTransform: "uppercase",
                     }}
                   >
@@ -1000,7 +1005,7 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
                   <div
                     style={{
                       marginTop: 4,
-                      fontSize: 9,
+                      fontSize: 10,
                       fontWeight: 700,
                       textTransform: "uppercase",
                     }}
@@ -1008,10 +1013,14 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
                     Atención a clientes
                   </div>
 
-                  <div style={{ fontSize: 9 }}>Tel. 81 82 66 10 15</div>
+                  <div style={{ fontSize: 10, marginTop: 1 }}>
+                    Tel. 81 82 66 10 15
+                  </div>
+
                   <div
                     style={{
-                      fontSize: 9,
+                      fontSize: 9.5,
+                      lineHeight: 1.1,
                       wordBreak: "break-word",
                       overflowWrap: "anywhere",
                     }}
