@@ -620,6 +620,7 @@ export const crearCierre = async (req, res) => {
 };
 
 // GET /api/reporte/productos?inicio=YYYY-MM-DD&fin=YYYY-MM-DD
+// GET /api/reporte/productos?inicio=YYYY-MM-DD&fin=YYYY-MM-DD
 export const reporteProductos = async (req, res) => {
   try {
     const { inicio, fin } = req.query;
@@ -632,8 +633,8 @@ export const reporteProductos = async (req, res) => {
     const fechaInicio = inicio || `${yyyy}-${mm}-01`;
     const fechaFin = fin || `${yyyy}-${mm}-${dd}`;
 
-    const desde = `${fechaInicio} 00:00:00`;
-    const hasta = `${fechaFin} 23:59:59`;
+    // ✅ convertir created_at de UTC a hora de México
+    const colMX = `CONVERT_TZ(v.created_at, '+00:00', '-06:00')`;
 
     const [masVendidos] = await pool.query(
       `
@@ -646,14 +647,14 @@ export const reporteProductos = async (req, res) => {
       FROM ventas_items vi
       INNER JOIN ventas v ON v.id = vi.venta_id
       INNER JOIN productos p ON p.id = vi.producto_id
-      WHERE v.created_at BETWEEN ? AND ?
+      WHERE DATE(${colMX}) BETWEEN ? AND ?
         AND v.es_cotizacion = 0
         AND COALESCE(v.es_cotizacion_pedido, 0) = 0
       GROUP BY p.id, p.codigo, p.nombre
       ORDER BY cantidad_vendida DESC, importe_vendido DESC
       LIMIT 10
       `,
-      [desde, hasta]
+      [fechaInicio, fechaFin]
     );
 
     const [menosVendidos] = await pool.query(
@@ -667,7 +668,7 @@ export const reporteProductos = async (req, res) => {
       FROM ventas_items vi
       INNER JOIN ventas v ON v.id = vi.venta_id
       INNER JOIN productos p ON p.id = vi.producto_id
-      WHERE v.created_at BETWEEN ? AND ?
+      WHERE DATE(${colMX}) BETWEEN ? AND ?
         AND v.es_cotizacion = 0
         AND COALESCE(v.es_cotizacion_pedido, 0) = 0
       GROUP BY p.id, p.codigo, p.nombre
@@ -675,24 +676,24 @@ export const reporteProductos = async (req, res) => {
       ORDER BY cantidad_vendida ASC, importe_vendido ASC
       LIMIT 10
       `,
-      [desde, hasta]
+      [fechaInicio, fechaFin]
     );
 
     const [ventasPorDia] = await pool.query(
       `
       SELECT 
-        DATE(v.created_at) AS fecha,
+        DATE(${colMX}) AS fecha,
         COALESCE(SUM(vi.subtotal), 0) AS total,
         COALESCE(SUM(vi.cantidad), 0) AS piezas
       FROM ventas v
       INNER JOIN ventas_items vi ON vi.venta_id = v.id
-      WHERE v.created_at BETWEEN ? AND ?
+      WHERE DATE(${colMX}) BETWEEN ? AND ?
         AND v.es_cotizacion = 0
         AND COALESCE(v.es_cotizacion_pedido, 0) = 0
-      GROUP BY DATE(v.created_at)
+      GROUP BY DATE(${colMX})
       ORDER BY fecha ASC
       `,
-      [desde, hasta]
+      [fechaInicio, fechaFin]
     );
 
     const [resumenRows] = await pool.query(
@@ -703,11 +704,11 @@ export const reporteProductos = async (req, res) => {
         COUNT(DISTINCT v.id) AS total_ventas
       FROM ventas v
       INNER JOIN ventas_items vi ON vi.venta_id = v.id
-      WHERE v.created_at BETWEEN ? AND ?
+      WHERE DATE(${colMX}) BETWEEN ? AND ?
         AND v.es_cotizacion = 0
         AND COALESCE(v.es_cotizacion_pedido, 0) = 0
       `,
-      [desde, hasta]
+      [fechaInicio, fechaFin]
     );
 
     const resumen = resumenRows[0] || {
