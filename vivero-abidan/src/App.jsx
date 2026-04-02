@@ -3367,6 +3367,121 @@ if (view === "movimientos") {
           </div>
         </div>
       </form>
+      <div style={{ marginTop: 18 }}>
+  <div
+    style={{
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: isMobile ? "stretch" : "center",
+      flexDirection: isMobile ? "column" : "row",
+      gap: 10,
+      marginBottom: 10,
+    }}
+  >
+    <h3 style={{ margin: 0 }}>Ventas registradas</h3>
+
+    <button
+      type="button"
+      onClick={() => setVentasAbiertas((v) => !v)}
+      style={btn("ghost")}
+    >
+      {ventasAbiertas ? "Ocultar ventas" : "Ver ventas"}
+    </button>
+  </div>
+
+  {ventasAbiertas && (
+    <div
+      style={{
+        overflowX: "auto",
+        border: `1px solid ${theme.border}`,
+        borderRadius: 12,
+        background: "#fff",
+      }}
+    >
+      <table
+        style={{
+          width: "100%",
+          borderCollapse: "collapse",
+          minWidth: 980,
+        }}
+      >
+        <thead>
+          <tr>
+            <th style={thStyle}>Folio</th>
+            <th style={thStyle}>Cliente</th>
+            <th style={thStyle}>Categoría</th>
+            <th style={thStyle}>Productos</th>
+            <th style={thStyle}>Total</th>
+            <th style={thStyle}>Pago</th>
+            <th style={thStyle}>Fecha</th>
+            <th style={thStyle}>Acciones</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {ventas.map((v) => (
+            <tr key={v.id}>
+              <td style={tdStyle}>#{v.id}</td>
+              <td style={tdStyle}>{v.cliente_nombre || "Público general"}</td>
+              <td style={tdStyle}>
+                {normalizarCategoriaVenta(v.categoria || "publico")}
+              </td>
+              <td style={tdStyle}>{Number(v.total_items || v.cantidad_items || 0)}</td>
+              <td style={tdStyle}>
+                <b>{money(v.total_final ?? v.total ?? 0)}</b>
+              </td>
+              <td style={tdStyle}>{v.tipo_pago || "—"}</td>
+              <td style={tdStyle}>{formatFechaLocal(v.created_at)}</td>
+              <td style={tdStyle}>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <button
+                    type="button"
+                    onClick={() => verTicket(v.id)}
+                    style={btn("primary")}
+                  >
+                    🧾 Ticket
+                  </button>
+
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => editarVentaDesdeTabla(v)}
+                      style={btn("ghost")}
+                    >
+                      ✏️ Editar
+                    </button>
+                  )}
+
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => eliminar(v.id)}
+                      disabled={loading}
+                      style={{
+                        ...btn("danger"),
+                        opacity: loading ? 0.7 : 1,
+                      }}
+                    >
+                      Eliminar
+                    </button>
+                  )}
+                </div>
+              </td>
+            </tr>
+          ))}
+
+          {ventas.length === 0 && (
+            <tr>
+              <td style={tdStyle} colSpan={8}>
+                No hay ventas aún.
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  )}
+</div>
     </div>
   </div>
 )}
