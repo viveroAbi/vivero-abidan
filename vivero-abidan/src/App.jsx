@@ -668,13 +668,32 @@ const notaAutomaticaCliente = useMemo(() => {
 }, [clienteSeleccionado, saldoActualCliente, disponibleCreditoCliente]);
 
 
-  const efectivoNum = useMemo(
-    () => Number(form.efectivo || 0),
-    [form.efectivo]
-  );
+  const efectivoNum = useMemo(() => Number(form.efectivo || 0), [form.efectivo]);
   const tarjetaNum = useMemo(() => Number(form.tarjeta || 0), [form.tarjeta]);
-
+  const transferenciaNum = useMemo(
+    () => Number(form.transferencia || 0),
+    [form.transferencia]
+  );
+  const chequeNum = useMemo(() => Number(form.cheque || 0), [form.cheque]);
   const recibidoNum = useMemo(() => Number(form.recibido || 0), [form.recibido]);
+
+  const totalPagadoMixtoCompleto = useMemo(() => {
+    return Number(
+      (
+        efectivoNum +
+        tarjetaNum +
+        transferenciaNum +
+        chequeNum
+      ).toFixed(2)
+    );
+  }, [efectivoNum, tarjetaNum, transferenciaNum, chequeNum]);
+
+  const restaACuenta = useMemo(() => {
+    return Math.max(
+      Number((Number(totalFinalUI || 0) - totalPagadoMixtoCompleto).toFixed(2)),
+      0
+    );
+  }, [totalFinalUI, totalPagadoMixtoCompleto]);
 
 const cambioNum = useMemo(() => {
   if (form.tipoPago === "efectivo") {
@@ -1345,10 +1364,14 @@ async function iniciarCamaraYDeteccion() {
   tipoPago: ventaData.tipo_pago || "efectivo",
   efectivo: String(ventaData.efectivo ?? ""),
   tarjeta: String(ventaData.tarjeta ?? ""),
+  transferencia: String(ventaData.transferencia ?? ""),
+  cheque: String(ventaData.cheque ?? ""),
   recibido: String(ventaData.recibido ?? ""),
   cambio: String(ventaData.cambio ?? ""),
   esCotizacion: esCot,
   esCotizacionPedido: esPedido,
+  fecha_vencimiento: ventaData.fecha_vencimiento || "",
+  observaciones_credito: ventaData.observaciones_credito || "",
 }));
 
     // 5) Cargar carrito desde items (MAPEO CORRECTO)
@@ -3556,7 +3579,6 @@ if (view === "movimientos") {
         type="number"
         step="0.01"
         style={inputStyle}
-        disabled={form.tipoPago === "transferencia" ? false : false}
       />
     </label>
   )}
@@ -3571,7 +3593,6 @@ if (view === "movimientos") {
         type="number"
         step="0.01"
         style={inputStyle}
-        disabled={form.tipoPago === "cheque" ? false : false}
       />
     </label>
   )}
