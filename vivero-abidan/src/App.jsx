@@ -1575,7 +1575,13 @@ async function imprimirCorteTicket() {
       method: "POST",
       headers: authHeaders(),
     });
+  } catch (err) {
+    console.error("ERROR /reporte/cierres:", err);
+    alert(`Falló /reporte/cierres: ${err?.message || "sin detalle"}`);
+    return;
+  }
 
+  try {
     const q = new URLSearchParams();
     q.set("periodo", reporteTipo || "diario");
 
@@ -1593,8 +1599,8 @@ async function imprimirCorteTicket() {
     });
     setShowTicket(true);
   } catch (err) {
-    console.error(err);
-    alert("No se pudo generar el corte para imprimir");
+    console.error("ERROR /reporte/corte/ticket:", err);
+    alert(`Falló /reporte/corte/ticket: ${err?.message || "sin detalle"}`);
   }
 }
 async function imprimirProductosPorCategoriaPDF() {
