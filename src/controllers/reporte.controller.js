@@ -334,6 +334,36 @@ export const ticketCorteDiario = async (req, res) => {
       paramsGastos
     );
 
+    const categoriasAuto = [
+  "border",
+  "corteza",
+  "fertilizante",
+  "maceta",
+  "tierra",
+  "malla",
+  "duranta",
+  "agribon",
+];
+
+const [productosAutoRows] = await pool.query(
+  `
+  SELECT
+    LOWER(TRIM(COALESCE(p.categoria_planta, ''))) AS categoria,
+    COALESCE(SUM(vi.cantidad), 0) AS piezas,
+    COALESCE(SUM(vi.subtotal), 0) AS total
+  FROM ventas_items vi
+  INNER JOIN ventas v ON v.id = vi.venta_id
+  INNER JOIN productos p ON p.id = vi.producto_id
+  WHERE ${whereVentas}
+    AND ${filtroVentasRealesAliasV}
+    AND LOWER(TRIM(COALESCE(p.categoria_planta, ''))) IN (${categoriasAuto
+      .map(() => "?")
+      .join(",")})
+  GROUP BY LOWER(TRIM(COALESCE(p.categoria_planta, '')))
+  ORDER BY categoria ASC
+  `,
+  [...paramsVentas, ...categoriasAuto]
+);
     const [[totalGastos]] = await pool.query(
       `
       SELECT COALESCE(SUM(monto), 0) AS total
@@ -342,6 +372,14 @@ export const ticketCorteDiario = async (req, res) => {
       `,
       paramsGastos
     );
+
+    const totalAuto = productosAutoRows.reduce(
+  (acc, item) => acc + Number(item.total || 0),
+  0
+);
+
+const totalManual = Number(totalGastos.total || 0);
+const totalGeneralGastos = totalManual + totalAuto;
 
     const [[ventasEfectivo]] = await pool.query(
       `
@@ -405,44 +443,55 @@ export const ticketCorteDiario = async (req, res) => {
 
     lines.push(`TOTAL VENTAS: ${money(totalVentas.total)}`);
     lines.push("------------------------------");
-    lines.push("GASTOS");
+    lines.push("GASTOS / INSUMOS");
 
-    const categoriasGastoFijas = [
-      "border",
-      "corteza",
-      "fertilizante",
-      "maceta",
-      "tierra",
-      "malla",
-      "duranta",
-      "gasolina",
-      "comida",
-      "renta",
-      "sueldos",
-      "gastos",
-    ];
+const categoriasManual = ["gasolina", "comida", "renta", "sueldos", "gastos"];
 
-    const gastosMap = Object.fromEntries(
-      gastosPorCategoria.map((g) => [
-        String(g.categoria || "").trim().toLowerCase(),
-        Number(g.total || 0),
-      ])
-    );
+const gastosMap = Object.fromEntries(
+  gastosPorCategoria.map((g) => [
+    String(g.categoria || "").trim().toLowerCase(),
+    Number(g.total || 0),
+  ])
+);
 
-    categoriasGastoFijas.forEach((cat) => {
-      lines.push(`${cat}: ${money(gastosMap[cat] || 0)}`);
-    });
+const productosAutoMap = Object.fromEntries(
+  productosAutoRows.map((r) => [
+    String(r.categoria || "").trim().toLowerCase(),
+    {
+      piezas: Number(r.piezas || 0),
+      total: Number(r.total || 0),
+    },
+  ])
+);
 
-    const gastosExtras = gastosPorCategoria.filter((g) => {
-      const nombre = String(g.categoria || "").trim().toLowerCase();
-      return !categoriasGastoFijas.includes(nombre);
-    });
+// AUTOMÁTICOS DESDE VENTAS
+lines.push("AUTO DESDE VENTAS");
+categoriasAuto.forEach((cat) => {
+  const row = productosAutoMap[cat] || { piezas: 0, total: 0 };
+  lines.push(`${cat}: ${row.piezas} pzas | ${money(row.total)}`);
+});
 
-    gastosExtras.forEach((g) => {
-      lines.push(`${g.categoria}: ${money(g.total)}`);
-    });
+lines.push("------------------------------");
 
-    lines.push(`TOTAL GASTOS: ${money(totalGastos.total)}`);
+// MANUALES
+lines.push("MANUALES");
+categoriasManual.forEach((cat) => {
+  lines.push(`${cat}: ${money(gastosMap[cat] || 0)}`);
+});
+
+const gastosExtras = gastosPorCategoria.filter((g) => {
+  const nombre = String(g.categoria || "").trim().toLowerCase();
+  return !categoriasManual.includes(nombre);
+});
+
+gastosExtras.forEach((g) => {
+  const nombre = String(g.categoria || "").trim().toLowerCase();
+  if (!categoriasAuto.includes(nombre)) {
+    lines.push(`${g.categoria}: ${money(g.total)}`);
+  }
+});
+
+lines.push(`TOTAL GASTOS: ${money(totalGeneralGastos)}`);
     lines.push("------------------------------");
     lines.push("VENTAS POR CATEGORIA");
 
