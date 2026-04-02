@@ -719,41 +719,49 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
           )}
 
           <div style={{ position: "relative", zIndex: 1 }}>
-            <div style={{ textAlign: "center", marginBottom: 4 }}>
-              <img
-                src={logoSrc}
-                alt="Logo"
-                crossOrigin="anonymous"
-                onError={(e) => {
-                  e.currentTarget.style.display = "none";
-                }}
-                style={{
-                  width: "100%",
-                  maxWidth: "72mm",
-                  maxHeight: "22mm",
-                  height: "auto",
-                  margin: "0 auto 4px auto",
-                  objectFit: "contain",
-                  display: "block",
-                }}
-              />
+            <div
+  style={{
+    textAlign: "center",
+    marginBottom: 4,
+    background: "#fff",
+    padding: "2px 0",
+  }}
+>
+  <img
+    src={logoSrc}
+    alt="Logo"
+    crossOrigin="anonymous"
+    onError={(e) => {
+      e.currentTarget.style.display = "none";
+    }}
+    style={{
+      width: "100%",
+      maxWidth: "72mm",
+      maxHeight: "22mm",
+      height: "auto",
+      margin: "0 auto 4px auto",
+      objectFit: "contain",
+      display: "block",
+      background: "#fff",
+    }}
+  />
 
-              <div
-                style={{
-                  textAlign: "center",
-                  fontSize: 11,
-                  marginTop: 2,
-                  marginBottom: 2,
-                  lineHeight: 1.15,
-                  fontFamily: thermalFont,
-                  fontWeight: 700,
-                }}
-              >
-                CARRETERA NACIONAL KM 253
-                <br />
-                COL. LOS RODRIGUEZ, SANTIAGO, N.L.
-              </div>
-            </div>
+  <div
+    style={{
+      textAlign: "center",
+      fontSize: 11,
+      marginTop: 2,
+      marginBottom: 2,
+      lineHeight: 1.15,
+      fontFamily: thermalFont,
+      fontWeight: 700,
+    }}
+  >
+    CARRETERA NACIONAL KM 253
+    <br />
+    COL. LOS RODRIGUEZ, SANTIAGO, N.L.
+  </div>
+</div>
 
             <hr />
 
