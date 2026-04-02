@@ -3,6 +3,7 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
   const items = Array.isArray(data?.items) ? data.items : [];
 
   const thermalFont = "sans-serif";
+  const logoSrc = "/logo-ticket.png";
 
   const printStyles = (
     <style>{`
@@ -484,14 +485,39 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
     <div style={{ textAlign: "center", marginBottom: 4 }}>
       <div
         style={{
-          fontSize: 20,
-          fontWeight: 700,
-          lineHeight: 1,
-          letterSpacing: "0.4px",
-          marginBottom: 2,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 6,
+          marginBottom: 4,
         }}
       >
-        VIVERO ABIDAN
+        <img
+          src={logoSrc}
+          alt="Logo Vivero Abidan"
+          crossOrigin="anonymous"
+          onError={(e) => {
+            e.currentTarget.style.display = "none";
+          }}
+          style={{
+            width: 22,
+            height: 22,
+            objectFit: "contain",
+            background: "#fff",
+            flexShrink: 0,
+          }}
+        />
+
+        <div
+          style={{
+            fontSize: 18,
+            fontWeight: 700,
+            lineHeight: 1,
+            letterSpacing: "0.3px",
+          }}
+        >
+          VIVERO ABIDAN
+        </div>
       </div>
 
       <div
@@ -543,16 +569,9 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
             </pre>
           </div>
 
-          <div
-            className="no-print"
-            style={{ display: "flex", gap: 8, marginTop: 10 }}
-          >
-            <button style={{ flex: 1 }} onClick={imprimirSoloTicket}>
-              Imprimir
-            </button>
-            <button style={{ flex: 1 }} onClick={onClose}>
-              Cerrar
-            </button>
+          <div className="no-print" style={{ display: "flex", gap: 8, marginTop: 10 }}>
+            <button style={{ flex: 1 }} onClick={imprimirSoloTicket}>Imprimir</button>
+            <button style={{ flex: 1 }} onClick={onClose}>Cerrar</button>
           </div>
         </div>
       </div>
@@ -590,30 +609,15 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
               <hr />
 
               <div style={{ fontSize: 12 }}>
-                <div>
-                  <b>FECHA Y HORA:</b>{" "}
-                  {venta.created_at
-                    ? new Date(venta.created_at).toLocaleString()
-                    : "—"}
-                </div>
-                <div>
-                  <b>CLIENTE:</b> {clienteNombre}
-                </div>
-                <div>
-                  <b>CATEGORIA:</b> {categoriaLabel(categoriaVenta)}
-                </div>
+                <div><b>FECHA Y HORA:</b> {venta.created_at ? new Date(venta.created_at).toLocaleString() : "—"}</div>
+                <div><b>CLIENTE:</b> {clienteNombre}</div>
+                <div><b>CATEGORIA:</b> {categoriaLabel(categoriaVenta)}</div>
               </div>
 
               <hr />
 
               <div style={{ fontSize: 12 }}>
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "30px 1fr",
-                    gap: 6,
-                  }}
-                >
+                <div style={{ display: "grid", gridTemplateColumns: "30px 1fr", gap: 6 }}>
                   <b style={{ textAlign: "right" }}>CANT</b>
                   <b>PRODUCTO / PRECIO</b>
                 </div>
@@ -649,12 +653,7 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
                             }}
                           >
                             <span style={{ ...productCellStyle, flex: 1 }}>{nombre}</span>
-                            <span
-                              style={{
-                                fontWeight: "bold",
-                                whiteSpace: "nowrap",
-                              }}
-                            >
+                            <span style={{ fontWeight: "bold", whiteSpace: "nowrap" }}>
                               {moneyCompact(pu)}
                             </span>
                           </div>
@@ -668,9 +667,7 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
               <hr />
 
               <div style={{ fontSize: 12 }}>
-                <div
-                  style={{ display: "flex", justifyContent: "space-between" }}
-                >
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
                   <span>ARTICULOS:</span>
                   <b>{numeroArticulos}</b>
                 </div>
@@ -686,16 +683,9 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
             </div>
           </div>
 
-          <div
-            className="no-print"
-            style={{ display: "flex", gap: 8, marginTop: 12 }}
-          >
-            <button style={{ flex: 1 }} onClick={imprimirSoloTicket}>
-              Imprimir
-            </button>
-            <button style={{ flex: 1 }} onClick={onClose}>
-              Cerrar
-            </button>
+          <div className="no-print" style={{ display: "flex", gap: 8, marginTop: 12 }}>
+            <button style={{ flex: 1 }} onClick={imprimirSoloTicket}>Imprimir</button>
+            <button style={{ flex: 1 }} onClick={onClose}>Cerrar</button>
           </div>
         </div>
       </div>
@@ -734,24 +724,11 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
             <hr />
 
             <div style={{ fontSize: 12, lineHeight: 1.18 }}>
-              <div>
-                <b>NO. TICKET:</b> {venta.id ?? "—"}
-              </div>
-              <div>
-                <b>FECHA:</b>{" "}
-                {venta.created_at
-                  ? new Date(venta.created_at).toLocaleString()
-                  : "—"}
-              </div>
-              <div>
-                <b>CLIENTE:</b> {clienteNombre}
-              </div>
-              <div>
-                <b>CATEGORIA:</b> {categoriaLabel(categoriaVenta)}
-              </div>
-              <div>
-                <b>FORMA DE PAGO:</b> {formaPago}
-              </div>
+              <div><b>NO. TICKET:</b> {venta.id ?? "—"}</div>
+              <div><b>FECHA:</b> {venta.created_at ? new Date(venta.created_at).toLocaleString() : "—"}</div>
+              <div><b>CLIENTE:</b> {clienteNombre}</div>
+              <div><b>CATEGORIA:</b> {categoriaLabel(categoriaVenta)}</div>
+              <div><b>FORMA DE PAGO:</b> {formaPago}</div>
             </div>
 
             <hr />
@@ -795,26 +772,11 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
                         }}
                       >
                         <div style={qtyCellStyle}>{cant}</div>
-
                         <div style={productCellStyle}>{nombre}</div>
-
-                        <div
-                          style={{
-                            textAlign: "right",
-                            fontWeight: "bold",
-                            whiteSpace: "nowrap",
-                          }}
-                        >
+                        <div style={{ textAlign: "right", fontWeight: "bold", whiteSpace: "nowrap" }}>
                           {moneyCompact(pu)}
                         </div>
-
-                        <div
-                          style={{
-                            textAlign: "right",
-                            fontWeight: "bold",
-                            whiteSpace: "nowrap",
-                          }}
-                        >
+                        <div style={{ textAlign: "right", fontWeight: "bold", whiteSpace: "nowrap" }}>
                           {moneyCompact(imp)}
                         </div>
                       </div>
@@ -839,16 +801,8 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
                 <span>IVA:</span>
                 <b>{moneyCompact(0)}</b>
               </div>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  marginTop: 2,
-                }}
-              >
-                <span>
-                  <b>TOTAL:</b>
-                </span>
+              <div style={{ display: "flex", justifyContent: "space-between", marginTop: 2 }}>
+                <span><b>TOTAL:</b></span>
                 <b>{moneyCompact(totalFinal)}</b>
               </div>
             </div>
@@ -867,9 +821,7 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
                       </div>
                     ))
                   ) : (
-                    <div
-                      style={{ display: "flex", justifyContent: "space-between" }}
-                    >
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
                       <span>MIXTO:</span>
                       <b>{moneyCompact(totalFinal)}</b>
                     </div>
@@ -879,15 +831,11 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
 
               {(tipoPagoRaw === "efectivo" || tipoPagoRaw === "mixto") && (
                 <div style={{ fontSize: 12 }}>
-                  <div
-                    style={{ display: "flex", justifyContent: "space-between" }}
-                  >
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
                     <span>RECIBIDO:</span>
                     <b>{moneyCompact(venta.recibido ?? recibido)}</b>
                   </div>
-                  <div
-                    style={{ display: "flex", justifyContent: "space-between" }}
-                  >
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
                     <span>CAMBIO:</span>
                     <b>{moneyCompact(venta.cambio ?? cambio)}</b>
                   </div>
@@ -896,15 +844,11 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
 
               {esPagoACuenta && (
                 <div style={{ fontSize: 12, marginTop: 4 }}>
-                  <div
-                    style={{ display: "flex", justifyContent: "space-between" }}
-                  >
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
                     <span>DEJA:</span>
                     <b>{moneyCompact(dejaACuenta)}</b>
                   </div>
-                  <div
-                    style={{ display: "flex", justifyContent: "space-between" }}
-                  >
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
                     <span>RESTA:</span>
                     <b>{moneyCompact(restaACuenta)}</b>
                   </div>
@@ -948,44 +892,19 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
                     fontFamily: thermalFont,
                   }}
                 >
-                  <div
-                    style={{
-                      fontWeight: 700,
-                      fontSize: 12,
-                      textTransform: "uppercase",
-                    }}
-                  >
+                  <div style={{ fontWeight: 700, fontSize: 12, textTransform: "uppercase" }}>
                     ESCANEAR PARA FACTURAR
                   </div>
 
-                  <div
-                    style={{
-                      fontWeight: 700,
-                      fontSize: 12,
-                      textTransform: "uppercase",
-                    }}
-                  >
+                  <div style={{ fontWeight: 700, fontSize: 12, textTransform: "uppercase" }}>
                     EN WHATSAPP
                   </div>
 
-                  <div
-                    style={{
-                      marginTop: 4,
-                      fontSize: 10,
-                      textTransform: "uppercase",
-                    }}
-                  >
+                  <div style={{ marginTop: 4, fontSize: 10, textTransform: "uppercase" }}>
                     ENVÍA TU INFORMACIÓN
                   </div>
 
-                  <div
-                    style={{
-                      marginTop: 4,
-                      fontSize: 10,
-                      fontWeight: 700,
-                      textTransform: "uppercase",
-                    }}
-                  >
+                  <div style={{ marginTop: 4, fontSize: 10, fontWeight: 700, textTransform: "uppercase" }}>
                     ATENCIÓN A CLIENTES
                   </div>
 
@@ -1030,16 +949,9 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
           </div>
         </div>
 
-        <div
-          className="no-print"
-          style={{ display: "flex", gap: 8, marginTop: 10 }}
-        >
-          <button style={{ flex: 1 }} onClick={imprimirSoloTicket}>
-            Imprimir
-          </button>
-          <button style={{ flex: 1 }} onClick={onClose}>
-            Cerrar
-          </button>
+        <div className="no-print" style={{ display: "flex", gap: 8, marginTop: 10 }}>
+          <button style={{ flex: 1 }} onClick={imprimirSoloTicket}>Imprimir</button>
+          <button style={{ flex: 1 }} onClick={onClose}>Cerrar</button>
         </div>
       </div>
     </div>
