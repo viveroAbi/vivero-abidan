@@ -2,7 +2,8 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
   const venta = data?.venta || {};
   const items = Array.isArray(data?.items) ? data.items : [];
 
-  const thermalFont = '"Arial", "Helvetica", sans-serif';
+  const thermalFont = 'sans-serif';
+  const logoSrc = "/logo-vivero-abidan.png";
 
   const printStyles = (
     <style>{`
@@ -544,13 +545,33 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
             </div>
 
             <div style={{ position: "relative", zIndex: 1 }}>
-              <div
-                style={{ textAlign: "center", fontWeight: "bold", fontSize: 17 }}
-              >
-                VIVERO ABIDAN
-              </div>
-              <div style={{ textAlign: "center", fontSize: 12, marginTop: 2 }}>
-                PEDIDO
+              <div style={{ textAlign: "center", marginBottom: 6 }}>
+                <img
+                  src={logoSrc}
+                  alt="Vivero Abidan"
+                  crossOrigin="anonymous"
+                  style={{
+                    width: "100%",
+                    maxWidth: "66mm",
+                    height: "auto",
+                    margin: "0 auto 6px auto",
+                    objectFit: "contain",
+                    display: "block",
+                  }}
+                />
+
+                <div
+                  style={{
+                    textAlign: "center",
+                    fontSize: 11,
+                    marginTop: 2,
+                    fontFamily: thermalFont,
+                    fontWeight: 700,
+                    letterSpacing: "0.3px",
+                  }}
+                >
+                  PEDIDO
+                </div>
               </div>
 
               <hr />
@@ -695,24 +716,37 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
           )}
 
           <div style={{ position: "relative", zIndex: 1 }}>
-            <div
-              style={{ textAlign: "center", fontWeight: "bold", fontSize: 17 }}
-            >
-              VIVERO ABIDAN
-            </div>
+            <div style={{ textAlign: "center", marginBottom: 6 }}>
+              <img
+                src={logoSrc}
+                alt="Vivero Abidan"
+                crossOrigin="anonymous"
+                style={{
+                  width: "100%",
+                  maxWidth: "66mm",
+                  height: "auto",
+                  margin: "0 auto 6px auto",
+                  objectFit: "contain",
+                  display: "block",
+                }}
+              />
 
-            <div
-              style={{
-                textAlign: "center",
-                fontSize: 11,
-                marginTop: 4,
-                marginBottom: 4,
-                lineHeight: 1.18,
-              }}
-            >
-              CARRETERA NACIONAL KM 253
-              <br />
-              COL. LOS RODRIGUEZ, SANTIAGO, N.L.
+              <div
+                style={{
+                  textAlign: "center",
+                  fontSize: 10,
+                  marginTop: 2,
+                  marginBottom: 2,
+                  lineHeight: 1.18,
+                  fontFamily: thermalFont,
+                  fontWeight: 600,
+                  letterSpacing: "0.2px",
+                }}
+              >
+                CARRETERA NACIONAL KM 253
+                <br />
+                COL. LOS RODRIGUEZ, SANTIAGO, N.L.
+              </div>
             </div>
 
             <hr />
@@ -925,21 +959,65 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
                   />
                 </div>
 
-                <div style={{ textAlign: "left", lineHeight: 1.15 }}>
-                  <div style={{ fontWeight: "bold", fontSize: 10 }}>
-                    ESCANEAR PARA FACTURAR
+                <div
+                  style={{
+                    textAlign: "left",
+                    lineHeight: 1.12,
+                    fontFamily: thermalFont,
+                    letterSpacing: "0.15px",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontWeight: 700,
+                      fontSize: 10,
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    Escanear para facturar
                   </div>
-                  <div style={{ fontSize: 10, fontWeight: "bold" }}>
-                    EN WHATSAPP
+
+                  <div
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 700,
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    en WhatsApp
                   </div>
-                  <div style={{ marginTop: 4, fontSize: 9 }}>
-                    ENVIA TU INFORMACION
+
+                  <div
+                    style={{
+                      marginTop: 4,
+                      fontSize: 9,
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    Envía tu información
                   </div>
-                  <div style={{ marginTop: 4, fontSize: 9, fontWeight: "bold" }}>
-                    ATENCION A CLIENTES
+
+                  <div
+                    style={{
+                      marginTop: 4,
+                      fontSize: 9,
+                      fontWeight: 700,
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    Atención a clientes
                   </div>
-                  <div style={{ fontSize: 9 }}>TEL. 81 82 66 10 15</div>
-                  <div style={{ fontSize: 9 }}>VIVEROABIDAN@GMAIL.COM</div>
+
+                  <div style={{ fontSize: 9 }}>Tel. 81 82 66 10 15</div>
+                  <div
+                    style={{
+                      fontSize: 9,
+                      wordBreak: "break-word",
+                      overflowWrap: "anywhere",
+                    }}
+                  >
+                    viveroabidan@gmail.com
+                  </div>
                 </div>
               </div>
             </div>
