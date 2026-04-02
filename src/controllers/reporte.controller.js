@@ -355,24 +355,42 @@ export const ticketCorteDiario = async (req, res) => {
     ];
 
     const [productosAutoRows] = await pool.query(
-      `
-      SELECT
-        LOWER(TRIM(COALESCE(p.categoria_planta, ''))) AS categoria,
-        COALESCE(SUM(vi.cantidad), 0) AS piezas,
-        COALESCE(SUM(vi.subtotal), 0) AS total
-      FROM ventas_items vi
-      INNER JOIN ventas v ON v.id = vi.venta_id
-      INNER JOIN productos p ON p.id = vi.producto_id
-      WHERE ${whereVentasAliasV}
-        AND ${filtroVentasRealesAliasV}
-        AND LOWER(TRIM(COALESCE(p.categoria_planta, ''))) IN (${categoriasAuto
-          .map(() => "?")
-          .join(",")})
-      GROUP BY LOWER(TRIM(COALESCE(p.categoria_planta, '')))
-      ORDER BY categoria ASC
-      `,
-      [...paramsVentasAliasV, ...categoriasAuto]
-    );
+  `
+  SELECT
+    CASE
+      WHEN LOWER(TRIM(COALESCE(p.categoria_planta, ''))) IN (${categoriasAuto.map(() => "?").join(",")})
+        THEN LOWER(TRIM(COALESCE(p.categoria_planta, '')))
+      WHEN LOWER(COALESCE(p.nombre, '')) LIKE '%agribon%'
+        THEN 'agribon'
+      WHEN LOWER(COALESCE(p.nombre, '')) LIKE '%malla%'
+        THEN 'malla'
+      WHEN LOWER(COALESCE(p.nombre, '')) LIKE '%maceta%'
+        THEN 'maceta'
+      WHEN LOWER(COALESCE(p.nombre, '')) LIKE '%tierra%'
+        THEN 'tierra'
+      WHEN LOWER(COALESCE(p.nombre, '')) LIKE '%fertilizante%'
+        THEN 'fertilizante'
+      WHEN LOWER(COALESCE(p.nombre, '')) LIKE '%corteza%'
+        THEN 'corteza'
+      WHEN LOWER(COALESCE(p.nombre, '')) LIKE '%border%'
+        THEN 'border'
+      WHEN LOWER(COALESCE(p.nombre, '')) LIKE '%duranta%'
+        THEN 'duranta'
+      ELSE NULL
+    END AS categoria,
+    COALESCE(SUM(vi.cantidad), 0) AS piezas,
+    COALESCE(SUM(vi.subtotal), 0) AS total
+  FROM ventas_items vi
+  INNER JOIN ventas v ON v.id = vi.venta_id
+  INNER JOIN productos p ON p.id = vi.producto_id
+  WHERE ${whereVentasAliasV}
+    AND ${filtroVentasRealesAliasV}
+  GROUP BY categoria
+  HAVING categoria IS NOT NULL
+  ORDER BY categoria ASC
+  `,
+  [...categoriasAuto]
+);
 
     const [[totalGastos]] = await pool.query(
       `
