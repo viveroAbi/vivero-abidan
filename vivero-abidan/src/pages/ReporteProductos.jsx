@@ -57,6 +57,23 @@ export default function ReporteProductos({ token }) {
       currency: "MXN",
     });
 
+  function formatearFechaSinZona(fechaStr) {
+    if (!fechaStr) return "";
+
+    const str = String(fechaStr).trim();
+
+    // Si viene como YYYY-MM-DD o YYYY-MM-DDTHH:mm:ss...
+    const soloFecha = str.slice(0, 10);
+    const partes = soloFecha.split("-");
+
+    if (partes.length === 3) {
+      const [y, m, d] = partes;
+      if (y && m && d) return `${d}/${m}/${y}`;
+    }
+
+    return str;
+  }
+
   async function cargar() {
     try {
       if (!token) {
@@ -114,7 +131,7 @@ export default function ReporteProductos({ token }) {
 
   const barVentasPorDia = useMemo(() => {
     return (data.ventasPorDia || []).map((d) => ({
-      fecha: new Date(d.fecha).toLocaleDateString("es-MX"),
+      fecha: formatearFechaSinZona(d.fecha),
       piezas: Number(d.piezas || 0),
       total: Number(d.total || 0),
     }));
@@ -336,7 +353,7 @@ export default function ReporteProductos({ token }) {
         </div>
       </div>
 
-      {/* ===== LISTAS (siguen útiles) ===== */}
+      {/* ===== LISTAS ===== */}
       <h3>Más vendidos</h3>
       <ul>
         {(data.masVendidos || []).map((p) => (
@@ -361,8 +378,8 @@ export default function ReporteProductos({ token }) {
       <ul>
         {(data.ventasPorDia || []).map((d, i) => (
           <li key={i}>
-            {new Date(d.fecha).toLocaleDateString("es-MX")} | Piezas:{" "}
-            {Number(d.piezas || 0)} | Total: {money(d.total || 0)}
+            {formatearFechaSinZona(d.fecha)} | Piezas: {Number(d.piezas || 0)} | Total:{" "}
+            {money(d.total || 0)}
           </li>
         ))}
       </ul>
