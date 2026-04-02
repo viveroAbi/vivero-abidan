@@ -1597,7 +1597,211 @@ async function imprimirCorteTicket() {
     alert("No se pudo generar el corte para imprimir");
   }
 }
+async function imprimirProductosPorCategoriaPDF() {
+  try {
+    const q = new URLSearchParams();
+    q.set("periodo", reporteTipo || "diario");
 
+    if (reporteFecha) {
+      q.set("fecha", reporteFecha);
+    }
+
+    const data = await apiFetch(`/reporte/productos-categoria/pdf?${q.toString()}`, {
+      headers: authHeaders(),
+    });
+
+    const info = data?.data || {};
+    const categorias = Array.isArray(info.categorias) ? info.categorias : [];
+    const resumen = info?.resumen || {};
+
+    const periodoLabel =
+      (info.periodo || "diario").toUpperCase();
+
+    const fechaLabel = info.fecha || "ACTUAL";
+
+    const money = (n) =>
+      Number(n || 0).toLocaleString("es-MX", {
+        style: "currency",
+        currency: "MXN",
+      });
+
+    const html = `
+      <html>
+        <head>
+          <title>PDF Productos por Categoría</title>
+          <style>
+            @page {
+              size: A4;
+              margin: 14mm;
+            }
+
+            body {
+              font-family: Arial, Helvetica, sans-serif;
+              color: #111;
+              margin: 0;
+              padding: 0;
+              font-size: 12px;
+            }
+
+            .title {
+              text-align: center;
+              font-size: 22px;
+              font-weight: bold;
+              margin-bottom: 4px;
+            }
+
+            .subtitle {
+              text-align: center;
+              font-size: 14px;
+              margin-bottom: 16px;
+            }
+
+            .meta {
+              margin-bottom: 14px;
+              line-height: 1.5;
+            }
+
+            .resumen {
+              border: 1px solid #ccc;
+              padding: 10px;
+              margin-bottom: 16px;
+            }
+
+            .categoria {
+              margin-top: 18px;
+              page-break-inside: avoid;
+            }
+
+            .categoria h3 {
+              margin: 0 0 8px 0;
+              padding: 6px 8px;
+              background: #f2f2f2;
+              border: 1px solid #ccc;
+              font-size: 14px;
+            }
+
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-bottom: 8px;
+            }
+
+            th, td {
+              border: 1px solid #ccc;
+              padding: 6px 8px;
+              text-align: left;
+              font-size: 12px;
+            }
+
+            th {
+              background: #fafafa;
+            }
+
+            .right {
+              text-align: right;
+            }
+
+            .totales {
+              margin-top: 6px;
+              text-align: right;
+              font-weight: bold;
+            }
+
+            .empty {
+              color: #666;
+              font-style: italic;
+              margin-top: 8px;
+            }
+
+            .actions {
+              margin-top: 18px;
+            }
+
+            @media print {
+              .actions {
+                display: none;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="title">VIVERO ABIDAN</div>
+          <div class="subtitle">REPORTE DE PRODUCTOS POR CATEGORÍA</div>
+
+          <div class="meta">
+            <div><strong>Período:</strong> ${periodoLabel}</div>
+            <div><strong>Fecha base:</strong> ${fechaLabel}</div>
+          </div>
+
+          <div class="resumen">
+            <div><strong>Total categorías:</strong> ${resumen.totalCategorias || 0}</div>
+            <div><strong>Total productos:</strong> ${resumen.totalProductos || 0}</div>
+            <div><strong>Total piezas:</strong> ${resumen.totalPiezas || 0}</div>
+            <div><strong>Total importe:</strong> ${money(resumen.totalImporte || 0)}</div>
+          </div>
+
+          ${
+            categorias.length === 0
+              ? `<div class="empty">No hay productos vendidos en este período.</div>`
+              : categorias
+                  .map(
+                    (cat) => `
+                      <div class="categoria">
+                        <h3>${String(cat.categoria || "sin_categoria").toUpperCase()}</h3>
+
+                        <table>
+                          <thead>
+                            <tr>
+                              <th style="width: 18%">Código</th>
+                              <th>Producto</th>
+                              <th style="width: 14%">Cantidad</th>
+                              <th style="width: 18%">Importe</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            ${cat.productos
+                              .map(
+                                (p) => `
+                                  <tr>
+                                    <td>${p.codigo || ""}</td>
+                                    <td>${p.nombre || ""}</td>
+                                    <td class="right">${Number(p.cantidad || 0)}</td>
+                                    <td class="right">${money(p.total || 0)}</td>
+                                  </tr>
+                                `
+                              )
+                              .join("")}
+                          </tbody>
+                        </table>
+
+                        <div class="totales">
+                          Total piezas: ${Number(cat.totalCantidad || 0)} |
+                          Total importe: ${money(cat.totalImporte || 0)}
+                        </div>
+                      </div>
+                    `
+                  )
+                  .join("")
+          }
+
+          <div class="actions">
+            <button onclick="window.print()">Imprimir / Guardar PDF</button>
+          </div>
+        </body>
+      </html>
+    `;
+
+    const win = window.open("", "_blank", "width=1000,height=800");
+    if (!win) return;
+
+    win.document.open();
+    win.document.write(html);
+    win.document.close();
+  } catch (err) {
+    console.error(err);
+    alert("No se pudo generar el PDF de productos por categoría");
+  }
+}
 async function guardarGasto(e) {
   e.preventDefault();
   setMessage("", "");
@@ -3534,13 +3738,15 @@ if (view === "movimientos") {
   </b>
 </div>
 
-      <button
-  type="button"
-  onClick={imprimirCorteTicket}
-  style={{ ...btn("primary"), marginBottom: 14 }}
->
-  Imprimir corte {reporteTipo}
-</button>
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 10 }}>
+  <button style={btn("primary")} onClick={imprimirCorteTicket}>
+    Imprimir corte diario
+  </button>
+
+  <button style={btn("ghost")} onClick={imprimirProductosPorCategoriaPDF}>
+    PDF productos por categoría
+  </button>
+</div>
 
 
 

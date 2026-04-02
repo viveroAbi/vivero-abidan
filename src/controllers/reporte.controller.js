@@ -290,19 +290,8 @@ export const ticketCorteDiario = async (req, res) => {
       columnaFecha: "created_at",
     });
 
-    const { where: whereVentasDetalle, params: paramsVentasDetalle } = buildWhere({
-      fecha,
-      periodo,
-      columnaFecha: "v.created_at",
-    });
-
     const baseDate = fecha ? new Date(`${fecha}T12:00:00`) : new Date();
     const now = new Date();
-
-    const filtroVentasRealesAliasV = `
-      v.es_cotizacion = 0
-      AND COALESCE(v.es_cotizacion_pedido, 0) = 0
-    `;
 
     const [ventasPorPago] = await pool.query(
       `
@@ -332,25 +321,6 @@ export const ticketCorteDiario = async (req, res) => {
       WHERE ${whereVentas} AND ${filtroVentasReales}
       `,
       paramsVentas
-    );
-
-    const [detalleProductos] = await pool.query(
-      `
-      SELECT
-        p.id,
-        p.codigo,
-        p.nombre,
-        COALESCE(SUM(vi.cantidad), 0) AS cantidad,
-        COALESCE(SUM(vi.subtotal), 0) AS total
-      FROM ventas_items vi
-      INNER JOIN ventas v ON v.id = vi.venta_id
-      INNER JOIN productos p ON p.id = vi.producto_id
-      WHERE ${whereVentasDetalle}
-        AND ${filtroVentasRealesAliasV}
-      GROUP BY p.id, p.codigo, p.nombre
-      ORDER BY cantidad DESC, p.nombre ASC
-      `,
-      paramsVentasDetalle
     );
 
     const [gastosPorCategoria] = await pool.query(
@@ -458,18 +428,6 @@ export const ticketCorteDiario = async (req, res) => {
     }
 
     lines.push("------------------------------");
-    lines.push("DETALLE DE PRODUCTOS");
-
-    if (!detalleProductos.length) {
-      lines.push("Sin productos vendidos");
-    } else {
-      detalleProductos.forEach((p) => {
-        const codigo = p.codigo ? `${p.codigo} - ` : "";
-        lines.push(`${p.cantidad} x ${codigo}${p.nombre}: ${money(p.total)}`);
-      });
-    }
-
-    lines.push("------------------------------");
     lines.push(`TOTAL EN CAJA: ${money(caja)}`);
     lines.push("------------------------------");
     lines.push("FIRMA: _______________________");
@@ -477,13 +435,107 @@ export const ticketCorteDiario = async (req, res) => {
 
     return res.json({
       mensaje: `Ticket corte ${periodo}`,
-      data: {
-        texto: lines.join("\n"),
-        detalleProductos,
-      },
+      data: { texto: lines.join("\n") },
     });
   } catch (err) {
     console.error("ERROR ticket corte:", err);
+    return res.status(500).json({
+      error: "Error en BD",
+      message: err.message,
+    });
+  }
+};
+export const reporteProductosPorCategoriaPDF = async (req, res) => {
+  try {
+    const fecha = req.query.fecha || null;
+    const periodo = String(req.query.periodo || "diario").toLowerCase();
+
+    const { where: whereVentasDetalle, params: paramsVentasDetalle } = buildWhere({
+      fecha,
+      periodo,
+      columnaFecha: "v.created_at",
+    });
+
+    const filtroVentasRealesAliasV = `
+      v.es_cotizacion = 0
+      AND COALESCE(v.es_cotizacion_pedido, 0) = 0
+    `;
+
+    const [rows] = await pool.query(
+      `
+      SELECT
+        COALESCE(NULLIF(TRIM(p.categoria_planta), ''), 'sin_categoria') AS categoria_planta,
+        p.id,
+        COALESCE(p.codigo, '') AS codigo,
+        p.nombre,
+        COALESCE(SUM(vi.cantidad), 0) AS cantidad,
+        COALESCE(SUM(vi.subtotal), 0) AS total
+      FROM ventas_items vi
+      INNER JOIN ventas v ON v.id = vi.venta_id
+      INNER JOIN productos p ON p.id = vi.producto_id
+      WHERE ${whereVentasDetalle}
+        AND ${filtroVentasRealesAliasV}
+      GROUP BY categoria_planta, p.id, p.codigo, p.nombre
+      ORDER BY categoria_planta ASC, cantidad DESC, p.nombre ASC
+      `,
+      paramsVentasDetalle
+    );
+
+    const agrupadoMap = new Map();
+
+    for (const row of rows) {
+      const categoria = row.categoria_planta || "sin_categoria";
+
+      if (!agrupadoMap.has(categoria)) {
+        agrupadoMap.set(categoria, {
+          categoria,
+          totalCantidad: 0,
+          totalImporte: 0,
+          productos: [],
+        });
+      }
+
+      const grupo = agrupadoMap.get(categoria);
+
+      const item = {
+        id: row.id,
+        codigo: row.codigo || "",
+        nombre: row.nombre || "",
+        cantidad: Number(row.cantidad || 0),
+        total: Number(row.total || 0),
+      };
+
+      grupo.productos.push(item);
+      grupo.totalCantidad += item.cantidad;
+      grupo.totalImporte += item.total;
+    }
+
+    const categorias = Array.from(agrupadoMap.values()).map((g) => ({
+      ...g,
+      totalCantidad: Number(g.totalCantidad.toFixed(2)),
+      totalImporte: Number(g.totalImporte.toFixed(2)),
+    }));
+
+    const resumen = {
+      totalCategorias: categorias.length,
+      totalProductos: categorias.reduce((acc, c) => acc + c.productos.length, 0),
+      totalPiezas: categorias.reduce((acc, c) => acc + c.totalCantidad, 0),
+      totalImporte: Number(
+        categorias.reduce((acc, c) => acc + c.totalImporte, 0).toFixed(2)
+      ),
+    };
+
+    return res.json({
+      mensaje: `Reporte productos por categoría ${periodo}`,
+      data: {
+        periodo,
+        fecha: fecha || "ACTUAL",
+        categorias,
+        resumen,
+      },
+    });
+  } catch (err) {
+    console.error("ERROR reporteProductosPorCategoriaPDF:", err);
     return res.status(500).json({
       error: "Error en BD",
       message: err.message,
