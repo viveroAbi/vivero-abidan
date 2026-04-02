@@ -290,10 +290,20 @@ export const ticketCorteDiario = async (req, res) => {
       columnaFecha: "created_at",
     });
 
+    const { where: whereVentasDetalle, params: paramsVentasDetalle } = buildWhere({
+      fecha,
+      periodo,
+      columnaFecha: "v.created_at",
+    });
+
     const baseDate = fecha ? new Date(`${fecha}T12:00:00`) : new Date();
     const now = new Date();
 
-    // ===== Ventas por pago =====
+    const filtroVentasRealesAliasV = `
+      v.es_cotizacion = 0
+      AND COALESCE(v.es_cotizacion_pedido, 0) = 0
+    `;
+
     const [ventasPorPago] = await pool.query(
       `
       SELECT tipo_pago, COALESCE(SUM(total_final), 0) AS total
@@ -304,7 +314,6 @@ export const ticketCorteDiario = async (req, res) => {
       paramsVentas
     );
 
-    // ===== Ventas por categoría =====
     const [ventasPorCategoria] = await pool.query(
       `
       SELECT categoria, COALESCE(SUM(total_final), 0) AS total, COUNT(*) AS cantidad
@@ -316,7 +325,6 @@ export const ticketCorteDiario = async (req, res) => {
       paramsVentas
     );
 
-    // ===== Total ventas =====
     const [[totalVentas]] = await pool.query(
       `
       SELECT COALESCE(SUM(total_final), 0) AS total
@@ -326,7 +334,6 @@ export const ticketCorteDiario = async (req, res) => {
       paramsVentas
     );
 
-    // ===== Detalle de productos vendidos =====
     const [detalleProductos] = await pool.query(
       `
       SELECT
@@ -338,15 +345,14 @@ export const ticketCorteDiario = async (req, res) => {
       FROM ventas_items vi
       INNER JOIN ventas v ON v.id = vi.venta_id
       INNER JOIN productos p ON p.id = vi.producto_id
-      WHERE ${whereVentas}
+      WHERE ${whereVentasDetalle}
         AND ${filtroVentasRealesAliasV}
       GROUP BY p.id, p.codigo, p.nombre
       ORDER BY cantidad DESC, p.nombre ASC
       `,
-      paramsVentas
+      paramsVentasDetalle
     );
 
-    // ===== Gastos por categoría =====
     const [gastosPorCategoria] = await pool.query(
       `
       SELECT categoria, COALESCE(SUM(monto), 0) AS total
@@ -358,7 +364,6 @@ export const ticketCorteDiario = async (req, res) => {
       paramsGastos
     );
 
-    // ===== Total gastos =====
     const [[totalGastos]] = await pool.query(
       `
       SELECT COALESCE(SUM(monto), 0) AS total
@@ -368,7 +373,6 @@ export const ticketCorteDiario = async (req, res) => {
       paramsGastos
     );
 
-    // ===== Caja = ventas efectivo - gastos efectivo =====
     const [[ventasEfectivo]] = await pool.query(
       `
       SELECT COALESCE(SUM(total_final), 0) AS total
