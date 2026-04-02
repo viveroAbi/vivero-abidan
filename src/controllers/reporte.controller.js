@@ -407,13 +407,40 @@ export const ticketCorteDiario = async (req, res) => {
     lines.push("------------------------------");
     lines.push("GASTOS");
 
-    if (!gastosPorCategoria.length) {
-      lines.push("Sin gastos");
-    } else {
-      gastosPorCategoria.forEach((g) => {
-        lines.push(`${g.categoria}: ${money(g.total)}`);
-      });
-    }
+    const categoriasGastoFijas = [
+      "border",
+      "corteza",
+      "fertilizante",
+      "maceta",
+      "tierra",
+      "malla",
+      "duranta",
+      "gasolina",
+      "comida",
+      "renta",
+      "sueldos",
+      "gastos",
+    ];
+
+    const gastosMap = Object.fromEntries(
+      gastosPorCategoria.map((g) => [
+        String(g.categoria || "").trim().toLowerCase(),
+        Number(g.total || 0),
+      ])
+    );
+
+    categoriasGastoFijas.forEach((cat) => {
+      lines.push(`${cat}: ${money(gastosMap[cat] || 0)}`);
+    });
+
+    const gastosExtras = gastosPorCategoria.filter((g) => {
+      const nombre = String(g.categoria || "").trim().toLowerCase();
+      return !categoriasGastoFijas.includes(nombre);
+    });
+
+    gastosExtras.forEach((g) => {
+      lines.push(`${g.categoria}: ${money(g.total)}`);
+    });
 
     lines.push(`TOTAL GASTOS: ${money(totalGastos.total)}`);
     lines.push("------------------------------");
@@ -476,7 +503,7 @@ export const reporteProductosPorCategoriaPDF = async (req, res) => {
       WHERE ${whereVentasDetalle}
         AND ${filtroVentasRealesAliasV}
       GROUP BY categoria_planta, p.id, p.codigo, p.nombre
-      ORDER BY categoria_planta ASC, cantidad DESC, p.nombre ASC
+      ORDER BY categoria_planta ASC, p.nombre ASC
       `,
       paramsVentasDetalle
     );
@@ -515,6 +542,20 @@ export const reporteProductosPorCategoriaPDF = async (req, res) => {
       totalCantidad: Number(g.totalCantidad.toFixed(2)),
       totalImporte: Number(g.totalImporte.toFixed(2)),
     }));
+
+    categorias.sort((a, b) =>
+      String(a.categoria || "").localeCompare(String(b.categoria || ""), "es", {
+        sensitivity: "base",
+      })
+    );
+
+    categorias.forEach((cat) => {
+      cat.productos.sort((a, b) =>
+        String(a.nombre || "").localeCompare(String(b.nombre || ""), "es", {
+          sensitivity: "base",
+        })
+      );
+    });
 
     const resumen = {
       totalCategorias: categorias.length,
