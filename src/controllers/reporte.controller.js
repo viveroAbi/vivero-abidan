@@ -278,13 +278,22 @@ export const ticketCorteDiario = async (req, res) => {
     const fecha = req.query.fecha || null;
     const periodo = String(req.query.periodo || "diario").toLowerCase();
 
-    const { where: whereVentas, params: paramsVentas } = buildWhere({
+    // WHERE para consultas simples sobre ventas
+    const { where: whereVentasSimple, params: paramsVentasSimple } = buildWhere({
       fecha,
       periodo,
       columnaFecha: "created_at",
     });
 
-    const { where: whereGastos, params: paramsGastos } = buildWhere({
+    // WHERE para consultas con alias v
+    const { where: whereVentasAliasV, params: paramsVentasAliasV } = buildWhere({
+      fecha,
+      periodo,
+      columnaFecha: "v.created_at",
+    });
+
+    // WHERE para consultas simples sobre gastos
+    const { where: whereGastosSimple, params: paramsGastosSimple } = buildWhere({
       fecha,
       periodo,
       columnaFecha: "created_at",
@@ -297,108 +306,109 @@ export const ticketCorteDiario = async (req, res) => {
       `
       SELECT tipo_pago, COALESCE(SUM(total_final), 0) AS total
       FROM ventas
-      WHERE ${whereVentas} AND ${filtroVentasReales}
+      WHERE ${whereVentasSimple} AND ${filtroVentasReales}
       GROUP BY tipo_pago
       `,
-      paramsVentas
+      paramsVentasSimple
     );
 
     const [ventasPorCategoria] = await pool.query(
       `
       SELECT categoria, COALESCE(SUM(total_final), 0) AS total, COUNT(*) AS cantidad
       FROM ventas
-      WHERE ${whereVentas} AND ${filtroVentasReales}
+      WHERE ${whereVentasSimple} AND ${filtroVentasReales}
       GROUP BY categoria
       ORDER BY total DESC
       `,
-      paramsVentas
+      paramsVentasSimple
     );
 
     const [[totalVentas]] = await pool.query(
       `
       SELECT COALESCE(SUM(total_final), 0) AS total
       FROM ventas
-      WHERE ${whereVentas} AND ${filtroVentasReales}
+      WHERE ${whereVentasSimple} AND ${filtroVentasReales}
       `,
-      paramsVentas
+      paramsVentasSimple
     );
 
     const [gastosPorCategoria] = await pool.query(
       `
       SELECT categoria, COALESCE(SUM(monto), 0) AS total
       FROM gastos
-      WHERE ${whereGastos}
+      WHERE ${whereGastosSimple}
       GROUP BY categoria
       ORDER BY total DESC
       `,
-      paramsGastos
+      paramsGastosSimple
     );
 
     const categoriasAuto = [
-  "border",
-  "corteza",
-  "fertilizante",
-  "maceta",
-  "tierra",
-  "malla",
-  "duranta",
-  "agribon",
-];
+      "border",
+      "corteza",
+      "fertilizante",
+      "maceta",
+      "tierra",
+      "malla",
+      "duranta",
+      "agribon",
+    ];
 
-const [productosAutoRows] = await pool.query(
-  `
-  SELECT
-    LOWER(TRIM(COALESCE(p.categoria_planta, ''))) AS categoria,
-    COALESCE(SUM(vi.cantidad), 0) AS piezas,
-    COALESCE(SUM(vi.subtotal), 0) AS total
-  FROM ventas_items vi
-  INNER JOIN ventas v ON v.id = vi.venta_id
-  INNER JOIN productos p ON p.id = vi.producto_id
-  WHERE ${whereVentas}
-    AND ${filtroVentasRealesAliasV}
-    AND LOWER(TRIM(COALESCE(p.categoria_planta, ''))) IN (${categoriasAuto
-      .map(() => "?")
-      .join(",")})
-  GROUP BY LOWER(TRIM(COALESCE(p.categoria_planta, '')))
-  ORDER BY categoria ASC
-  `,
-  [...paramsVentas, ...categoriasAuto]
-);
+    const [productosAutoRows] = await pool.query(
+      `
+      SELECT
+        LOWER(TRIM(COALESCE(p.categoria_planta, ''))) AS categoria,
+        COALESCE(SUM(vi.cantidad), 0) AS piezas,
+        COALESCE(SUM(vi.subtotal), 0) AS total
+      FROM ventas_items vi
+      INNER JOIN ventas v ON v.id = vi.venta_id
+      INNER JOIN productos p ON p.id = vi.producto_id
+      WHERE ${whereVentasAliasV}
+        AND ${filtroVentasRealesAliasV}
+        AND LOWER(TRIM(COALESCE(p.categoria_planta, ''))) IN (${categoriasAuto
+          .map(() => "?")
+          .join(",")})
+      GROUP BY LOWER(TRIM(COALESCE(p.categoria_planta, '')))
+      ORDER BY categoria ASC
+      `,
+      [...paramsVentasAliasV, ...categoriasAuto]
+    );
+
     const [[totalGastos]] = await pool.query(
       `
       SELECT COALESCE(SUM(monto), 0) AS total
       FROM gastos
-      WHERE ${whereGastos}
+      WHERE ${whereGastosSimple}
       `,
-      paramsGastos
+      paramsGastosSimple
     );
 
     const totalAuto = productosAutoRows.reduce(
-  (acc, item) => acc + Number(item.total || 0),
-  0
-);
+      (acc, item) => acc + Number(item.total || 0),
+      0
+    );
 
-const totalManual = Number(totalGastos.total || 0);
-const totalGeneralGastos = totalManual + totalAuto;
+    const totalManual = Number(totalGastos.total || 0);
+    const totalGeneralGastos = totalManual + totalAuto;
 
     const [[ventasEfectivo]] = await pool.query(
       `
       SELECT COALESCE(SUM(total_final), 0) AS total
       FROM ventas
-      WHERE ${whereVentas}
+      WHERE ${whereVentasSimple}
         AND ${filtroVentasReales}
         AND tipo_pago = 'efectivo'
       `,
-      paramsVentas
+      paramsVentasSimple
     );
 
     const [[gastosEfectivo]] = await pool.query(
       `
       SELECT COALESCE(SUM(monto), 0) AS total
       FROM gastos
-      WHERE ${whereGastos} AND metodo_pago = 'efectivo'
+      WHERE ${whereGastosSimple} AND metodo_pago = 'efectivo'
       `,
-      paramsGastos
+      paramsGastosSimple
     );
 
     const caja = Number(ventasEfectivo.total) - Number(gastosEfectivo.total);
@@ -445,53 +455,48 @@ const totalGeneralGastos = totalManual + totalAuto;
     lines.push("------------------------------");
     lines.push("GASTOS / INSUMOS");
 
-const categoriasManual = ["gasolina", "comida", "renta", "sueldos", "gastos"];
+    const categoriasManual = ["gasolina", "comida", "renta", "sueldos", "gastos"];
 
-const gastosMap = Object.fromEntries(
-  gastosPorCategoria.map((g) => [
-    String(g.categoria || "").trim().toLowerCase(),
-    Number(g.total || 0),
-  ])
-);
+    const gastosMap = Object.fromEntries(
+      gastosPorCategoria.map((g) => [
+        String(g.categoria || "").trim().toLowerCase(),
+        Number(g.total || 0),
+      ])
+    );
 
-const productosAutoMap = Object.fromEntries(
-  productosAutoRows.map((r) => [
-    String(r.categoria || "").trim().toLowerCase(),
-    {
-      piezas: Number(r.piezas || 0),
-      total: Number(r.total || 0),
-    },
-  ])
-);
+    const productosAutoMap = Object.fromEntries(
+      productosAutoRows.map((r) => [
+        String(r.categoria || "").trim().toLowerCase(),
+        {
+          piezas: Number(r.piezas || 0),
+          total: Number(r.total || 0),
+        },
+      ])
+    );
 
-// AUTOMÁTICOS DESDE VENTAS
-lines.push("AUTO DESDE VENTAS");
-categoriasAuto.forEach((cat) => {
-  const row = productosAutoMap[cat] || { piezas: 0, total: 0 };
-  lines.push(`${cat}: ${row.piezas} pzas | ${money(row.total)}`);
-});
+    lines.push("AUTO DESDE VENTAS");
+    categoriasAuto.forEach((cat) => {
+      const row = productosAutoMap[cat] || { piezas: 0, total: 0 };
+      lines.push(`${cat}: ${row.piezas} pzas | ${money(row.total)}`);
+    });
 
-lines.push("------------------------------");
+    lines.push("------------------------------");
+    lines.push("MANUALES");
 
-// MANUALES
-lines.push("MANUALES");
-categoriasManual.forEach((cat) => {
-  lines.push(`${cat}: ${money(gastosMap[cat] || 0)}`);
-});
+    categoriasManual.forEach((cat) => {
+      lines.push(`${cat}: ${money(gastosMap[cat] || 0)}`);
+    });
 
-const gastosExtras = gastosPorCategoria.filter((g) => {
-  const nombre = String(g.categoria || "").trim().toLowerCase();
-  return !categoriasManual.includes(nombre);
-});
+    const gastosExtras = gastosPorCategoria.filter((g) => {
+      const nombre = String(g.categoria || "").trim().toLowerCase();
+      return !categoriasManual.includes(nombre) && !categoriasAuto.includes(nombre);
+    });
 
-gastosExtras.forEach((g) => {
-  const nombre = String(g.categoria || "").trim().toLowerCase();
-  if (!categoriasAuto.includes(nombre)) {
-    lines.push(`${g.categoria}: ${money(g.total)}`);
-  }
-});
+    gastosExtras.forEach((g) => {
+      lines.push(`${g.categoria}: ${money(g.total)}`);
+    });
 
-lines.push(`TOTAL GASTOS: ${money(totalGeneralGastos)}`);
+    lines.push(`TOTAL GASTOS: ${money(totalGeneralGastos)}`);
     lines.push("------------------------------");
     lines.push("VENTAS POR CATEGORIA");
 
