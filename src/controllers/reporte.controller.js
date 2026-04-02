@@ -357,7 +357,25 @@ export const ticketCorteDiario = async (req, res) => {
 const [productosAutoRows] = await pool.query(
   `
   SELECT
-    LOWER(TRIM(COALESCE(p.categoria_planta, ''))) AS categoria,
+    CASE
+      WHEN LOWER(TRIM(COALESCE(p.categoria_planta, ''))) = 'border'
+        OR LOWER(COALESCE(p.nombre, '')) LIKE '%border%' THEN 'border'
+      WHEN LOWER(TRIM(COALESCE(p.categoria_planta, ''))) = 'corteza'
+        OR LOWER(COALESCE(p.nombre, '')) LIKE '%corteza%' THEN 'corteza'
+      WHEN LOWER(TRIM(COALESCE(p.categoria_planta, ''))) = 'fertilizante'
+        OR LOWER(COALESCE(p.nombre, '')) LIKE '%fertilizante%' THEN 'fertilizante'
+      WHEN LOWER(TRIM(COALESCE(p.categoria_planta, ''))) = 'maceta'
+        OR LOWER(COALESCE(p.nombre, '')) LIKE '%maceta%' THEN 'maceta'
+      WHEN LOWER(TRIM(COALESCE(p.categoria_planta, ''))) = 'tierra'
+        OR LOWER(COALESCE(p.nombre, '')) LIKE '%tierra%' THEN 'tierra'
+      WHEN LOWER(TRIM(COALESCE(p.categoria_planta, ''))) = 'malla'
+        OR LOWER(COALESCE(p.nombre, '')) LIKE '%malla%' THEN 'malla'
+      WHEN LOWER(TRIM(COALESCE(p.categoria_planta, ''))) = 'duranta'
+        OR LOWER(COALESCE(p.nombre, '')) LIKE '%duranta%' THEN 'duranta'
+      WHEN LOWER(TRIM(COALESCE(p.categoria_planta, ''))) = 'agribon'
+        OR LOWER(COALESCE(p.nombre, '')) LIKE '%agribon%' THEN 'agribon'
+      ELSE NULL
+    END AS categoria,
     COALESCE(SUM(vi.cantidad), 0) AS piezas,
     COALESCE(SUM(vi.subtotal), 0) AS total
   FROM ventas_items vi
@@ -365,13 +383,11 @@ const [productosAutoRows] = await pool.query(
   INNER JOIN productos p ON p.id = vi.producto_id
   WHERE ${whereVentasAliasV}
     AND ${filtroVentasRealesAliasV}
-    AND LOWER(TRIM(COALESCE(p.categoria_planta, ''))) IN (${categoriasAuto
-      .map(() => "?")
-      .join(",")})
-  GROUP BY LOWER(TRIM(COALESCE(p.categoria_planta, '')))
+  GROUP BY categoria
+  HAVING categoria IS NOT NULL
   ORDER BY categoria ASC
   `,
-  [...paramsVentasAliasV, ...categoriasAuto]
+  paramsVentasAliasV
 );
 
     const [[totalGastos]] = await pool.query(
