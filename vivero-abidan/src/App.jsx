@@ -264,10 +264,15 @@ const [userSaving, setUserSaving] = useState(false);
 const [form, setForm] = useState({
   categoria: "publico",
   tipoPago: "efectivo",
+
   efectivo: "",
   tarjeta: "",
+  transferencia: "",
+  cheque: "",
+
   recibido: "",
   cambio: "",
+
   esCotizacion: false,
   esCotizacionPedido: false,
   fecha_vencimiento: "",
@@ -1405,6 +1410,8 @@ async function iniciarCamaraYDeteccion() {
     tipoPago: "efectivo",
     efectivo: "",
     tarjeta: "",
+    transferencia: "",
+    cheque: "",
     recibido: "",
     cambio: "",
     esCotizacion: false,
@@ -2121,6 +2128,8 @@ async function onCreateUserSubmit(e) {
         tipoPago: value,
         efectivo: total ? String(total) : "",
         tarjeta: "0",
+        transferencia: "0",
+        cheque: "0",
         recibido: f.recibido || "",
         cambio: f.cambio || "",
       };
@@ -2132,17 +2141,36 @@ async function onCreateUserSubmit(e) {
         tipoPago: value,
         efectivo: "0",
         tarjeta: total ? String(total) : "",
-        recibido: f.recibido || "",
-        cambio: f.cambio || "",
+        transferencia: "0",
+        cheque: "0",
+        recibido: "",
+        cambio: "",
       };
     }
 
-    if (value === "transferencia" || value === "cheque") {
+    if (value === "transferencia") {
       return {
         ...f,
         tipoPago: value,
         efectivo: "0",
         tarjeta: "0",
+        transferencia: total ? String(total) : "",
+        cheque: "0",
+        recibido: "",
+        cambio: "",
+      };
+    }
+
+    if (value === "cheque") {
+      return {
+        ...f,
+        tipoPago: value,
+        efectivo: "0",
+        tarjeta: "0",
+        transferencia: "0",
+        cheque: total ? String(total) : "",
+        recibido: "",
+        cambio: "",
       };
     }
 
@@ -2150,6 +2178,12 @@ async function onCreateUserSubmit(e) {
       return {
         ...f,
         tipoPago: value,
+        efectivo: "",
+        tarjeta: "",
+        transferencia: "0",
+        cheque: "0",
+        recibido: "",
+        cambio: "",
       };
     }
 
@@ -2159,6 +2193,8 @@ async function onCreateUserSubmit(e) {
         tipoPago: value,
         efectivo: "0",
         tarjeta: "0",
+        transferencia: "0",
+        cheque: "0",
         recibido: "",
         cambio: "",
       };
@@ -2192,10 +2228,11 @@ function onChangeMixtoEfectivo(e) {
       ...f,
       efectivo: String(efectivo),
       tarjeta: String(tarjeta),
+      transferencia: "0",
+      cheque: "0",
     };
   });
 }
-
 function onChangeMixtoTarjeta(e) {
   const value = e.target.value;
 
@@ -2221,156 +2258,200 @@ function onChangeMixtoTarjeta(e) {
       ...f,
       tarjeta: String(tarjeta),
       efectivo: String(efectivo),
+      transferencia: "0",
+      cheque: "0",
     };
   });
 }
 
   async function onSubmit(e) {
-    e.preventDefault();
-    setMessage("", "");
+  e.preventDefault();
+  setMessage("", "");
 
-    if (carrito.length === 0) {
-      setMessage("error", "Agrega al menos 1 producto al carrito.");
+  if (carrito.length === 0) {
+    setMessage("error", "Agrega al menos 1 producto al carrito.");
+    return;
+  }
+
+  if (
+    !form.esCotizacion &&
+    !esCotizacionPedido &&
+    form.categoria === "publico" &&
+    !["efectivo", "a_cuenta"].includes(form.tipoPago)
+  ) {
+    setMessage("error", "Venta al público solo acepta efectivo o a cuenta.");
+    return;
+  }
+
+  const sumaMixto = Number((efectivoNum + tarjetaNum).toFixed(2));
+  const totalEsperado = Number(Number(totalFinalUI).toFixed(2));
+
+  if (isMixto) {
+    if (efectivoNum < 0 || tarjetaNum < 0) {
+      setMessage("error", "En pago mixto no se permiten cantidades negativas.");
       return;
     }
 
-    if (
-  !form.esCotizacion &&
-  !esCotizacionPedido &&
-  form.categoria === "publico" &&
-  !["efectivo", "a_cuenta"].includes(form.tipoPago)
-) {
-  setMessage("error", "Venta al público solo acepta efectivo o a cuenta.");
-  return;
-}
-
-    const sumaMixto = Number((efectivoNum + tarjetaNum).toFixed(2));
-const totalEsperado = Number(Number(totalFinalUI).toFixed(2));
-
-if (isMixto) {
-  if (efectivoNum < 0 || tarjetaNum < 0) {
-    setMessage("error", "En pago mixto no se permiten cantidades negativas.");
-    return;
-  }
-
-  if (sumaMixto !== totalEsperado) {
-    setMessage(
-      "error",
-      "En pago mixto: efectivo + tarjeta debe ser igual al total."
-    );
-    return;
-  }
-}
-if (form.tipoPago === "a_cuenta" && !clienteSeleccionado?.id) {
-  setMessage("error", "Para pago a cuenta debes seleccionar un cliente.");
-  return;
-}
-
-if (
-  form.tipoPago === "a_cuenta" &&
-  clienteSeleccionado?.id &&
-  disponibleCreditoCliente < 0
-) {
-  setMessage("error", "El cliente ya superó su límite de crédito.");
-  return;
-}
-
-const abonoInicialNum = Number(form.efectivo || 0);
-const pendienteNuevo = Number((Number(totalFinalUI || 0) - abonoInicialNum).toFixed(2));
-
-const pendienteAnterior = editandoVentaId ? saldoActualCliente : 0;
-const saldoProyectado = Number(
-  (saldoActualCliente - pendienteAnterior + pendienteNuevo).toFixed(2)
-);
-
-if (
-  form.tipoPago === "a_cuenta" &&
-  clienteSeleccionado?.id &&
-  saldoProyectado > deudaMaximaCliente
-) {
-  setMessage("error", "La venta supera la deuda máxima permitida del cliente.");
-  return;
-}
-
-    const items = carrito.map((it) => ({
-  producto_id: it.producto_id,
-  cantidad: Number(it.cantidad),
-  precio_unitario: Number(it.precio_unitario || it.precio || 0),
-}));
-
-const payload = {
-  categoria: normalizarCategoriaVenta(form.categoria),
-  tipoPago: form.tipoPago,
-  cliente_id: clienteSeleccionado?.id || null,
-  esCotizacionPedido: !!esCotizacionPedido,
-  descuentoPct: 0,
-  efectivo: isTarjeta ? 0 : Number(form.efectivo || (form.tipoPago === "efectivo" ? totalFinalUI : 0)),
-  tarjeta: form.tipoPago === "efectivo" ? 0 : Number(form.tarjeta || (isTarjeta ? totalFinalUI : 0)),
-  recibido: Number(form.recibido || 0),
-  cambio: Number(cambioNum || 0),
-  esCotizacion: form.esCotizacion,
-  guardarSaldoFavor,
-  abono_inicial: form.tipoPago === "a_cuenta" ? Number(form.efectivo || 0) : 0,
-  fecha_vencimiento: form.fecha_vencimiento || null,
-  observaciones_credito: form.observaciones_credito || "",
-  items,
-};
-    try {
-      setLoading(true);
-
-      const endpoint = editandoVentaId ? `/ventas/${editandoVentaId}` : "/ventas";
-const method = editandoVentaId ? "PUT" : "POST";
-
-const data = await apiFetch(endpoint, {
-  method,
-  headers: authHeaders(),
-  body: JSON.stringify(payload),
-});
-      
-
-
-      setMessage("success", `✅ ${data?.mensaje || "Guardado"}`);
-
-      setCarrito([]);
-      setProductos([]);
-      setSugerencias([]);
-      setSearch("");
-      setForm({
-  categoria: "publico",
-  tipoPago: "efectivo",
-  efectivo: "",
-  tarjeta: "",
-  recibido: "",
-  cambio: "",
-  esCotizacion: false,
-  esCotizacionPedido: false,
-  fecha_vencimiento: "",
-  observaciones_credito: "",
-});
-      setClienteSeleccionado(null);
-      setClienteSearch("");
-      setClienteSug([]);
-      setShowClienteSug(false);
-      setEsCotizacionPedido(false);
-
-
-      await recargarTodo();
-if (view === "productos") {
-  await buscarProductos("", "");
-}
-
-      if (!payload.esCotizacion && !payload.esCotizacionPedido && data?.data?.id) {
-  await verTicket(data.data.id);
-}
-
-      return data;
-    } catch (err) {
-      console.error(err);
-      setMessage("error", err.data?.error || err.message || "Error al guardar.");
-    } finally {
-      setLoading(false);
+    if (sumaMixto !== totalEsperado) {
+      setMessage(
+        "error",
+        "En pago mixto: efectivo + tarjeta debe ser igual al total."
+      );
+      return;
     }
   }
+
+  if (form.tipoPago === "a_cuenta" && !clienteSeleccionado?.id) {
+    setMessage("error", "Para pago a cuenta debes seleccionar un cliente.");
+    return;
+  }
+
+  if (
+    form.tipoPago === "a_cuenta" &&
+    clienteSeleccionado?.id &&
+    disponibleCreditoCliente < 0
+  ) {
+    setMessage("error", "El cliente ya superó su límite de crédito.");
+    return;
+  }
+
+  const abonoInicialNum =
+    form.tipoPago === "a_cuenta"
+      ? Number(
+          (
+            Number(form.efectivo || 0) +
+            Number(form.tarjeta || 0) +
+            Number(form.transferencia || 0) +
+            Number(form.cheque || 0)
+          ).toFixed(2)
+        )
+      : 0;
+
+  const pendienteNuevo =
+    form.tipoPago === "a_cuenta"
+      ? Number((Number(totalFinalUI || 0) - abonoInicialNum).toFixed(2))
+      : 0;
+
+  if (form.tipoPago === "a_cuenta" && pendienteNuevo < 0) {
+    setMessage("error", "El abono no puede ser mayor al total de la venta.");
+    return;
+  }
+
+  const pendienteAnterior = editandoVentaId ? saldoActualCliente : 0;
+  const saldoProyectado = Number(
+    (saldoActualCliente - pendienteAnterior + pendienteNuevo).toFixed(2)
+  );
+
+  if (
+    form.tipoPago === "a_cuenta" &&
+    clienteSeleccionado?.id &&
+    saldoProyectado > deudaMaximaCliente
+  ) {
+    setMessage("error", "La venta supera la deuda máxima permitida del cliente.");
+    return;
+  }
+
+  const items = carrito.map((it) => ({
+    producto_id: it.producto_id,
+    cantidad: Number(it.cantidad),
+    precio_unitario: Number(it.precio_unitario || it.precio || 0),
+  }));
+
+  const payload = {
+    categoria: normalizarCategoriaVenta(form.categoria),
+    tipoPago: form.tipoPago,
+    cliente_id: clienteSeleccionado?.id || null,
+    esCotizacionPedido: !!esCotizacionPedido,
+    descuentoPct: 0,
+
+    efectivo:
+      form.tipoPago === "efectivo"
+        ? Number(form.efectivo || totalFinalUI || 0)
+        : Number(form.efectivo || 0),
+
+    tarjeta:
+      form.tipoPago === "tarjeta_credito" || form.tipoPago === "tarjeta_debito"
+        ? Number(form.tarjeta || totalFinalUI || 0)
+        : Number(form.tarjeta || 0),
+
+    transferencia:
+      form.tipoPago === "transferencia"
+        ? Number(form.transferencia || totalFinalUI || 0)
+        : Number(form.transferencia || 0),
+
+    cheque:
+      form.tipoPago === "cheque"
+        ? Number(form.cheque || totalFinalUI || 0)
+        : Number(form.cheque || 0),
+
+    recibido: Number(form.recibido || 0),
+    cambio: Number(cambioNum || 0),
+
+    esCotizacion: form.esCotizacion,
+    guardarSaldoFavor,
+
+    abono_inicial: form.tipoPago === "a_cuenta" ? abonoInicialNum : 0,
+    fecha_vencimiento: form.fecha_vencimiento || null,
+    observaciones_credito: form.observaciones_credito || "",
+
+    items,
+  };
+
+  try {
+    setLoading(true);
+
+    const endpoint = editandoVentaId ? `/ventas/${editandoVentaId}` : "/ventas";
+    const method = editandoVentaId ? "PUT" : "POST";
+
+    const data = await apiFetch(endpoint, {
+      method,
+      headers: authHeaders(),
+      body: JSON.stringify(payload),
+    });
+
+    setMessage("success", `✅ ${data?.mensaje || "Guardado"}`);
+
+    setCarrito([]);
+    setProductos([]);
+    setSugerencias([]);
+    setSearch("");
+    setForm({
+      categoria: "publico",
+      tipoPago: "efectivo",
+      efectivo: "",
+      tarjeta: "",
+      transferencia: "",
+      cheque: "",
+      recibido: "",
+      cambio: "",
+      esCotizacion: false,
+      esCotizacionPedido: false,
+      fecha_vencimiento: "",
+      observaciones_credito: "",
+    });
+    setClienteSeleccionado(null);
+    setClienteSearch("");
+    setClienteSug([]);
+    setShowClienteSug(false);
+    setEsCotizacionPedido(false);
+
+    await recargarTodo();
+    if (view === "productos") {
+      await buscarProductos("", "");
+    }
+
+    if (!payload.esCotizacion && !payload.esCotizacionPedido && data?.data?.id) {
+      await verTicket(data.data.id);
+    }
+
+    setEditandoVentaId(null);
+  } catch (err) {
+    console.error(err);
+    setMessage("error", err?.message || "No se pudo guardar la venta.");
+  } finally {
+    setLoading(false);
+  }
+}
 
   async function eliminar(id) {
   if (!isAdmin) return;
@@ -3355,155 +3436,205 @@ if (view === "movimientos") {
 
           {/* COLUMNA 3 */}
           <div style={{ display: "grid", gap: 10 }}>
-            <label style={labelStyle}>
-              Tipo de pago:
-              <select
-                name="tipoPago"
-                value={form.tipoPago}
-                onChange={onChangeTipoPago}
-                style={inputStyle}
-              >
-                <option value="efectivo">Efectivo</option>
-                <option value="tarjeta_credito">Tarjeta (Crédito)</option>
-                <option value="tarjeta_debito">Tarjeta (Débito)</option>
-                <option value="transferencia">Transferencia</option>
-                <option value="cheque">Cheque</option>
-                <option value="mixto">Mixto</option>
-                <option value="a_cuenta">A cuenta</option>
-              </select>
-            </label>
+  <label style={labelStyle}>
+    Tipo de pago:
+    <select
+      name="tipoPago"
+      value={form.tipoPago}
+      onChange={onChangeTipoPago}
+      style={inputStyle}
+    >
+      <option value="efectivo">Efectivo</option>
+      <option value="tarjeta_credito">Tarjeta (Crédito)</option>
+      <option value="tarjeta_debito">Tarjeta (Débito)</option>
+      <option value="transferencia">Transferencia</option>
+      <option value="cheque">Cheque</option>
+      <option value="mixto">Mixto</option>
+      <option value="a_cuenta">A cuenta</option>
+    </select>
+  </label>
 
-            {form.tipoPago === "a_cuenta" && (
-              <div style={{ display: "grid", gap: 10 }}>
-                <label style={labelStyle}>
-                  Fecha de vencimiento:
-                  <input
-                    type="date"
-                    name="fecha_vencimiento"
-                    value={form.fecha_vencimiento}
-                    onChange={onChange}
-                    style={inputStyle}
-                  />
-                </label>
+  {form.tipoPago === "a_cuenta" && (
+    <div style={{ display: "grid", gap: 10 }}>
+      <label style={labelStyle}>
+        Fecha de vencimiento:
+        <input
+          type="date"
+          name="fecha_vencimiento"
+          value={form.fecha_vencimiento}
+          onChange={onChange}
+          style={inputStyle}
+        />
+      </label>
 
-                <label style={labelStyle}>
-                  Observaciones de crédito:
-                  <input
-                    type="text"
-                    name="observaciones_credito"
-                    value={form.observaciones_credito}
-                    onChange={onChange}
-                    placeholder="Notas del crédito"
-                    style={inputStyle}
-                  />
-                </label>
-              </div>
-            )}
+      <label style={labelStyle}>
+        Observaciones de crédito:
+        <input
+          type="text"
+          name="observaciones_credito"
+          value={form.observaciones_credito}
+          onChange={onChange}
+          placeholder="Notas del crédito"
+          style={inputStyle}
+        />
+      </label>
+    </div>
+  )}
 
-            {form.tipoPago === "a_cuenta" && (
-              <div
-                style={{
-                  marginTop: 4,
-                  padding: 12,
-                  border: "1px solid #d9e7d9",
-                  borderRadius: 10,
-                  background: "#f8fff8",
-                  display: "grid",
-                  gap: 8,
-                }}
-              >
-                <div>
-                  <strong>Cliente:</strong>{" "}
-                  {clienteSeleccionado?.nombre || "Sin cliente seleccionado"}
-                </div>
-                <div>
-                  <strong>Saldo actual:</strong> ${saldoActualCliente.toFixed(2)}
-                </div>
-                <div>
-                  <strong>Deuda máxima:</strong> ${deudaMaximaCliente.toFixed(2)}
-                </div>
-                <div>
-                  <strong>Crédito disponible:</strong> ${disponibleCreditoCliente.toFixed(2)}
-                </div>
-                <div>
-                  <strong>Notas:</strong> {notaAutomaticaCliente}
-                </div>
-              </div>
-            )}
+  {form.tipoPago === "a_cuenta" && (
+    <div
+      style={{
+        marginTop: 4,
+        padding: 12,
+        border: "1px solid #d9e7d9",
+        borderRadius: 10,
+        background: "#f8fff8",
+        display: "grid",
+        gap: 8,
+      }}
+    >
+      <div>
+        <strong>Cliente:</strong>{" "}
+        {clienteSeleccionado?.nombre || "Sin cliente seleccionado"}
+      </div>
+      <div>
+        <strong>Saldo actual:</strong> ${saldoActualCliente.toFixed(2)}
+      </div>
+      <div>
+        <strong>Deuda máxima:</strong> ${deudaMaximaCliente.toFixed(2)}
+      </div>
+      <div>
+        <strong>Crédito disponible:</strong> ${disponibleCreditoCliente.toFixed(2)}
+      </div>
+      <div>
+        <strong>Notas:</strong> {notaAutomaticaCliente}
+      </div>
+    </div>
+  )}
 
-            <label style={labelStyle}>
-              Efectivo:
-              <input
-                name="efectivo"
-                value={form.efectivo}
-                onChange={onChangeMixtoEfectivo}
-                type="number"
-                step="0.01"
-                style={inputStyle}
-                disabled={
-                  isTarjeta ||
-                  form.tipoPago === "transferencia" ||
-                  form.tipoPago === "cheque"
-                }
-              />
-            </label>
+  <label style={labelStyle}>
+    Efectivo:
+    <input
+      name="efectivo"
+      value={form.efectivo}
+      onChange={onChangeMixtoEfectivo}
+      type="number"
+      step="0.01"
+      style={inputStyle}
+      disabled={
+        isTarjeta ||
+        form.tipoPago === "transferencia" ||
+        form.tipoPago === "cheque"
+      }
+    />
+  </label>
 
-            <label style={labelStyle}>
-              Tarjeta:
-              <input
-                name="tarjeta"
-                value={form.tarjeta}
-                onChange={onChangeMixtoTarjeta}
-                type="number"
-                step="0.01"
-                style={inputStyle}
-                disabled={
-                  form.tipoPago === "efectivo" ||
-                  form.tipoPago === "transferencia" ||
-                  form.tipoPago === "cheque"
-                }
-              />
-            </label>
+  <label style={labelStyle}>
+    Tarjeta:
+    <input
+      name="tarjeta"
+      value={form.tarjeta}
+      onChange={onChangeMixtoTarjeta}
+      type="number"
+      step="0.01"
+      style={inputStyle}
+      disabled={
+        form.tipoPago === "efectivo" ||
+        form.tipoPago === "transferencia" ||
+        form.tipoPago === "cheque"
+      }
+    />
+  </label>
 
-            {(form.tipoPago === "efectivo" || form.tipoPago === "mixto") && (
-              <>
-                <label style={labelStyle}>
-                  Recibido:
-                  <input
-                    name="recibido"
-                    value={form.recibido}
-                    onChange={onChange}
-                    type="number"
-                    step="0.01"
-                    style={inputStyle}
-                    placeholder="Ej: 500"
-                  />
-                </label>
+  {(form.tipoPago === "transferencia" || form.tipoPago === "a_cuenta") && (
+    <label style={labelStyle}>
+      Transferencia:
+      <input
+        name="transferencia"
+        value={form.transferencia}
+        onChange={onChange}
+        type="number"
+        step="0.01"
+        style={inputStyle}
+        disabled={form.tipoPago === "transferencia" ? false : false}
+      />
+    </label>
+  )}
 
-                <div style={{ marginTop: 4, color: theme.muted, fontSize: 13 }}>
-                  Cambio: <b>{money(cambioNum)}</b>
-                </div>
-              </>
-            )}
+  {(form.tipoPago === "cheque" || form.tipoPago === "a_cuenta") && (
+    <label style={labelStyle}>
+      Cheque:
+      <input
+        name="cheque"
+        value={form.cheque}
+        onChange={onChange}
+        type="number"
+        step="0.01"
+        style={inputStyle}
+        disabled={form.tipoPago === "cheque" ? false : false}
+      />
+    </label>
+  )}
 
-            {form.tipoPago === "efectivo" && clienteSeleccionado && cambioNum > 0 && (
-              <label
-                style={{
-                  display: "flex",
-                  gap: 8,
-                  alignItems: "center",
-                  marginTop: 4,
-                }}
-              >
-                <input
-                  type="checkbox"
-                  checked={guardarSaldoFavor}
-                  onChange={(e) => setGuardarSaldoFavor(e.target.checked)}
-                />
-                Guardar cambio como saldo a favor
-              </label>
-            )}
+  {form.tipoPago === "a_cuenta" && (
+    <div
+      style={{
+        marginTop: 4,
+        padding: 12,
+        border: "1px solid #d9e7d9",
+        borderRadius: 10,
+        background: "#f8fff8",
+        display: "grid",
+        gap: 8,
+      }}
+    >
+      <div>
+        <strong>Total abonado:</strong> {money(totalPagadoMixtoCompleto)}
+      </div>
+      <div>
+        <strong>Resta:</strong> {money(restaACuenta)}
+      </div>
+    </div>
+  )}
 
+  {(form.tipoPago === "efectivo" || form.tipoPago === "mixto") && (
+    <>
+      <label style={labelStyle}>
+        Recibido:
+        <input
+          name="recibido"
+          value={form.recibido}
+          onChange={onChange}
+          type="number"
+          step="0.01"
+          style={inputStyle}
+          placeholder="Ej: 500"
+        />
+      </label>
+
+      <div style={{ marginTop: 4, color: theme.muted, fontSize: 13 }}>
+        Cambio: <b>{money(cambioNum)}</b>
+      </div>
+    </>
+  )}
+
+  {form.tipoPago === "efectivo" && clienteSeleccionado && cambioNum > 0 && (
+    <label
+      style={{
+        display: "flex",
+        gap: 8,
+        alignItems: "center",
+        marginTop: 4,
+      }}
+    >
+      <input
+        type="checkbox"
+        checked={guardarSaldoFavor}
+        onChange={(e) => setGuardarSaldoFavor(e.target.checked)}
+      />
+      Guardar cambio como saldo a favor del cliente
+    </label>
+  )}
             <div
               style={{
                 display: "flex",

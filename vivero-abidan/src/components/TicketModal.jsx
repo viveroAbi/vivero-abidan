@@ -3,7 +3,6 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
   const items = Array.isArray(data?.items) ? data.items : [];
 
   const thermalFont = "sans-serif";
-  const logoSrc = "/vivero-abidan.jpeg";
 
   const printStyles = (
     <style>{`
@@ -481,6 +480,47 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
     lineHeight: 1.1,
   };
 
+  const HeaderEmpresa = ({ subtitulo }) => (
+    <div style={{ textAlign: "center", marginBottom: 4 }}>
+      <div
+        style={{
+          fontSize: 20,
+          fontWeight: 700,
+          lineHeight: 1,
+          letterSpacing: "0.4px",
+          marginBottom: 2,
+        }}
+      >
+        VIVERO ABIDAN
+      </div>
+
+      <div
+        style={{
+          fontSize: 11,
+          lineHeight: 1.15,
+          fontWeight: 700,
+        }}
+      >
+        CARRETERA NACIONAL KM 253
+        <br />
+        COL. LOS RODRIGUEZ, SANTIAGO, N.L.
+      </div>
+
+      {subtitulo ? (
+        <div
+          style={{
+            marginTop: 4,
+            fontSize: 11,
+            fontWeight: 700,
+            letterSpacing: "0.4px",
+          }}
+        >
+          {subtitulo}
+        </div>
+      ) : null}
+    </div>
+  );
+
   if (data?.tipo === "corte") {
     return (
       <div className="ticket-overlay" style={overlayStyle}>
@@ -545,37 +585,7 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
             </div>
 
             <div style={{ position: "relative", zIndex: 1 }}>
-              <div style={{ textAlign: "center", marginBottom: 4 }}>
-                <img
-                  src={logoSrc}
-                  alt="Logo"
-                  crossOrigin="anonymous"
-                  onError={(e) => {
-                    e.currentTarget.style.display = "none";
-                  }}
-                  style={{
-                    width: "100%",
-                    maxWidth: "72mm",
-                    maxHeight: "22mm",
-                    height: "auto",
-                    margin: "0 auto 4px auto",
-                    objectFit: "contain",
-                    display: "block",
-                  }}
-                />
-
-                <div
-                  style={{
-                    textAlign: "center",
-                    fontSize: 11,
-                    marginTop: 2,
-                    fontFamily: thermalFont,
-                    fontWeight: 700,
-                  }}
-                >
-                  PEDIDO
-                </div>
-              </div>
+              <HeaderEmpresa subtitulo="PEDIDO" />
 
               <hr />
 
@@ -719,49 +729,7 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
           )}
 
           <div style={{ position: "relative", zIndex: 1 }}>
-            <div
-  style={{
-    textAlign: "center",
-    marginBottom: 4,
-    background: "#fff",
-    padding: "2px 0",
-  }}
->
-  <img
-    src={logoSrc}
-    alt="Logo"
-    crossOrigin="anonymous"
-    onError={(e) => {
-      e.currentTarget.style.display = "none";
-    }}
-    style={{
-      width: "100%",
-      maxWidth: "72mm",
-      maxHeight: "22mm",
-      height: "auto",
-      margin: "0 auto 4px auto",
-      objectFit: "contain",
-      display: "block",
-      background: "#fff",
-    }}
-  />
-
-  <div
-    style={{
-      textAlign: "center",
-      fontSize: 11,
-      marginTop: 2,
-      marginBottom: 2,
-      lineHeight: 1.15,
-      fontFamily: thermalFont,
-      fontWeight: 700,
-    }}
-  >
-    CARRETERA NACIONAL KM 253
-    <br />
-    COL. LOS RODRIGUEZ, SANTIAGO, N.L.
-  </div>
-</div>
+            <HeaderEmpresa />
 
             <hr />
 
@@ -987,7 +955,7 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
                       textTransform: "uppercase",
                     }}
                   >
-                    Escanear para facturar
+                    ESCANEAR PARA FACTURAR
                   </div>
 
                   <div
@@ -997,7 +965,7 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
                       textTransform: "uppercase",
                     }}
                   >
-                    en WhatsApp
+                    EN WHATSAPP
                   </div>
 
                   <div
@@ -1007,7 +975,7 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
                       textTransform: "uppercase",
                     }}
                   >
-                    Envía tu información
+                    ENVÍA TU INFORMACIÓN
                   </div>
 
                   <div
@@ -1018,7 +986,7 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
                       textTransform: "uppercase",
                     }}
                   >
-                    Atención a clientes
+                    ATENCIÓN A CLIENTES
                   </div>
 
                   <div style={{ fontSize: 10, marginTop: 1 }}>
