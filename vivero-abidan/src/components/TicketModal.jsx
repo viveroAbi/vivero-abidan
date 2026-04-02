@@ -58,12 +58,12 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
           position: static !important;
           left: auto !important;
           top: auto !important;
-          width: 72mm !important;
-          max-width: 72mm !important;
-          min-width: 72mm !important;
+          width: 76mm !important;
+          max-width: 76mm !important;
+          min-width: 76mm !important;
           max-height: none !important;
           margin: 0 auto !important;
-          padding: 2.5mm 3mm !important;
+          padding: 2.5mm 2.5mm !important;
           box-sizing: border-box !important;
           overflow: visible !important;
           background: #fff !important;
@@ -77,7 +77,6 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
           max-width: 100% !important;
           height: auto !important;
           display: block !important;
-          margin: 0 auto !important;
           break-inside: auto !important;
           page-break-inside: auto !important;
         }
@@ -91,6 +90,7 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
         p, div, span, h1, h2, h3, h4, h5, h6, pre, table, tr, td {
           break-inside: auto !important;
           page-break-inside: auto !important;
+          word-break: break-word !important;
         }
       }
     `}</style>
@@ -130,10 +130,10 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
             }
 
             #ticket-print {
-              width: 72mm;
-              max-width: 72mm;
-              min-width: 72mm;
-              padding: 2.5mm 3mm;
+              width: 76mm;
+              max-width: 76mm;
+              min-width: 76mm;
+              padding: 2.5mm 2.5mm;
               box-sizing: border-box;
               color: #000;
               background: #fff;
@@ -148,7 +148,6 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
               max-width: 100%;
               height: auto;
               display: block;
-              margin: 0 auto;
             }
 
             hr {
@@ -160,6 +159,7 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
             p, div, span, h1, h2, h3, h4, h5, h6, pre, table, tr, td {
               break-inside: auto;
               page-break-inside: auto;
+              word-break: break-word;
             }
           </style>
         </head>
@@ -219,14 +219,6 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
       win.onload = esperarImagenesEImprimir;
     }
   }
-
-  const money = (n) =>
-    Number(n || 0).toLocaleString("es-MX", {
-      style: "currency",
-      currency: "MXN",
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
 
   const moneyCompact = (n) =>
     `$${Number(n || 0).toLocaleString("es-MX", {
@@ -299,7 +291,6 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
   const esCotizacionNormal =
     Number(venta.es_cotizacion ?? venta.esCotizacion ?? 0) === 1;
 
-  // ✅ AQUÍ ESTÁ LA PARTE IMPORTANTE DEL CLIENTE
   const clienteNombreRaw = pickText(
     venta?.cliente_nombre,
     venta?.clienteNombre,
@@ -435,11 +426,11 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
 
   const ticketBoxStyle = {
     position: "relative",
-    width: "72mm",
-    maxWidth: "72mm",
+    width: "76mm",
+    maxWidth: "76mm",
     background: "white",
     color: "black",
-    padding: "2.5mm 3mm",
+    padding: "2.5mm 2.5mm",
     boxSizing: "border-box",
     fontFamily: thermalFont,
     maxHeight: "90vh",
@@ -694,12 +685,6 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
               CARRETERA NACIONAL KM 253
               <br />
               COL. LOS RODRIGUEZ, SANTIAGO, N.L.
-              <br />
-              TEL. 81 82 66 10 15
-              <br />
-              WHATSAPP: 81 81 16 75 87
-              <br />
-              VIVEROABIDAN@GMAIL.COM
             </div>
 
             <hr />
@@ -731,14 +716,14 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
               <div
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "26px 1fr 62px 62px",
-                  gap: 6,
+                  gridTemplateColumns: "24px 1fr 56px 56px",
+                  gap: 4,
                   alignItems: "start",
                 }}
               >
                 <b>CANT</b>
-                <b>| PRODUCTO</b>
-                <b style={{ textAlign: "right" }}>| PRECIO</b>
+                <b>PRODUCTO</b>
+                <b style={{ textAlign: "right" }}>PRECIO</b>
                 <b style={{ textAlign: "right" }}>IMPORTE</b>
               </div>
 
@@ -760,8 +745,8 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
                       <div
                         style={{
                           display: "grid",
-                          gridTemplateColumns: "26px 1fr 62px 62px",
-                          gap: 6,
+                          gridTemplateColumns: "24px 1fr 56px 56px",
+                          gap: 4,
                           alignItems: "start",
                         }}
                       >
@@ -769,7 +754,7 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
                           <b>{cant}</b>
                         </div>
 
-                        <div>{nombre}</div>
+                        <div style={{ wordBreak: "break-word" }}>{nombre}</div>
 
                         <div style={{ textAlign: "right", fontWeight: "bold" }}>
                           {moneyCompact(pu)}
@@ -878,46 +863,59 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
 
               <div
                 style={{
-                  textAlign: "center",
-                  marginTop: 10,
+                  display: "grid",
+                  gridTemplateColumns: "84px 1fr",
+                  gap: 8,
+                  alignItems: "center",
+                  marginTop: 12,
                   marginBottom: 6,
                 }}
               >
-                <img
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(
-                    "https://wa.me/528181167587?text=Hola,%20quiero%20solicitar%20mi%20factura.%20Adjunto%20mis%20datos."
-                  )}`}
-                  alt="QR WhatsApp Facturacion"
-                  crossOrigin="anonymous"
-                  style={{
-                    width: 82,
-                    height: 82,
-                    objectFit: "contain",
-                    imageRendering: "pixelated",
-                    display: "block",
-                    margin: "0 auto",
-                  }}
-                />
+                <div style={{ display: "flex", justifyContent: "center" }}>
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(
+                      "https://wa.me/528181167587?text=Hola,%20quiero%20solicitar%20mi%20factura.%20Adjunto%20mis%20datos."
+                    )}`}
+                    alt="QR WhatsApp Facturacion"
+                    crossOrigin="anonymous"
+                    style={{
+                      width: 78,
+                      height: 78,
+                      objectFit: "contain",
+                      imageRendering: "pixelated",
+                    }}
+                  />
+                </div>
 
-                <div style={{ marginTop: 6, fontWeight: "bold", fontSize: 10 }}>
-                  ESCANEAR PARA FACTURAR
+                <div style={{ textAlign: "left", lineHeight: 1.15 }}>
+                  <div style={{ fontWeight: "bold", fontSize: 10 }}>
+                    ESCANEAR PARA FACTURAR
+                  </div>
+                  <div style={{ fontSize: 10, fontWeight: "bold" }}>
+                    EN WHATSAPP
+                  </div>
+                  <div style={{ marginTop: 4, fontSize: 9 }}>
+                    ENVIA TU INFORMACION
+                  </div>
+                  <div style={{ marginTop: 4, fontSize: 9, fontWeight: "bold" }}>
+                    ATENCION A CLIENTES
+                  </div>
+                  <div style={{ fontSize: 9 }}>TEL. 81 82 66 10 15</div>
+                  <div style={{ fontSize: 9 }}>VIVEROABIDAN@GMAIL.COM</div>
                 </div>
-                <div style={{ fontSize: 10, fontWeight: "bold" }}>
-                  EN WHATSAPP
-                </div>
-                <div style={{ marginTop: 4, fontSize: 9 }}>
-                  ENVIA TU INFORMACION
-                </div>
-                <div style={{ marginTop: 4, fontSize: 9, fontWeight: "bold" }}>
-                  ATENCION A CLIENTES
-                </div>
-                <div style={{ fontSize: 9 }}>TEL. 81 82 66 10 15</div>
               </div>
             </div>
 
             <hr />
 
-            <div style={{ fontSize: 10, textAlign: "center", lineHeight: 1.1 }}>
+            <div
+              style={{
+                fontSize: 10,
+                textAlign: "center",
+                lineHeight: 1.15,
+                fontWeight: "bold",
+              }}
+            >
               ESTIMADO CLIENTE
               <br />
               POR LA SEGURIDAD DE AMBAS PARTES
