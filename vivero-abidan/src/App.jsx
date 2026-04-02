@@ -2447,1215 +2447,927 @@ if (view === "movimientos") {
   <div
     style={{
       display: "grid",
-      gridTemplateColumns: isMobile
-        ? "1fr"
-        : (ventasAbiertas
-            ? "minmax(0, 1.5fr) minmax(420px, 0.9fr)"
-            : "60px minmax(420px, 0.9fr)"),
+      gridTemplateColumns: "1fr",
       gap: 20,
       alignItems: "flex-start",
     }}
   >
-    {/* FORM */}
-<div
-  style={{
-    ...cardStyle,
-    padding: 16,
-    width: "100%",
-    minWidth: 0,
-    maxWidth: isMobile ? "100%" : 1180,
-    boxSizing: "border-box",
-    justifySelf: isMobile ? "stretch" : "end",
-    gridColumn: isMobile ? "auto" : 2,
-    gridRow: 1,
-  }}
->
-      <h2 style={{ marginTop: 0 }}>
-  {editandoVentaId
-    ? esCotizacionPedido
-      ? `Editar cotización de pedido #${editandoVentaId}`
-      : form.esCotizacion
-      ? `Editar cotización #${editandoVentaId}`
-      : `Editar venta #${editandoVentaId}`
-    : esCotizacionPedido
-    ? "Registrar cotización de pedido"
-    : form.esCotizacion
-    ? "Registrar cotización"
-    : "Registrar venta"}
-</h2>
-      <div style={{ display: "flex", gap: 10, marginBottom: 10, flexWrap: "wrap" }}>
-  <button
-    type="button"
-    style={{ ...btn("primary"), padding: "8px 12px", fontSize: 13, width: "auto" }}
-    onClick={async () => {
-      await nuevaVentaBorrador();
-      await cargarBorradores();
-      setMostrarBorradores(true);
-    }}
-  >
-    + Nueva venta
-  </button>
-
-  <button
-    type="button"
-    style={{ ...btn("ghost"), padding: "8px 12px", fontSize: 13, width: "auto" }}
-    onClick={async () => {
-      if (!mostrarBorradores) {
-        await cargarBorradores();
-      }
-      setMostrarBorradores((v) => !v);
-    }}
-  >
-    {mostrarBorradores ? "Ocultar borradores" : "Ver borradores"}
-  </button>
-
-  {borradorActivo && (
-    <div style={{ alignSelf: "center", fontSize: 12, opacity: 0.8 }}>
-      Borrador activo: #{borradorActivo}
-    </div>
-  )}
-</div>
-{mostrarBorradores && (
-  <div
-    style={{
-      ...cardStyle,
-      padding: 10,
-      marginBottom: 12,
-      boxShadow: "none",
-      border: `1px dashed ${theme.border}`,
-      maxHeight: 220,
-      overflowY: "auto",
-    }}
-  >
-    <div style={{ fontWeight: 800, marginBottom: 8 }}>Borradores</div>
-
-    {borradores.length === 0 ? (
-      <div style={{ color: theme.muted, fontSize: 13 }}>
-        No hay borradores.
-      </div>
-    ) : (
-      borradores.map((b) => (
-        <div
-          key={b.id}
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            gap: 8,
-            padding: "8px 0",
-            borderBottom: `1px solid ${theme.border}`,
-          }}
-        >
-          <div style={{ fontSize: 13 }}>
-            <div>
-              <b>#{b.id}</b> · {b.categoria || "sin categoría"}
-            </div>
-            <div style={{ color: theme.muted, fontSize: 12 }}>
-              {b.created_at ? formatFechaLocal(b.created_at) : ""}
-            </div>
-          </div>
-
-          <div style={{ display: "flex", gap: 6 }}>
-  <button
-    type="button"
-    style={btn("ghost")}
-    onClick={() => {
-      setBorradorActivo(b.id);
-      setMessage("success", `✅ Borrador #${b.id} seleccionado`);
-    }}
-  >
-    Usar
-  </button>
-
-  <button
-    type="button"
-    style={btn("danger")}
-    onClick={() => eliminarBorrador(b.id)}
-  >
-    Eliminar
-  </button>
-</div>
-        </div>
-      ))
-    )}
-  </div>
-)}
-<div style={{ position: "relative", marginBottom: 10 }}>
-  <label style={labelStyle}>
-    Cliente (opcional):
-    <div style={{ display: "flex", gap: 8 }}>
-      <input
-        ref={clienteInputRef}
-        type="text"
-        value={clienteSearch}
-        onChange={(e) => {
-          const v = e.target.value;
-          setClienteSearch(v);
-          setClienteSugActiva(-1);
-
-          // si escribe algo nuevo, quitamos selección previa
-          if (clienteSeleccionado) setClienteSeleccionado(null);
-
-          buscarClientesVenta(v);
-        }}
-        onKeyDown={onKeyDownBusquedaCliente}
-        onFocus={() => {
-          if (clienteSug.length) setShowClienteSug(true)
-        }}
-        onBlur={() => {
-          setTimeout(() => setShowClienteSug(false), 150);
-        }}
-        placeholder="Buscar cliente por nombre, teléfono o email..."
-        autoComplete="off"
-        style={inputStyle}
-      />
-
-      <button
-        type="button"
-        onClick={limpiarClienteVenta}
-        style={btn("ghost")}
-        title="Quitar cliente"
-      >
-        ✕
-      </button>
-    </div>
-  </label>
-
-  {clienteSeleccionado && (
-    <div style={{ marginTop: 6, fontSize: 12, color: theme.muted }}>
-      Cliente seleccionado: <b>{clienteSeleccionado.nombre}</b> · Categoría:{" "}
-      <b>{normalizarCategoriaVenta(clienteSeleccionado.categoria_cliente || "publico")}</b>
-    </div>
-  )}
-
-  {showClienteSug && (
     <div
       style={{
-        position: "absolute",
-        top: "100%",
-        left: 0,
-        right: 0,
-        marginTop: 6,
-        background: "#fff",
-        border: `1px solid ${theme.border}`,
-        borderRadius: 10,
-        boxShadow: "0 8px 18px rgba(0,0,0,0.08)",
-        maxHeight: 240,
-        overflowY: "auto",
-        zIndex: 60,
+        ...cardStyle,
+        padding: 16,
+        width: "100%",
+        minWidth: 0,
+        maxWidth: "100%",
+        boxSizing: "border-box",
+        justifySelf: "stretch",
       }}
     >
-      {clienteLoading ? (
-        <div style={{ padding: 10, fontSize: 13 }}>Buscando...</div>
-      ) : clienteSug.length === 0 ? (
-        <div style={{ padding: 10, fontSize: 13, color: theme.muted }}>
-          Sin resultados
-        </div>
-      ) : (
-        clienteSug.map((c, idx) => (
-          <button
-            key={c.id}
-            type="button"
-            onMouseDown={(e) => e.preventDefault()}
-            onMouseEnter={() => setClienteSugActiva(idx)}
-            onClick={() => seleccionarClienteVenta(c)}
-            style={{
-              width: "100%",
-              textAlign: "left",
-              padding: "10px 12px",
-              border: "none",
-              borderBottom: "1px solid #edf2ef",
-              background: idx === clienteSugActiva ? "#e8f7ee" : "#fff",
-              cursor: "pointer",
-            }}
-          >
-            <div style={{ fontWeight: 700 }}>{c.nombre}</div>
-            <div style={{ fontSize: 12, color: theme.muted }}>
-              {c.telefono || "-"} · {c.email || "-"} · cat: {normalizarCategoriaVenta(c.categoria_cliente || "publico")}
-            </div>
-          </button>
-        ))
-      )}
-    </div>
-  )}
-</div>
-
-      <form onSubmit={onSubmit}>
-  <div
-    style={{
-      display: "grid",
-      gridTemplateColumns: isMobile
-        ? "1fr"
-        : "minmax(260px, 1fr) minmax(360px, 1.2fr) minmax(240px, 0.9fr)",
-      gap: 16,
-      alignItems: "start",
-    }}
-  >
-    {/* COLUMNA 1 */}
-    <div
-      style={{
-        display: "grid",
-        gap: 12,
-        borderRight: isMobile ? "none" : `1px solid ${theme.border}`,
-        paddingRight: isMobile ? 0 : 12,
-      }}
-    >
-      <div style={{ position: "relative" }}>
-        <label style={labelStyle}>
-          Cliente (opcional):
-          <div style={{ display: "flex", gap: 8 }}>
-            <input
-              ref={clienteInputRef}
-              type="text"
-              value={clienteSearch}
-              onChange={(e) => {
-                const v = e.target.value;
-                setClienteSearch(v);
-                setClienteSugActiva(-1);
-
-                if (clienteSeleccionado) setClienteSeleccionado(null);
-
-                buscarClientesVenta(v);
-              }}
-              onKeyDown={onKeyDownBusquedaCliente}
-              onFocus={() => {
-                if (clienteSug.length) setShowClienteSug(true);
-              }}
-              onBlur={() => {
-                setTimeout(() => setShowClienteSug(false), 150);
-              }}
-              placeholder="Buscar cliente por nombre, teléfono o email..."
-              autoComplete="off"
-              style={inputStyle}
-            />
-
-            <button
-              type="button"
-              onClick={limpiarClienteVenta}
-              style={btn("ghost")}
-              title="Quitar cliente"
-            >
-              ✕
-            </button>
-          </div>
-        </label>
-
-        {clienteSeleccionado && (
-          <div style={{ marginTop: 6, fontSize: 12, color: theme.muted }}>
-            Cliente seleccionado: <b>{clienteSeleccionado.nombre}</b> · Categoría:{" "}
-            <b>
-              {normalizarCategoriaVenta(
-                clienteSeleccionado.categoria_cliente || "publico"
-              )}
-            </b>
-          </div>
-        )}
-
-        {showClienteSug && (
-          <div
-            style={{
-              position: "absolute",
-              top: "100%",
-              left: 0,
-              right: 0,
-              marginTop: 6,
-              background: "#fff",
-              border: `1px solid ${theme.border}`,
-              borderRadius: 10,
-              boxShadow: "0 8px 18px rgba(0,0,0,0.08)",
-              maxHeight: 240,
-              overflowY: "auto",
-              zIndex: 60,
-            }}
-          >
-            {clienteLoading ? (
-              <div style={{ padding: 10, fontSize: 13 }}>Buscando...</div>
-            ) : clienteSug.length === 0 ? (
-              <div style={{ padding: 10, fontSize: 13, color: theme.muted }}>
-                Sin resultados
-              </div>
-            ) : (
-              clienteSug.map((c, idx) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onMouseEnter={() => setClienteSugActiva(idx)}
-                  onClick={() => seleccionarClienteVenta(c)}
-                  style={{
-                    width: "100%",
-                    textAlign: "left",
-                    padding: "10px 12px",
-                    border: "none",
-                    borderBottom: "1px solid #edf2ef",
-                    background: idx === clienteSugActiva ? "#e8f7ee" : "#fff",
-                    cursor: "pointer",
-                  }}
-                >
-                  <div style={{ fontWeight: 700 }}>{c.nombre}</div>
-                  <div style={{ fontSize: 12, color: theme.muted }}>
-                    {c.telefono || "-"} · {c.email || "-"} · cat:{" "}
-                    {normalizarCategoriaVenta(c.categoria_cliente || "publico")}
-                  </div>
-                </button>
-              ))
-            )}
-          </div>
-        )}
-      </div>
-
-      <label style={labelStyle}>
-        Categoría:
-        <select
-          name="categoria"
-          value={form.categoria}
-          onChange={onChange}
-          style={inputStyle}
-          disabled={!!clienteSeleccionado}
-        >
-          <option value="publico">Público</option>
-          <option value="mayoreo">Mayoreo</option>
-          <option value="vivero">Vivero</option>
-          <option value="especial">Precio especial</option>
-        </select>
-
-        {clienteSeleccionado && (
-          <div style={{ marginTop: 6, fontSize: 12, color: theme.muted }}>
-            La categoría se tomó del cliente seleccionado.
-          </div>
-        )}
-      </label>
-    </div>
-
-    {/* COLUMNA 2 */}
-    <div
-      style={{
-        display: "grid",
-        gap: 12,
-        borderRight: isMobile ? "none" : `1px solid ${theme.border}`,
-        paddingRight: isMobile ? 0 : 12,
-      }}
-    >
-      <div
-        style={{
-          ...cardStyle,
-          padding: 12,
-          boxShadow: "none",
-          marginBottom: 0,
-        }}
-      >
-        <div
-          style={{
-            fontWeight: 900,
-            marginBottom: 8,
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <button
-            type="button"
-            onClick={() => setCarritoAbierto((v) => !v)}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              background: "transparent",
-              border: "none",
-              cursor: "pointer",
-              padding: 0,
-              fontSize: 16,
-              fontWeight: 900,
-              color: theme.text,
-            }}
-          >
-            <span>{carritoAbierto ? "▼" : "▶"}</span>
-            <span>🛒 Carrito</span>
-            <span style={{ fontSize: 13, color: theme.muted }}>
-              ({carrito.length})
-            </span>
-          </button>
-          <span style={{ color: theme.green2 }}>{money(totalCarrito)}</span>
-        </div>
-
-        <div style={{ position: "relative", marginBottom: 10 }}>
-          <div style={{ display: "flex", gap: 8 }}>
-            <input
-              ref={cantidadAgregarRef}
-              type="number"
-              min="1"
-              value={cantidadAgregar}
-              onChange={(e) => setCantidadAgregar(e.target.value)}
-              placeholder="1"
-              style={{
-                width: 90,
-                padding: "10px 12px",
-                borderRadius: 10,
-                border: "1px solid #cfd8d3",
-                outline: "none",
-              }}
-            />
-
-            <input
-              ref={busquedaProductoRef}
-              type="text"
-              value={busqueda}
-              onChange={onChangeBusqueda}
-              onKeyDown={onKeyDownBusquedaProducto}
-              onFocus={() => {
-                if (sugerencias.length) setShowSugerencias(true);
-              }}
-              onBlur={() => {
-                setTimeout(() => setShowSugerencias(false), 150);
-              }}
-              placeholder="Escribe para buscar (ej. C, CH, CHI...)"
-              autoComplete="off"
-              style={{
-                flex: 1,
-                padding: "10px 12px",
-                borderRadius: 10,
-                border: "1px solid #cfd8d3",
-                outline: "none",
-              }}
-            />
-
-            <button
-              type="button"
-              onClick={() => buscarSugerenciasProductos(busqueda)}
-              style={{
-                padding: "10px 14px",
-                borderRadius: 10,
-                border: "1px solid #0ea75a",
-                background: "#17c964",
-                color: "#fff",
-                fontWeight: 700,
-                cursor: "pointer",
-              }}
-            >
-              Buscar
-            </button>
-          </div>
-
-          {showSugerencias && (
-            <div
-              style={{
-                position: "absolute",
-                top: "100%",
-                left: 0,
-                right: 0,
-                marginTop: 6,
-                background: "#fff",
-                border: "1px solid #d7e3de",
-                borderRadius: 10,
-                boxShadow: "0 8px 18px rgba(0,0,0,0.08)",
-                maxHeight: 260,
-                overflowY: "auto",
-                zIndex: 50,
-              }}
-            >
-              {loadingSugerencias ? (
-                <div style={{ padding: 10, fontSize: 13 }}>Buscando...</div>
-              ) : sugerencias.length === 0 ? (
-                <div style={{ padding: 10, fontSize: 13, color: "#5b6f67" }}>
-                  Sin resultados
-                </div>
-              ) : (
-                sugerencias.map((p, idx) => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onMouseDown={(e) => e.preventDefault()}
-                    onMouseEnter={() => setSugerenciaActiva(idx)}
-                    onClick={() => seleccionarSugerencia(p)}
-                    style={{
-                      width: "100%",
-                      textAlign: "left",
-                      padding: "10px 12px",
-                      border: "none",
-                      borderBottom: "1px solid #edf2ef",
-                      background: idx === sugerenciaActiva ? "#e8f7ee" : "#fff",
-                      cursor: "pointer",
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: "flex",
-                        gap: 10,
-                        alignItems: "center",
-                      }}
-                    >
-                      {p.imagen_url ? (
-                        <img
-                          src={`${API_URL.replace("/api", "")}${p.imagen_url}`}
-                          alt={p.nombre}
-                          style={{
-                            width: 44,
-                            height: 44,
-                            borderRadius: 10,
-                            objectFit: "cover",
-                            border: "1px solid #d7e3de",
-                            flex: "0 0 auto",
-                          }}
-                        />
-                      ) : (
-                        <div
-                          style={{
-                            width: 44,
-                            height: 44,
-                            borderRadius: 10,
-                            border: "1px solid #d7e3de",
-                            background: "#f7fbf9",
-                            display: "grid",
-                            placeItems: "center",
-                            color: "#8aa39a",
-                            fontSize: 10,
-                            flex: "0 0 auto",
-                          }}
-                        >
-                          Sin foto
-                        </div>
-                      )}
-
-                      <div style={{ minWidth: 0 }}>
-                        <div
-                          style={{
-                            fontWeight: 800,
-                            fontSize: 13,
-                            whiteSpace: "nowrap",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                          }}
-                        >
-                          {p.nombre}
-                        </div>
-                        <div style={{ fontSize: 12, color: "#5b6f67" }}>
-                          {p.codigo_cat || p.codigo} •{" "}
-                          {money(p.precio_publico ?? p.precio ?? 0)}
-                        </div>
-                      </div>
-                    </div>
-                  </button>
-                ))
-              )}
-            </div>
-          )}
-        </div>
-
-        <div style={{ display: "grid", gap: 6, marginBottom: 10 }}>
-          <label style={{ fontSize: 13, fontWeight: 600 }}>
-            Escanear código de barras
-          </label>
-
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <input
-              type="text"
-              value={codigoScan}
-              onChange={(e) => setCodigoScan(e.target.value)}
-              onKeyDown={onScanKeyDown}
-              placeholder="Escanea o escribe código (ej. SIN-00001)"
-              autoComplete="off"
-              style={{
-                flex: 1,
-                minWidth: 220,
-                padding: "10px 12px",
-                borderRadius: 10,
-                border: "1px solid #cfd8d3",
-                outline: "none",
-              }}
-            />
-
-            <button
-              type="button"
-              onClick={() => buscarProductoPorCodigo(codigoScan)}
-              disabled={scanLoading}
-              style={{
-                padding: "10px 14px",
-                borderRadius: 10,
-                border: "1px solid #0ea75a",
-                background: scanLoading ? "#b7e7cb" : "#17c964",
-                color: "#fff",
-                fontWeight: 700,
-                cursor: "pointer",
-              }}
-            >
-              {scanLoading ? "Buscando..." : "Agregar"}
-            </button>
-
-            <button
-              type="button"
-              onClick={abrirCamaraEscaner}
-              style={{
-                padding: "10px 14px",
-                borderRadius: 10,
-                border: "1px solid #0b6bff",
-                background: "#1f7aff",
-                color: "#fff",
-                fontWeight: 700,
-                cursor: "pointer",
-              }}
-              title="Usar cámara del teléfono o tableta"
-            >
-              📷 Escanear con cámara
-            </button>
-          </div>
-
-          <small style={{ color: "#5b6f67" }}>
-            Funciona con lector USB (como teclado) o con celular si escribe el código aquí.
-          </small>
-        </div>
-
-        {carritoAbierto &&
-          (carrito.length > 0 ? (
-            <div
-              style={{
-                marginTop: 10,
-                display: "grid",
-                gap: 8,
-                maxHeight: 260,
-                overflowY: "auto",
-                borderTop: `1px solid ${theme.border}`,
-                paddingTop: 10,
-                paddingRight: 4,
-              }}
-            >
-              {[...carrito].reverse().map((it) => {
-                const itemKey = it.producto_id ?? it._rowId;
-                const subtotal =
-                  Number(it.cantidad || 0) * Number(it.precio_unitario || 0);
-
-                return (
-                  <div
-                    key={itemKey}
-                    style={{
-                      border: `1px solid ${theme.border}`,
-                      borderRadius: 12,
-                      padding: 10,
-                      background: "#fff",
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns: isMobile
-                          ? "minmax(0, 1fr)"
-                          : "minmax(180px, 1.7fr) 80px 105px 105px 58px",
-                        gap: 8,
-                        alignItems: "center",
-                      }}
-                    >
-                      <div style={{ minWidth: 0, overflow: "hidden" }}>
-                        <div
-                          style={{
-                            fontWeight: 700,
-                            fontSize: 13,
-                            whiteSpace: "normal",
-                            wordBreak: "keep-all",
-                            overflowWrap: "break-word",
-                            lineHeight: 1.15,
-                          }}
-                        >
-                          {it.codigo ? `${it.codigo} — ` : ""}
-                          {it.nombre}
-                        </div>
-                      </div>
-
-                      <div>
-                        <div
-                          style={{
-                            fontSize: 11,
-                            color: theme.muted,
-                            marginBottom: 4,
-                          }}
-                        >
-                          Cant.
-                        </div>
-                        <input
-                          type="number"
-                          min="1"
-                          value={it.cantidad}
-                          onChange={(e) =>
-                            cambiarCantidad(itemKey, e.target.value)
-                          }
-                          style={{
-                            ...inputStyle,
-                            marginTop: 0,
-                            padding: "6px 8px",
-                            fontSize: 13,
-                            height: 34,
-                            width: "100%",
-                          }}
-                        />
-                      </div>
-
-                      <div>
-                        <div
-                          style={{
-                            fontSize: 11,
-                            color: theme.muted,
-                            marginBottom: 4,
-                          }}
-                        >
-                          Precio
-                        </div>
-                        <input
-                          type="number"
-                          value={it.precio_unitario}
-                          onChange={(e) =>
-                            setCarrito((prev) =>
-                              prev.map((x) =>
-                                (x.producto_id ?? x._rowId) === itemKey
-                                  ? {
-                                      ...x,
-                                      precio_unitario: Number(
-                                        e.target.value || 0
-                                      ),
-                                    }
-                                  : x
-                              )
-                            )
-                          }
-                          style={{
-                            ...inputStyle,
-                            marginTop: 0,
-                            padding: "6px 8px",
-                            fontSize: 13,
-                            height: 34,
-                            width: "100%",
-                          }}
-                        />
-                      </div>
-
-                      <div>
-                        <div
-                          style={{
-                            fontSize: 11,
-                            color: theme.muted,
-                            marginBottom: 4,
-                          }}
-                        >
-                          Importe
-                        </div>
-                        <div
-                          style={{
-                            fontWeight: 800,
-                            fontSize: 13,
-                            color: theme.green2,
-                          }}
-                        >
-                          {money(subtotal)}
-                        </div>
-                      </div>
-
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent: isMobile
-                            ? "flex-start"
-                            : "flex-end",
-                        }}
-                      >
-                        <button
-                          type="button"
-                          onClick={() => quitarDelCarrito(itemKey)}
-                          style={{
-                            ...btn("danger"),
-                            minWidth: 46,
-                            height: 34,
-                            padding: "6px 8px",
-                            fontSize: 16,
-                            lineHeight: 1,
-                          }}
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div style={{ marginTop: 10, color: theme.muted, fontSize: 13 }}>
-              Carrito vacío.
-            </div>
-          ))}
-      </div>
-    </div>
-
-    {/* COLUMNA 3 */}
-    <div style={{ display: "grid", gap: 10 }}>
-      <label style={labelStyle}>
-        Tipo de pago:
-        <select
-          name="tipoPago"
-          value={form.tipoPago}
-          onChange={onChangeTipoPago}
-          style={inputStyle}
-        >
-          <option value="efectivo">Efectivo</option>
-          <option value="tarjeta_credito">Tarjeta (Crédito)</option>
-          <option value="tarjeta_debito">Tarjeta (Débito)</option>
-          <option value="transferencia">Transferencia</option>
-          <option value="cheque">Cheque</option>
-          <option value="mixto">Mixto</option>
-          <option value="a_cuenta">A cuenta</option>
-        </select>
-      </label>
-
-      {form.tipoPago === "a_cuenta" && (
-        <div style={{ display: "grid", gap: 10 }}>
-          <label style={labelStyle}>
-            Fecha de vencimiento:
-            <input
-              type="date"
-              name="fecha_vencimiento"
-              value={form.fecha_vencimiento}
-              onChange={onChange}
-              style={inputStyle}
-            />
-          </label>
-
-          <label style={labelStyle}>
-            Observaciones de crédito:
-            <input
-              type="text"
-              name="observaciones_credito"
-              value={form.observaciones_credito}
-              onChange={onChange}
-              placeholder="Notas del crédito"
-              style={inputStyle}
-            />
-          </label>
-        </div>
-      )}
-
-      {form.tipoPago === "a_cuenta" && (
-        <div
-          style={{
-            marginTop: 4,
-            padding: 12,
-            border: "1px solid #d9e7d9",
-            borderRadius: 10,
-            background: "#f8fff8",
-            display: "grid",
-            gap: 8,
-          }}
-        >
-          <div>
-            <strong>Cliente:</strong>{" "}
-            {clienteSeleccionado?.nombre || "Sin cliente seleccionado"}
-          </div>
-          <div>
-            <strong>Saldo actual:</strong> ${saldoActualCliente.toFixed(2)}
-          </div>
-          <div>
-            <strong>Deuda máxima:</strong> ${deudaMaximaCliente.toFixed(2)}
-          </div>
-          <div>
-            <strong>Crédito disponible:</strong> $
-            {disponibleCreditoCliente.toFixed(2)}
-          </div>
-          <div>
-            <strong>Notas:</strong> {notaAutomaticaCliente}
-          </div>
-        </div>
-      )}
-
-      <label style={labelStyle}>
-        Efectivo:
-        <input
-          name="efectivo"
-          value={form.efectivo}
-          onChange={onChangeMixtoEfectivo}
-          type="number"
-          step="0.01"
-          style={inputStyle}
-          disabled={
-            isTarjeta ||
-            form.tipoPago === "transferencia" ||
-            form.tipoPago === "cheque"
-          }
-        />
-      </label>
-
-      <label style={labelStyle}>
-        Tarjeta:
-        <input
-          name="tarjeta"
-          value={form.tarjeta}
-          onChange={onChangeMixtoTarjeta}
-          type="number"
-          step="0.01"
-          style={inputStyle}
-          disabled={
-            form.tipoPago === "efectivo" ||
-            form.tipoPago === "transferencia" ||
-            form.tipoPago === "cheque"
-          }
-        />
-      </label>
-
-      {(form.tipoPago === "efectivo" || form.tipoPago === "mixto") && (
-        <>
-          <label style={labelStyle}>
-            Recibido:
-            <input
-              name="recibido"
-              value={form.recibido}
-              onChange={onChange}
-              type="number"
-              step="0.01"
-              style={inputStyle}
-              placeholder="Ej: 500"
-            />
-          </label>
-
-          <div style={{ marginTop: 4, color: theme.muted, fontSize: 13 }}>
-            Cambio: <b>{money(cambioNum)}</b>
-          </div>
-        </>
-      )}
-
-      {form.tipoPago === "efectivo" &&
-        clienteSeleccionado &&
-        cambioNum > 0 && (
-          <label
-            style={{
-              display: "flex",
-              gap: 8,
-              alignItems: "center",
-              marginTop: 4,
-            }}
-          >
-            <input
-              type="checkbox"
-              checked={guardarSaldoFavor}
-              onChange={(e) => setGuardarSaldoFavor(e.target.checked)}
-            />
-            Guardar cambio como saldo a favor
-          </label>
-        )}
-
       <div
         style={{
           display: "flex",
-          flexDirection: "column",
-          gap: 6,
-          marginTop: 4,
+          justifyContent: "space-between",
+          alignItems: isMobile ? "stretch" : "center",
+          flexDirection: isMobile ? "column" : "row",
+          gap: 10,
+          marginBottom: 10,
         }}
       >
-        <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <input
-            type="checkbox"
-            checked={form.esCotizacion}
-            onChange={(e) => {
-              const checked = e.target.checked;
-              setForm((f) => ({ ...f, esCotizacion: checked }));
-              if (checked) setEsCotizacionPedido(false);
-            }}
-          />
-          Es cotización (no es venta)
-        </label>
+        <div>
+          <h2 style={{ margin: 0 }}>Registrar venta</h2>
+        </div>
 
-        <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <input
-            type="checkbox"
-            checked={!!esCotizacionPedido}
-            onChange={(e) => {
-              const checked = e.target.checked;
-              setEsCotizacionPedido(checked);
-              if (checked) {
-                setForm((f) => ({ ...f, esCotizacion: false }));
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <button
+            type="button"
+            onClick={nuevaVentaBorrador}
+            style={btn("primary")}
+          >
+            + Nueva venta
+          </button>
+
+          <button
+            type="button"
+            onClick={async () => {
+              setMostrarBorradores((v) => !v);
+              if (!mostrarBorradores) {
+                await cargarBorradores();
               }
             }}
-          />
-          Cotización de pedido
-        </label>
+            style={btn("ghost")}
+          >
+            Ver borradores
+          </button>
+        </div>
       </div>
 
-      <button
-        type="submit"
-        disabled={loading}
-        style={{
-          ...btn("primary"),
-          width: "100%",
-          marginTop: 8,
-          opacity: loading ? 0.7 : 1,
-        }}
-      >
-        {loading
-          ? editandoVentaId
-            ? "Actualizando..."
-            : "Guardando..."
-          : editandoVentaId
-          ? "Actualizar ticket"
-          : esCotizacionPedido
-          ? "Guardar cotización de pedido"
-          : form.esCotizacion
-          ? "Guardar cotización"
-          : "Guardar venta"}
-      </button>
-
-      {editandoVentaId && (
-        <button
-          type="button"
-          onClick={cancelarEdicionVenta}
-          style={{ ...btn("ghost"), width: "100%", marginTop: 8 }}
+      {mostrarBorradores && (
+        <div
+          style={{
+            ...cardStyle,
+            padding: 12,
+            marginBottom: 14,
+            boxShadow: "none",
+          }}
         >
-          Cancelar edición
-        </button>
-      )}
+          <div style={{ fontWeight: 800, marginBottom: 10 }}>Borradores</div>
 
-      {msg.text && <div style={badge(msg.type)}>{msg.text}</div>}
-    </div>
-  </div>
-</form>
-    </div>
+          {borradores.length === 0 ? (
+            <div style={{ color: theme.muted }}>No hay borradores.</div>
+          ) : (
+            <div style={{ display: "grid", gap: 8 }}>
+              {borradores.map((b) => (
+                <div
+                  key={b.id}
+                  style={{
+                    border: `1px solid ${theme.border}`,
+                    borderRadius: 10,
+                    padding: 10,
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: isMobile ? "stretch" : "center",
+                    flexDirection: isMobile ? "column" : "row",
+                    gap: 8,
+                  }}
+                >
+                  <div>
+                    <div style={{ fontWeight: 700 }}>
+                      Borrador #{b.id}
+                    </div>
+                    <div style={{ fontSize: 12, color: theme.muted }}>
+                      {b.cliente_nombre || "Sin cliente"} ·{" "}
+                      {formatFechaLocal(b.created_at || b.fecha || new Date())}
+                    </div>
+                  </div>
 
-    {/* TABLA */}
-<div
-  style={{
-    width: "100%",
-    minWidth: 0,
-    gridColumn: 1,
-    gridRow: 1,
-    alignSelf: "start",
-  }}
->
-  <div
-    style={{
-      ...cardStyle,
-      padding: 0,
-      overflow: "hidden",
-      width: "100%",
-    }}
-  >
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: ventasAbiertas ? "space-between" : "center",
-        padding: 12,
-        borderBottom: ventasAbiertas ? `1px solid ${theme.border}` : "none",
-        background: "#f8fbfa",
-      }}
-    >
-      {ventasAbiertas && <h2 style={{ margin: 0 }}>Ventas</h2>}
-      <button
-        type="button"
-        onClick={() => setVentasAbiertas((v) => !v)}
-        style={{
-          border: `1px solid ${theme.border}`,
-          background: "#fff",
-          borderRadius: 10,
-          width: 36,
-          height: 36,
-          cursor: "pointer",
-          fontSize: 18,
-          fontWeight: 700,
-        }}
-        title={ventasAbiertas ? "Cerrar ventas" : "Abrir ventas"}
-      >
-        {ventasAbiertas ? "◀" : "▶"}
-      </button>
-    </div>
-
-    {ventasAbiertas && (
-      <div
-        style={{
-          overflowX: "auto",
-          WebkitOverflowScrolling: "touch",
-          width: "100%",
-          padding: 12,
-          boxSizing: "border-box",
-        }}
-      >
-        <table
-  style={{
-    width: "100%",
-    minWidth: isMobile ? 950 : 0, // ✅ scroll interno en móvil
-    borderCollapse: "collapse",
-  }}
->
-          <thead>
-            <tr>
-              {[
-                "ID",
-                "Categoría",
-                "Productos",
-                "Total",
-                "Descuento",
-                "Total Final",
-                "Pago",
-                "Fecha",
-                "Acciones",
-              ].map((h) => (
-                <th key={h} style={thStyle}>
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {ventas.map((v) => (
-              <tr key={v.id}>
-                <td style={tdStyle}>{v.id}</td>
-                <td style={tdStyle}>{v.categoria}</td>
-                <td style={{ ...tdStyle, whiteSpace: "normal", maxWidth: 340 }}>
-                  {v.productos_resumen || "—"}
-                </td>
-                <td style={tdStyle}>{money(v.total)}</td>
-                <td style={tdStyle}>{money(v.descuento)}</td>
-                <td style={tdStyle}>
-                  <b style={{ color: theme.green2 }}>{money(v.total_final)}</b>
-                </td>
-                <td style={tdStyle}>{v.tipo_pago}</td>
-                <td style={tdStyle}>{formatFechaLocal(v.created_at)}</td>
-                <td style={tdStyle}>
-                  <button onClick={() => verTicket(v.id)} style={btn("primary")}>
-                    🧾 Ticket
-                  </button>
-                  {isAdmin && (
-  <button
-    type="button"
-    onClick={() => editarVentaDesdeTabla(v)}
-    style={{ ...btn("ghost"), marginLeft: 8 }}
-  >
-    ✏️ Editar
-  </button>
-)}
-                  {isAdmin && (
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                     <button
-                      onClick={() => eliminar(v.id)}
-                      disabled={loading}
-                      style={{
-                        ...btn("danger"),
-                        marginLeft: 8,
-                        opacity: loading ? 0.7 : 1,
-                      }}
+                      type="button"
+                      style={btn("ghost")}
+                      onClick={() => cargarBorradorEnFormulario(b)}
+                    >
+                      Abrir
+                    </button>
+
+                    <button
+                      type="button"
+                      style={btn("danger")}
+                      onClick={() => eliminarBorrador(b.id)}
                     >
                       Eliminar
                     </button>
-                    
-                  )}
-                </td>
-              </tr>
-            ))}
-            
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
-            {ventas.length === 0 && (
-              <tr>
-                <td style={tdStyle} colSpan={9}>
-                  No hay ventas aún.
-                </td>
-              </tr>
+      <form onSubmit={onSubmit}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: isMobile
+              ? "1fr"
+              : "minmax(280px, 1fr) minmax(420px, 1.35fr) minmax(300px, 1fr)",
+            gap: 18,
+            alignItems: "start",
+          }}
+        >
+          {/* COLUMNA 1 */}
+          <div
+            style={{
+              display: "grid",
+              gap: 12,
+              borderRight: isMobile ? "none" : `1px solid ${theme.border}`,
+              paddingRight: isMobile ? 0 : 14,
+            }}
+          >
+            <div style={{ position: "relative" }}>
+              <label style={labelStyle}>
+                Cliente (opcional):
+                <div style={{ display: "flex", gap: 8 }}>
+                  <input
+                    ref={clienteInputRef}
+                    type="text"
+                    value={clienteSearch}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setClienteSearch(v);
+                      setClienteSugActiva(-1);
+
+                      if (clienteSeleccionado) setClienteSeleccionado(null);
+
+                      buscarClientesVenta(v);
+                    }}
+                    onKeyDown={onKeyDownBusquedaCliente}
+                    onFocus={() => {
+                      if (clienteSug.length) setShowClienteSug(true);
+                    }}
+                    onBlur={() => {
+                      setTimeout(() => setShowClienteSug(false), 150);
+                    }}
+                    placeholder="Buscar cliente por nombre, teléfono o email..."
+                    autoComplete="off"
+                    style={inputStyle}
+                  />
+
+                  <button
+                    type="button"
+                    onClick={limpiarClienteVenta}
+                    style={btn("ghost")}
+                    title="Quitar cliente"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </label>
+
+              {clienteSeleccionado && (
+                <div style={{ marginTop: 6, fontSize: 12, color: theme.muted }}>
+                  Cliente seleccionado: <b>{clienteSeleccionado.nombre}</b> · Categoría:{" "}
+                  <b>
+                    {normalizarCategoriaVenta(
+                      clienteSeleccionado.categoria_cliente || "publico"
+                    )}
+                  </b>
+                </div>
+              )}
+
+              {showClienteSug && (
+                <div
+                  style={{
+                    position: "absolute",
+                    top: "100%",
+                    left: 0,
+                    right: 0,
+                    marginTop: 6,
+                    background: "#fff",
+                    border: `1px solid ${theme.border}`,
+                    borderRadius: 10,
+                    boxShadow: "0 8px 18px rgba(0,0,0,0.08)",
+                    maxHeight: 240,
+                    overflowY: "auto",
+                    zIndex: 60,
+                  }}
+                >
+                  {clienteLoading ? (
+                    <div style={{ padding: 10, fontSize: 13 }}>Buscando...</div>
+                  ) : clienteSug.length === 0 ? (
+                    <div style={{ padding: 10, fontSize: 13, color: theme.muted }}>
+                      Sin resultados
+                    </div>
+                  ) : (
+                    clienteSug.map((c, idx) => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onMouseEnter={() => setClienteSugActiva(idx)}
+                        onClick={() => seleccionarClienteVenta(c)}
+                        style={{
+                          width: "100%",
+                          textAlign: "left",
+                          padding: "10px 12px",
+                          border: "none",
+                          borderBottom: "1px solid #edf2ef",
+                          background: idx === clienteSugActiva ? "#e8f7ee" : "#fff",
+                          cursor: "pointer",
+                        }}
+                      >
+                        <div style={{ fontWeight: 700 }}>{c.nombre}</div>
+                        <div style={{ fontSize: 12, color: theme.muted }}>
+                          {c.telefono || "-"} · {c.email || "-"} · cat:{" "}
+                          {normalizarCategoriaVenta(c.categoria_cliente || "publico")}
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+
+            <label style={labelStyle}>
+              Categoría:
+              <select
+                name="categoria"
+                value={form.categoria}
+                onChange={onChange}
+                style={inputStyle}
+                disabled={!!clienteSeleccionado}
+              >
+                <option value="publico">Público</option>
+                <option value="mayoreo">Mayoreo</option>
+                <option value="vivero">Vivero</option>
+                <option value="especial">Precio especial</option>
+              </select>
+
+              {clienteSeleccionado && (
+                <div style={{ marginTop: 6, fontSize: 12, color: theme.muted }}>
+                  La categoría se tomó del cliente seleccionado.
+                </div>
+              )}
+            </label>
+          </div>
+
+          {/* COLUMNA 2 */}
+          <div
+            style={{
+              display: "grid",
+              gap: 12,
+              borderRight: isMobile ? "none" : `1px solid ${theme.border}`,
+              paddingRight: isMobile ? 0 : 14,
+            }}
+          >
+            <div
+              style={{
+                ...cardStyle,
+                padding: 12,
+                boxShadow: "none",
+                marginBottom: 0,
+              }}
+            >
+              <div
+                style={{
+                  fontWeight: 900,
+                  marginBottom: 8,
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setCarritoAbierto((v) => !v)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    background: "transparent",
+                    border: "none",
+                    cursor: "pointer",
+                    padding: 0,
+                    fontSize: 16,
+                    fontWeight: 900,
+                    color: theme.text,
+                  }}
+                >
+                  <span>{carritoAbierto ? "▼" : "▶"}</span>
+                  <span>🛒 Carrito</span>
+                  <span style={{ fontSize: 13, color: theme.muted }}>
+                    ({carrito.length})
+                  </span>
+                </button>
+
+                <span style={{ color: theme.green2 }}>{money(totalCarrito)}</span>
+              </div>
+
+              <div style={{ position: "relative", marginBottom: 10 }}>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <input
+                    ref={cantidadAgregarRef}
+                    type="number"
+                    min="1"
+                    value={cantidadAgregar}
+                    onChange={(e) => setCantidadAgregar(e.target.value)}
+                    placeholder="1"
+                    style={{
+                      width: 90,
+                      padding: "10px 12px",
+                      borderRadius: 10,
+                      border: "1px solid #cfd8d3",
+                      outline: "none",
+                    }}
+                  />
+
+                  <input
+                    ref={busquedaProductoRef}
+                    type="text"
+                    value={busqueda}
+                    onChange={onChangeBusqueda}
+                    onKeyDown={onKeyDownBusquedaProducto}
+                    onFocus={() => {
+                      if (sugerencias.length) setShowSugerencias(true);
+                    }}
+                    onBlur={() => {
+                      setTimeout(() => setShowSugerencias(false), 150);
+                    }}
+                    placeholder="Escribe para buscar (ej. C, CH, CHI...)"
+                    autoComplete="off"
+                    style={{
+                      flex: 1,
+                      padding: "10px 12px",
+                      borderRadius: 10,
+                      border: "1px solid #cfd8d3",
+                      outline: "none",
+                    }}
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() => buscarSugerenciasProductos(busqueda)}
+                    style={{
+                      padding: "10px 14px",
+                      borderRadius: 10,
+                      border: "1px solid #0ea75a",
+                      background: "#17c964",
+                      color: "#fff",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Buscar
+                  </button>
+                </div>
+
+                {showSugerencias && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: "100%",
+                      left: 0,
+                      right: 0,
+                      marginTop: 6,
+                      background: "#fff",
+                      border: "1px solid #d7e3de",
+                      borderRadius: 10,
+                      boxShadow: "0 8px 18px rgba(0,0,0,0.08)",
+                      maxHeight: 260,
+                      overflowY: "auto",
+                      zIndex: 50,
+                    }}
+                  >
+                    {loadingSugerencias ? (
+                      <div style={{ padding: 10, fontSize: 13 }}>Buscando...</div>
+                    ) : sugerencias.length === 0 ? (
+                      <div style={{ padding: 10, fontSize: 13, color: "#5b6f67" }}>
+                        Sin resultados
+                      </div>
+                    ) : (
+                      sugerencias.map((p, idx) => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onMouseEnter={() => setSugerenciaActiva(idx)}
+                          onClick={() => seleccionarSugerencia(p)}
+                          style={{
+                            width: "100%",
+                            textAlign: "left",
+                            padding: "10px 12px",
+                            border: "none",
+                            borderBottom: "1px solid #edf2ef",
+                            background: idx === sugerenciaActiva ? "#e8f7ee" : "#fff",
+                            cursor: "pointer",
+                          }}
+                        >
+                          <div
+                            style={{
+                              display: "flex",
+                              gap: 10,
+                              alignItems: "center",
+                            }}
+                          >
+                            {p.imagen_url ? (
+                              <img
+                                src={`${API_URL.replace("/api", "")}${p.imagen_url}`}
+                                alt={p.nombre}
+                                style={{
+                                  width: 44,
+                                  height: 44,
+                                  borderRadius: 10,
+                                  objectFit: "cover",
+                                  border: "1px solid #d7e3de",
+                                  flex: "0 0 auto",
+                                }}
+                              />
+                            ) : (
+                              <div
+                                style={{
+                                  width: 44,
+                                  height: 44,
+                                  borderRadius: 10,
+                                  border: "1px solid #d7e3de",
+                                  background: "#f7fbf9",
+                                  display: "grid",
+                                  placeItems: "center",
+                                  color: "#8aa39a",
+                                  fontSize: 10,
+                                  flex: "0 0 auto",
+                                }}
+                              >
+                                Sin foto
+                              </div>
+                            )}
+
+                            <div style={{ minWidth: 0 }}>
+                              <div
+                                style={{
+                                  fontWeight: 800,
+                                  fontSize: 13,
+                                  whiteSpace: "nowrap",
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                }}
+                              >
+                                {p.nombre}
+                              </div>
+                              <div style={{ fontSize: 12, color: "#5b6f67" }}>
+                                {p.codigo_cat || p.codigo} •{" "}
+                                {money(p.precio_publico ?? p.precio ?? 0)}
+                              </div>
+                            </div>
+                          </div>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div style={{ display: "grid", gap: 6, marginBottom: 10 }}>
+                <label style={{ fontSize: 13, fontWeight: 600 }}>
+                  Escanear código de barras
+                </label>
+
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <input
+                    type="text"
+                    value={codigoScan}
+                    onChange={(e) => setCodigoScan(e.target.value)}
+                    onKeyDown={onScanKeyDown}
+                    placeholder="Escanea o escribe código (ej. SIN-00001)"
+                    autoComplete="off"
+                    style={{
+                      flex: 1,
+                      minWidth: 220,
+                      padding: "10px 12px",
+                      borderRadius: 10,
+                      border: "1px solid #cfd8d3",
+                      outline: "none",
+                    }}
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() => buscarProductoPorCodigo(codigoScan)}
+                    disabled={scanLoading}
+                    style={{
+                      padding: "10px 14px",
+                      borderRadius: 10,
+                      border: "1px solid #0ea75a",
+                      background: scanLoading ? "#b7e7cb" : "#17c964",
+                      color: "#fff",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {scanLoading ? "Buscando..." : "Agregar"}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={abrirCamaraEscaner}
+                    style={{
+                      padding: "10px 14px",
+                      borderRadius: 10,
+                      border: "1px solid #0b6bff",
+                      background: "#1f7aff",
+                      color: "#fff",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                    }}
+                    title="Usar cámara del teléfono o tableta"
+                  >
+                    📷 Escanear con cámara
+                  </button>
+                </div>
+
+                <small style={{ color: "#5b6f67" }}>
+                  Funciona con lector USB (como teclado) o con celular si escribe el código aquí.
+                </small>
+              </div>
+
+              {carritoAbierto &&
+                (carrito.length > 0 ? (
+                  <div
+                    style={{
+                      marginTop: 10,
+                      display: "grid",
+                      gap: 8,
+                      maxHeight: 300,
+                      overflowY: "auto",
+                      borderTop: `1px solid ${theme.border}`,
+                      paddingTop: 10,
+                      paddingRight: 4,
+                    }}
+                  >
+                    {[...carrito].reverse().map((it) => {
+                      const itemKey = it.producto_id ?? it._rowId;
+                      const subtotal =
+                        Number(it.cantidad || 0) * Number(it.precio_unitario || 0);
+
+                      return (
+                        <div
+                          key={itemKey}
+                          style={{
+                            border: `1px solid ${theme.border}`,
+                            borderRadius: 12,
+                            padding: 10,
+                            background: "#fff",
+                          }}
+                        >
+                          <div
+                            style={{
+                              display: "grid",
+                              gridTemplateColumns: isMobile
+                                ? "minmax(0, 1fr)"
+                                : "minmax(180px, 1.7fr) 80px 105px 105px 58px",
+                              gap: 8,
+                              alignItems: "center",
+                            }}
+                          >
+                            <div style={{ minWidth: 0, overflow: "hidden" }}>
+                              <div
+                                style={{
+                                  fontWeight: 700,
+                                  fontSize: 13,
+                                  whiteSpace: "normal",
+                                  wordBreak: "keep-all",
+                                  overflowWrap: "break-word",
+                                  lineHeight: 1.15,
+                                }}
+                              >
+                                {it.codigo ? `${it.codigo} — ` : ""}
+                                {it.nombre}
+                              </div>
+                            </div>
+
+                            <div>
+                              <div style={{ fontSize: 11, color: theme.muted, marginBottom: 4 }}>
+                                Cant.
+                              </div>
+                              <input
+                                type="number"
+                                min="1"
+                                value={it.cantidad}
+                                onChange={(e) => cambiarCantidad(itemKey, e.target.value)}
+                                style={{
+                                  ...inputStyle,
+                                  marginTop: 0,
+                                  padding: "6px 8px",
+                                  fontSize: 13,
+                                  height: 34,
+                                  width: "100%",
+                                }}
+                              />
+                            </div>
+
+                            <div>
+                              <div style={{ fontSize: 11, color: theme.muted, marginBottom: 4 }}>
+                                Precio
+                              </div>
+                              <input
+                                type="number"
+                                value={it.precio_unitario}
+                                onChange={(e) =>
+                                  setCarrito((prev) =>
+                                    prev.map((x) =>
+                                      (x.producto_id ?? x._rowId) === itemKey
+                                        ? {
+                                            ...x,
+                                            precio_unitario: Number(e.target.value || 0),
+                                          }
+                                        : x
+                                    )
+                                  )
+                                }
+                                style={{
+                                  ...inputStyle,
+                                  marginTop: 0,
+                                  padding: "6px 8px",
+                                  fontSize: 13,
+                                  height: 34,
+                                  width: "100%",
+                                }}
+                              />
+                            </div>
+
+                            <div>
+                              <div style={{ fontSize: 11, color: theme.muted, marginBottom: 4 }}>
+                                Importe
+                              </div>
+                              <div
+                                style={{
+                                  fontWeight: 800,
+                                  fontSize: 13,
+                                  color: theme.green2,
+                                }}
+                              >
+                                {money(subtotal)}
+                              </div>
+                            </div>
+
+                            <div
+                              style={{
+                                display: "flex",
+                                justifyContent: isMobile ? "flex-start" : "flex-end",
+                              }}
+                            >
+                              <button
+                                type="button"
+                                onClick={() => quitarDelCarrito(itemKey)}
+                                style={{
+                                  ...btn("danger"),
+                                  minWidth: 46,
+                                  height: 34,
+                                  padding: "6px 8px",
+                                  fontSize: 16,
+                                  lineHeight: 1,
+                                }}
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div style={{ marginTop: 10, color: theme.muted, fontSize: 13 }}>
+                    Carrito vacío.
+                  </div>
+                ))}
+            </div>
+          </div>
+
+          {/* COLUMNA 3 */}
+          <div style={{ display: "grid", gap: 10 }}>
+            <label style={labelStyle}>
+              Tipo de pago:
+              <select
+                name="tipoPago"
+                value={form.tipoPago}
+                onChange={onChangeTipoPago}
+                style={inputStyle}
+              >
+                <option value="efectivo">Efectivo</option>
+                <option value="tarjeta_credito">Tarjeta (Crédito)</option>
+                <option value="tarjeta_debito">Tarjeta (Débito)</option>
+                <option value="transferencia">Transferencia</option>
+                <option value="cheque">Cheque</option>
+                <option value="mixto">Mixto</option>
+                <option value="a_cuenta">A cuenta</option>
+              </select>
+            </label>
+
+            {form.tipoPago === "a_cuenta" && (
+              <div style={{ display: "grid", gap: 10 }}>
+                <label style={labelStyle}>
+                  Fecha de vencimiento:
+                  <input
+                    type="date"
+                    name="fecha_vencimiento"
+                    value={form.fecha_vencimiento}
+                    onChange={onChange}
+                    style={inputStyle}
+                  />
+                </label>
+
+                <label style={labelStyle}>
+                  Observaciones de crédito:
+                  <input
+                    type="text"
+                    name="observaciones_credito"
+                    value={form.observaciones_credito}
+                    onChange={onChange}
+                    placeholder="Notas del crédito"
+                    style={inputStyle}
+                  />
+                </label>
+              </div>
             )}
-          </tbody>
-        </table>
-      </div>
-    )}
-  </div>
-</div>
+
+            {form.tipoPago === "a_cuenta" && (
+              <div
+                style={{
+                  marginTop: 4,
+                  padding: 12,
+                  border: "1px solid #d9e7d9",
+                  borderRadius: 10,
+                  background: "#f8fff8",
+                  display: "grid",
+                  gap: 8,
+                }}
+              >
+                <div>
+                  <strong>Cliente:</strong>{" "}
+                  {clienteSeleccionado?.nombre || "Sin cliente seleccionado"}
+                </div>
+                <div>
+                  <strong>Saldo actual:</strong> ${saldoActualCliente.toFixed(2)}
+                </div>
+                <div>
+                  <strong>Deuda máxima:</strong> ${deudaMaximaCliente.toFixed(2)}
+                </div>
+                <div>
+                  <strong>Crédito disponible:</strong> ${disponibleCreditoCliente.toFixed(2)}
+                </div>
+                <div>
+                  <strong>Notas:</strong> {notaAutomaticaCliente}
+                </div>
+              </div>
+            )}
+
+            <label style={labelStyle}>
+              Efectivo:
+              <input
+                name="efectivo"
+                value={form.efectivo}
+                onChange={onChangeMixtoEfectivo}
+                type="number"
+                step="0.01"
+                style={inputStyle}
+                disabled={
+                  isTarjeta ||
+                  form.tipoPago === "transferencia" ||
+                  form.tipoPago === "cheque"
+                }
+              />
+            </label>
+
+            <label style={labelStyle}>
+              Tarjeta:
+              <input
+                name="tarjeta"
+                value={form.tarjeta}
+                onChange={onChangeMixtoTarjeta}
+                type="number"
+                step="0.01"
+                style={inputStyle}
+                disabled={
+                  form.tipoPago === "efectivo" ||
+                  form.tipoPago === "transferencia" ||
+                  form.tipoPago === "cheque"
+                }
+              />
+            </label>
+
+            {(form.tipoPago === "efectivo" || form.tipoPago === "mixto") && (
+              <>
+                <label style={labelStyle}>
+                  Recibido:
+                  <input
+                    name="recibido"
+                    value={form.recibido}
+                    onChange={onChange}
+                    type="number"
+                    step="0.01"
+                    style={inputStyle}
+                    placeholder="Ej: 500"
+                  />
+                </label>
+
+                <div style={{ marginTop: 4, color: theme.muted, fontSize: 13 }}>
+                  Cambio: <b>{money(cambioNum)}</b>
+                </div>
+              </>
+            )}
+
+            {form.tipoPago === "efectivo" && clienteSeleccionado && cambioNum > 0 && (
+              <label
+                style={{
+                  display: "flex",
+                  gap: 8,
+                  alignItems: "center",
+                  marginTop: 4,
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={guardarSaldoFavor}
+                  onChange={(e) => setGuardarSaldoFavor(e.target.checked)}
+                />
+                Guardar cambio como saldo a favor
+              </label>
+            )}
+
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 6,
+                marginTop: 4,
+              }}
+            >
+              <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <input
+                  type="checkbox"
+                  checked={form.esCotizacion}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setForm((f) => ({ ...f, esCotizacion: checked }));
+                    if (checked) setEsCotizacionPedido(false);
+                  }}
+                />
+                Es cotización (no es venta)
+              </label>
+
+              <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <input
+                  type="checkbox"
+                  checked={!!esCotizacionPedido}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setEsCotizacionPedido(checked);
+                    if (checked) {
+                      setForm((f) => ({ ...f, esCotizacion: false }));
+                    }
+                  }}
+                />
+                Cotización de pedido
+              </label>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              style={{
+                ...btn("primary"),
+                width: "100%",
+                marginTop: 8,
+                opacity: loading ? 0.7 : 1,
+              }}
+            >
+              {loading
+                ? editandoVentaId
+                  ? "Actualizando..."
+                  : "Guardando..."
+                : editandoVentaId
+                ? "Actualizar venta"
+                : "Guardar venta"}
+            </button>
+
+            {editandoVentaId && (
+              <button
+                type="button"
+                onClick={cancelarEdicionVenta}
+                style={{
+                  ...btn("ghost"),
+                  width: "100%",
+                }}
+              >
+                Cancelar edición
+              </button>
+            )}
+
+            {msg.text && <div style={badge(msg.type)}>{msg.text}</div>}
+          </div>
+        </div>
+      </form>
+    </div>
   </div>
 )}
 {view === "reporte" && (

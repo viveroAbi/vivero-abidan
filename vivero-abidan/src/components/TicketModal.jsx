@@ -452,6 +452,22 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
     padding: "20px 0",
   };
 
+  const qtyCellStyle = {
+    textAlign: "right",
+    fontWeight: "bold",
+    whiteSpace: "nowrap",
+    fontVariantNumeric: "tabular-nums",
+    fontFeatureSettings: '"tnum"',
+    paddingRight: 2,
+  };
+
+  const productCellStyle = {
+    wordBreak: "normal",
+    overflowWrap: "normal",
+    whiteSpace: "normal",
+    lineHeight: 1.1,
+  };
+
   if (data?.tipo === "corte") {
     return (
       <div className="ticket-overlay" style={overlayStyle}>
@@ -546,11 +562,11 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
                 <div
                   style={{
                     display: "grid",
-                    gridTemplateColumns: "26px 1fr",
+                    gridTemplateColumns: "30px 1fr",
                     gap: 6,
                   }}
                 >
-                  <b>CANT</b>
+                  <b style={{ textAlign: "right" }}>CANT</b>
                   <b>PRODUCTO / PRECIO</b>
                 </div>
 
@@ -569,14 +585,12 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
                         <div
                           style={{
                             display: "grid",
-                            gridTemplateColumns: "26px 1fr",
+                            gridTemplateColumns: "30px 1fr",
                             gap: 6,
                             alignItems: "start",
                           }}
                         >
-                          <div>
-                            <b>{cant}</b>
-                          </div>
+                          <div style={qtyCellStyle}>{cant}</div>
 
                           <div
                             style={{
@@ -586,7 +600,7 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
                               width: "100%",
                             }}
                           >
-                            <span style={{ flex: 1 }}>{nombre}</span>
+                            <span style={{ ...productCellStyle, flex: 1 }}>{nombre}</span>
                             <span
                               style={{
                                 fontWeight: "bold",
@@ -716,12 +730,12 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
               <div
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "24px 1fr 56px 56px",
-                  gap: 4,
+                  gridTemplateColumns: "32px 1fr 52px 58px",
+                  gap: 3,
                   alignItems: "start",
                 }}
               >
-                <b>CANT</b>
+                <b style={{ textAlign: "right" }}>CANT</b>
                 <b>PRODUCTO</b>
                 <b style={{ textAlign: "right" }}>PRECIO</b>
                 <b style={{ textAlign: "right" }}>IMPORTE</b>
@@ -741,26 +755,36 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
                   ).toUpperCase();
 
                   return (
-                    <div key={idx} style={{ marginTop: 7 }}>
+                    <div key={idx} style={{ marginTop: 6 }}>
                       <div
                         style={{
                           display: "grid",
-                          gridTemplateColumns: "24px 1fr 56px 56px",
-                          gap: 4,
+                          gridTemplateColumns: "32px 1fr 52px 58px",
+                          gap: 3,
                           alignItems: "start",
                         }}
                       >
-                        <div>
-                          <b>{cant}</b>
-                        </div>
+                        <div style={qtyCellStyle}>{cant}</div>
 
-                        <div style={{ wordBreak: "break-word" }}>{nombre}</div>
+                        <div style={productCellStyle}>{nombre}</div>
 
-                        <div style={{ textAlign: "right", fontWeight: "bold" }}>
+                        <div
+                          style={{
+                            textAlign: "right",
+                            fontWeight: "bold",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
                           {moneyCompact(pu)}
                         </div>
 
-                        <div style={{ textAlign: "right", fontWeight: "bold" }}>
+                        <div
+                          style={{
+                            textAlign: "right",
+                            fontWeight: "bold",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
                           {moneyCompact(imp)}
                         </div>
                       </div>
