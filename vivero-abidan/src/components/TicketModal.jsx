@@ -501,8 +501,8 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
           e.currentTarget.style.display = "none";
         }}
         style={{
-          width: "76mm",
-          maxWidth: "76mm",
+          width: "74mm",
+          maxWidth: "74mm",
           height: "auto",
           objectFit: "contain",
           objectPosition: "center center",
@@ -776,18 +776,20 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
 
             <div style={{ fontSize: 12 }}>
               <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "32px 1fr 52px 58px",
-                  gap: 3,
-                  alignItems: "start",
-                }}
-              >
-                <b style={{ textAlign: "right" }}>CANT</b>
-                <b>PRODUCTO</b>
-                <b style={{ textAlign: "right" }}>PRECIO</b>
-                <b style={{ textAlign: "right" }}>IMPORTE</b>
-              </div>
+  style={{
+    display: "grid",
+    gridTemplateColumns: "38px 1fr 52px 58px",
+    gap: 3,
+    alignItems: "center",
+    fontSize: 11,
+    lineHeight: 1,
+  }}
+>
+  <b style={{ textAlign: "right", whiteSpace: "nowrap" }}>CANT</b>
+  <b style={{ whiteSpace: "nowrap" }}>PRODUCTO</b>
+  <b style={{ textAlign: "right", whiteSpace: "nowrap" }}>PRECIO</b>
+  <b style={{ textAlign: "right", whiteSpace: "nowrap" }}>IMPORTE</b>
+</div>
 
               {items.length === 0 ? (
                 <div style={{ marginTop: 8 }}>(SIN PRODUCTOS EN EL TICKET)</div>
