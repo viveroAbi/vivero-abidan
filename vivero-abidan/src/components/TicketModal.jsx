@@ -501,8 +501,8 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
           e.currentTarget.style.display = "none";
         }}
         style={{
-          width: "74mm",
-          maxWidth: "74mm",
+          width: "72mm",
+          maxWidth: "72mm",
           height: "auto",
           objectFit: "contain",
           objectPosition: "center center",
