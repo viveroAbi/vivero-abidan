@@ -482,52 +482,62 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
   };
 
   const HeaderEmpresa = ({ subtitulo }) => (
-    <div style={{ textAlign: "center", marginBottom: 6 }}>
+  <div style={{ textAlign: "center", marginBottom: 4 }}>
+    <div
+      style={{
+        width: "100%",
+        height: "18mm",
+        overflow: "hidden",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        margin: "0 auto 2px auto",
+      }}
+    >
       <img
         src={logoSrc}
         alt="Logo Vivero Abidan"
-        crossOrigin="anonymous"
         onError={(e) => {
           e.currentTarget.style.display = "none";
         }}
         style={{
-          width: "100%",
-          maxWidth: "68mm",
-          maxHeight: "28mm",
+          width: "76mm",
+          maxWidth: "76mm",
+          height: "auto",
           objectFit: "contain",
+          objectPosition: "center center",
           display: "block",
-          margin: "0 auto 6px auto",
           imageRendering: "auto",
-          filter: "grayscale(100%) contrast(220%)",
         }}
       />
+    </div>
 
+    <div
+      style={{
+        fontSize: 11,
+        lineHeight: 1.15,
+        fontWeight: 700,
+      }}
+    >
+      CARRETERA NACIONAL KM 253
+      <br />
+      COL. LOS RODRIGUEZ, SANTIAGO, N.L.
+    </div>
+
+    {subtitulo ? (
       <div
         style={{
+          marginTop: 3,
           fontSize: 11,
-          lineHeight: 1.15,
           fontWeight: 700,
+          letterSpacing: "0.4px",
         }}
       >
-        CARRETERA NACIONAL KM 253
-        <br />
-        COL. LOS RODRIGUEZ, SANTIAGO, N.L.
+        {subtitulo}
       </div>
-
-      {subtitulo ? (
-        <div
-          style={{
-            marginTop: 4,
-            fontSize: 11,
-            fontWeight: 700,
-            letterSpacing: "0.4px",
-          }}
-        >
-          {subtitulo}
-        </div>
-      ) : null}
-    </div>
-  );
+    ) : null}
+  </div>
+);
 
   if (data?.tipo === "corte") {
     return (
