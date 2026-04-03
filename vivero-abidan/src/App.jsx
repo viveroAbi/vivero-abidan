@@ -1340,69 +1340,93 @@ async function iniciarCamaraYDeteccion() {
   try {
     setMessage("", "");
 
-    // 1) Obtener ticket/detalle completo (ya trae venta + items)
     const data = await apiFetch(`/ventas/${v.id}/ticket`, { cache: "no-store" });
     const ventaData = data?.data?.venta || {};
     const items = Array.isArray(data?.data?.items) ? data.data.items : [];
 
-    // 2) Cargar modo edición
     setEditandoVentaId(v.id);
 
-    // 3) Cargar flags (venta / cotización / pedido)
     const esCot = !!ventaData.es_cotizacion;
     const esPedido = !!ventaData.es_cotizacion_pedido;
 
     setEsCotizacionPedido(esPedido);
 
-    // 4) Cargar form
     setForm((f) => ({
-  ...f,
-  categoria: normalizarCategoriaVenta(ventaData.categoria || "publico"),
-  tipoPago: ventaData.tipo_pago || "efectivo",
-  efectivo: String(ventaData.efectivo ?? ""),
-  tarjeta: String(ventaData.tarjeta ?? ""),
-  transferencia: String(ventaData.transferencia ?? ""),
-  cheque: String(ventaData.cheque ?? ""),
-  recibido: String(ventaData.recibido ?? ""),
-  cambio: String(ventaData.cambio ?? ""),
-  esCotizacion: esCot,
-  esCotizacionPedido: esPedido,
-  fecha_vencimiento: ventaData.fecha_vencimiento || "",
-  observaciones_credito: ventaData.observaciones_credito || "",
-}));
-
-    // 5) Cargar carrito desde items (MAPEO CORRECTO)
-    const itemsEdit = items.map((it) => ({
-      producto_id: Number(it.producto_id || it.id || 0),
-      id: Number(it.producto_id || it.id || 0),
-      codigo: it.codigo || "",
-      nombre: it.nombre || it.producto_nombre || "",
-      producto_nombre: it.producto_nombre || it.nombre || "",
-      precio_unitario: Number(it.precio_unitario ?? it.precio ?? 0),
-      precio: Number(it.precio_unitario ?? it.precio ?? 0),
-      cantidad: Number(it.cantidad || 1),
-      subtotal: Number(it.subtotal ?? it.importe ?? 0),
+      ...f,
+      categoria: normalizarCategoriaVenta(ventaData.categoria || "publico"),
+      tipoPago: ventaData.tipo_pago || "efectivo",
+      efectivo: String(ventaData.efectivo ?? ""),
+      tarjeta: String(ventaData.tarjeta ?? ""),
+      transferencia: String(ventaData.transferencia ?? ""),
+      cheque: String(ventaData.cheque ?? ""),
+      recibido: String(ventaData.recibido ?? ""),
+      cambio: String(ventaData.cambio ?? ""),
+      esCotizacion: esCot,
+      esCotizacionPedido: esPedido,
+      fecha_vencimiento: ventaData.fecha_vencimiento || "",
+      observaciones_credito: ventaData.observaciones_credito || "",
     }));
 
-  setCarrito(
-  items.map((it, idx) => ({
-    producto_id: it.producto_id != null ? Number(it.producto_id) : null,
-    codigo: it.codigo || "",
-    nombre: it.nombre || it.producto_nombre || "",
+    const clienteId = Number(
+      ventaData.cliente_id ?? v.cliente_id ?? 0
+    );
 
-    precio_publico: Number(it.precio_publico ?? it.precio_unitario ?? it.precio ?? 0),
-    precio_mayoreo: Number(it.precio_mayoreo ?? it.precio_unitario ?? it.precio ?? 0),
-    precio_vivero: Number(it.precio_vivero ?? it.precio_unitario ?? it.precio ?? 0),
-    precio_especial: Number(it.precio_especial ?? it.precio_unitario ?? it.precio ?? 0),
+    const clienteNombre = String(
+      ventaData.cliente_nombre ??
+      v.cliente_nombre ??
+      ""
+    ).trim();
 
-    precio: Number(it.precio ?? it.precio_unitario ?? 0),
-    precio_unitario: Number(it.precio_unitario ?? it.precio ?? 0),
-    cantidad: Number(it.cantidad || 1),
+    if (clienteId > 0) {
+      try {
+        const cli = await apiFetch(`/clientes/${clienteId}`, { cache: "no-store" });
+        const clienteCompleto = cli?.data || null;
 
-    _rowId: `${it.producto_id ?? "manual"}-${idx}-${Date.now()}`
-  }))
-);
-    // 6) Ir arriba visualmente (opcional)
+        setClienteSeleccionado(clienteCompleto);
+        setClienteSearch(clienteCompleto?.nombre || clienteNombre || "");
+        setShowClienteSug(false);
+        setClienteSug([]);
+      } catch (err) {
+        console.error("No se pudo cargar el cliente al editar:", err);
+
+        setClienteSeleccionado({
+          id: clienteId,
+          nombre: clienteNombre,
+          notas: "",
+          saldo_actual: 0,
+          deuda_maxima: 0,
+          categoria_cliente: normalizarCategoriaVenta(
+            ventaData.categoria || v.categoria || "publico"
+          ),
+        });
+
+        setClienteSearch(clienteNombre || "");
+        setShowClienteSug(false);
+        setClienteSug([]);
+      }
+    } else {
+      setClienteSeleccionado(null);
+      setClienteSearch(clienteNombre || "");
+      setShowClienteSug(false);
+      setClienteSug([]);
+    }
+
+    setCarrito(
+      items.map((it, idx) => ({
+        producto_id: it.producto_id != null ? Number(it.producto_id) : null,
+        codigo: it.codigo || "",
+        nombre: it.nombre || it.producto_nombre || "",
+        precio_publico: Number(it.precio_publico ?? it.precio_unitario ?? it.precio ?? 0),
+        precio_mayoreo: Number(it.precio_mayoreo ?? it.precio_unitario ?? it.precio ?? 0),
+        precio_vivero: Number(it.precio_vivero ?? it.precio_unitario ?? it.precio ?? 0),
+        precio_especial: Number(it.precio_especial ?? it.precio_unitario ?? it.precio ?? 0),
+        precio: Number(it.precio ?? it.precio_unitario ?? 0),
+        precio_unitario: Number(it.precio_unitario ?? it.precio ?? 0),
+        cantidad: Number(it.cantidad || 1),
+        _rowId: `${it.producto_id ?? "manual"}-${idx}-${Date.now()}`
+      }))
+    );
+
     window.scrollTo({ top: 0, behavior: "smooth" });
 
     setMessage(
