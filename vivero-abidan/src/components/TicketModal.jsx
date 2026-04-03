@@ -483,16 +483,20 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
 
   const HeaderEmpresa = ({ subtitulo }) => (
     <div style={{ textAlign: "center", marginBottom: 6 }}>
-      <img
-  src="/logo.png"
+      const logoSrc = "/logo.png";
+
+<img
+  src={logoSrc}
   alt="Logo Vivero Abidan"
   style={{
-    width: "220px",
-    maxWidth: "100%",
-    display: "block",
-    margin: "0 auto 10px",
+    width: "100%",
+    maxWidth: "68mm",
+    maxHeight: "28mm",
     objectFit: "contain",
-    filter: "contrast(1.4) brightness(0.75)",
+    display: "block",
+    margin: "0 auto 6px auto",
+    imageRendering: "auto",
+    filter: "grayscale(100%) contrast(220%)",
   }}
 />
 
