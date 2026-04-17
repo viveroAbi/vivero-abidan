@@ -2235,10 +2235,10 @@ async function onCreateUserSubmit(e) {
       return {
         ...f,
         tipoPago: value,
-        efectivo: "0",
-        tarjeta: "0",
-        transferencia: "0",
-        cheque: "0",
+        efectivo: "",
+        tarjeta: "",
+        transferencia: "",
+        cheque: "",
         recibido: "",
         cambio: "",
       };
@@ -2249,59 +2249,34 @@ async function onCreateUserSubmit(e) {
 }
 function onChangeMixtoEfectivo(e) {
   const value = e.target.value;
-
-  setForm((f) => {
-    if (f.tipoPago !== "mixto") {
-      return { ...f, efectivo: value };
-    }
-
-    if (value === "") {
-      return { ...f, efectivo: "", tarjeta: "" };
-    }
-
-    let efectivo = Number(value);
-    const total = Number(totalFinalUI || 0);
-
-    if (!Number.isFinite(efectivo)) efectivo = 0;
-    if (efectivo < 0) efectivo = 0;
-    if (efectivo > total) efectivo = total;
-
-    const tarjeta = Number((total - efectivo).toFixed(2));
-
-    return {
-      ...f,
-      efectivo: String(efectivo),
-      tarjeta: String(tarjeta),
-    };
-  });
+  setForm((f) => ({
+    ...f,
+    efectivo: value,
+  }));
 }
+
 function onChangeMixtoTarjeta(e) {
   const value = e.target.value;
+  setForm((f) => ({
+    ...f,
+    tarjeta: value,
+  }));
+}
 
-  setForm((f) => {
-    if (f.tipoPago !== "mixto") {
-      return { ...f, tarjeta: value };
-    }
+function onChangeMixtoTransferencia(e) {
+  const value = e.target.value;
+  setForm((f) => ({
+    ...f,
+    transferencia: value,
+  }));
+}
 
-    if (value === "") {
-      return { ...f, tarjeta: "", efectivo: "" };
-    }
-
-    let tarjeta = Number(value);
-    const total = Number(totalFinalUI || 0);
-
-    if (!Number.isFinite(tarjeta)) tarjeta = 0;
-    if (tarjeta < 0) tarjeta = 0;
-    if (tarjeta > total) tarjeta = total;
-
-    const efectivo = Number((total - tarjeta).toFixed(2));
-
-    return {
-      ...f,
-      tarjeta: String(tarjeta),
-      efectivo: String(efectivo),
-    };
-  });
+function onChangeMixtoCheque(e) {
+  const value = e.target.value;
+  setForm((f) => ({
+    ...f,
+    cheque: value,
+  }));
 }
 
   async function onSubmit(e) {
@@ -3553,70 +3528,70 @@ if (view === "movimientos") {
   )}
 
   <label style={labelStyle}>
-    Efectivo:
-    <input
-      name="efectivo"
-      value={form.efectivo}
-      onChange={onChangeMixtoEfectivo}
-      type="number"
-      step="0.01"
-      style={inputStyle}
-      disabled={
-        isTarjeta ||
-        form.tipoPago === "transferencia" ||
-        form.tipoPago === "cheque"
-      }
-    />
-  </label>
+  Efectivo:
+  <input
+    name="efectivo"
+    value={form.efectivo}
+    onChange={form.tipoPago === "mixto" ? onChangeMixtoEfectivo : onChange}
+    type="number"
+    step="0.01"
+    style={inputStyle}
+    disabled={
+      isTarjeta ||
+      form.tipoPago === "transferencia" ||
+      form.tipoPago === "cheque"
+    }
+  />
+</label>
 
+<label style={labelStyle}>
+  Tarjeta:
+  <input
+    name="tarjeta"
+    value={form.tarjeta}
+    onChange={form.tipoPago === "mixto" ? onChangeMixtoTarjeta : onChange}
+    type="number"
+    step="0.01"
+    style={inputStyle}
+    disabled={
+      form.tipoPago === "efectivo" ||
+      form.tipoPago === "transferencia" ||
+      form.tipoPago === "cheque"
+    }
+  />
+</label>
+
+{(form.tipoPago === "transferencia" ||
+  form.tipoPago === "a_cuenta" ||
+  form.tipoPago === "mixto") && (
   <label style={labelStyle}>
-    Tarjeta:
+    Transferencia:
     <input
-      name="tarjeta"
-      value={form.tarjeta}
-      onChange={onChangeMixtoTarjeta}
+      name="transferencia"
+      value={form.transferencia}
+      onChange={form.tipoPago === "mixto" ? onChangeMixtoTransferencia : onChange}
       type="number"
       step="0.01"
       style={inputStyle}
-      disabled={
-        form.tipoPago === "efectivo" ||
-        form.tipoPago === "transferencia" ||
-        form.tipoPago === "cheque"
-      }
     />
   </label>
+)}
 
-  {(form.tipoPago === "transferencia" ||
-    form.tipoPago === "a_cuenta" ||
-    form.tipoPago === "mixto") && (
-    <label style={labelStyle}>
-      Transferencia:
-      <input
-        name="transferencia"
-        value={form.transferencia}
-        onChange={onChange}
-        type="number"
-        step="0.01"
-        style={inputStyle}
-      />
-    </label>
-  )}
-
-  {(form.tipoPago === "cheque" ||
-    form.tipoPago === "a_cuenta" ||
-    form.tipoPago === "mixto") && (
-    <label style={labelStyle}>
-      Cheque:
-      <input
-        name="cheque"
-        value={form.cheque}
-        onChange={onChange}
-        type="number"
-        step="0.01"
-        style={inputStyle}
-      />
-    </label>
-  )}
+{(form.tipoPago === "cheque" ||
+  form.tipoPago === "a_cuenta" ||
+  form.tipoPago === "mixto") && (
+  <label style={labelStyle}>
+    Cheque:
+    <input
+      name="cheque"
+      value={form.cheque}
+      onChange={form.tipoPago === "mixto" ? onChangeMixtoCheque : onChange}
+      type="number"
+      step="0.01"
+      style={inputStyle}
+    />
+  </label>
+)}
 
   {form.tipoPago === "a_cuenta" && (
     <div
