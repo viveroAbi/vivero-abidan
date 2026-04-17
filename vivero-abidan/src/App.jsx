@@ -692,6 +692,13 @@ const notaAutomaticaCliente = useMemo(() => {
     );
   }, [totalFinalUI, totalPagadoMixtoCompleto]);
 
+const sobraMixto = useMemo(() => {
+  return Math.max(
+    Number((Number(totalPagadoMixtoCompleto || 0) - Number(totalFinalUI || 0)).toFixed(2)),
+    0
+  );
+}, [totalPagadoMixtoCompleto, totalFinalUI]);
+
 const cambioNum = useMemo(() => {
   if (form.tipoPago === "efectivo") {
     return Math.max(recibidoNum - totalFinalUI, 0);
@@ -703,7 +710,7 @@ const cambioNum = useMemo(() => {
 }, [form.tipoPago, recibidoNum, totalFinalUI, efectivoNum]);
 
 
-  // ✅ Autocomplete de importes según tipo de pago
+  // ✅ Autocomplete de importes según tipo de pago simple
   useEffect(() => {
   setForm((f) => {
     if (f.tipoPago === "efectivo") {
@@ -711,14 +718,38 @@ const cambioNum = useMemo(() => {
         ...f,
         efectivo: totalFinalUI ? String(totalFinalUI) : "",
         tarjeta: "0",
+        transferencia: "0",
+        cheque: "0",
       };
     }
 
     if (f.tipoPago === "tarjeta_credito" || f.tipoPago === "tarjeta_debito") {
       return {
         ...f,
-        tarjeta: totalFinalUI ? String(totalFinalUI) : "",
         efectivo: "0",
+        tarjeta: totalFinalUI ? String(totalFinalUI) : "",
+        transferencia: "0",
+        cheque: "0",
+      };
+    }
+
+    if (f.tipoPago === "transferencia") {
+      return {
+        ...f,
+        efectivo: "0",
+        tarjeta: "0",
+        transferencia: totalFinalUI ? String(totalFinalUI) : "",
+        cheque: "0",
+      };
+    }
+
+    if (f.tipoPago === "cheque") {
+      return {
+        ...f,
+        efectivo: "0",
+        tarjeta: "0",
+        transferencia: "0",
+        cheque: totalFinalUI ? String(totalFinalUI) : "",
       };
     }
 
@@ -3631,6 +3662,9 @@ if (view === "movimientos") {
       </div>
       <div>
         <strong>Falta:</strong> {money(Math.max(totalFinalUI - totalPagadoMixtoCompleto, 0))}
+      </div>
+      <div>
+        <strong>Sobra:</strong> {money(sobraMixto)}
       </div>
     </div>
   )}
