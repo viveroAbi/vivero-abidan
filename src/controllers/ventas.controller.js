@@ -188,7 +188,6 @@ export const getResumenVentas = async (req, res) => {
       .json({ error: "Error en BD", message: err.sqlMessage || err.message });
   }
 };
-
 // ==========================
 // POST /api/ventas
 // ==========================
@@ -200,6 +199,8 @@ export const crearVenta = async (req, res) => {
     guardarSaldoFavor = false,
     efectivo = 0,
     tarjeta = 0,
+    transferencia = 0,
+    cheque = 0,
     recibido = 0,
     cambio = 0,
     requiere_factura = 0,
@@ -247,6 +248,8 @@ export const crearVenta = async (req, res) => {
   const cambioN = Number(cambio || 0);
   const efectivoN = Number(efectivo || 0);
   const tarjetaN = Number(tarjeta || 0);
+  const transferenciaN = Number(transferencia || 0);
+  const chequeN = Number(cheque || 0);
   const abonoInicialN = Number(abono_inicial || 0);
 
   if (!Number.isFinite(recibidoN) || recibidoN < 0) {
@@ -255,6 +258,22 @@ export const crearVenta = async (req, res) => {
 
   if (!Number.isFinite(cambioN) || cambioN < 0) {
     return res.status(400).json({ error: "Cambio inválido" });
+  }
+
+  if (!Number.isFinite(efectivoN) || efectivoN < 0) {
+    return res.status(400).json({ error: "Efectivo inválido" });
+  }
+
+  if (!Number.isFinite(tarjetaN) || tarjetaN < 0) {
+    return res.status(400).json({ error: "Tarjeta inválida" });
+  }
+
+  if (!Number.isFinite(transferenciaN) || transferenciaN < 0) {
+    return res.status(400).json({ error: "Transferencia inválida" });
+  }
+
+  if (!Number.isFinite(chequeN) || chequeN < 0) {
+    return res.status(400).json({ error: "Cheque inválido" });
   }
 
   if (!Number.isFinite(abonoInicialN) || abonoInicialN < 0) {
@@ -285,6 +304,8 @@ export const crearVenta = async (req, res) => {
         total_final,
         efectivo,
         tarjeta,
+        transferencia,
+        cheque,
         recibido,
         cambio,
         es_cotizacion,
@@ -296,7 +317,7 @@ export const crearVenta = async (req, res) => {
         fecha_vencimiento,
         observaciones_credito
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         categoria,
         clienteId,
@@ -307,6 +328,8 @@ export const crearVenta = async (req, res) => {
         0,
         efectivoN,
         tarjetaN,
+        transferenciaN,
+        chequeN,
         recibidoN,
         cambioN,
         isCotizacion ? 1 : 0,
@@ -441,9 +464,13 @@ export const crearVenta = async (req, res) => {
     const totalACobrar = Number((totalConIVA - saldoAplicado).toFixed(2));
 
     if (tipoPago === "mixto") {
-      const suma = Number((efectivoN + tarjetaN).toFixed(2));
+      const suma = Number(
+        (efectivoN + tarjetaN + transferenciaN + chequeN).toFixed(2)
+      );
       if (suma !== Number(totalConIVA.toFixed(2))) {
-        throw new Error("El pago mixto no coincide con el total final");
+        throw new Error(
+          "En pago mixto: efectivo + tarjeta + transferencia + cheque debe ser igual al total."
+        );
       }
     }
 
@@ -452,6 +479,20 @@ export const crearVenta = async (req, res) => {
       Number(tarjetaN.toFixed(2)) !== Number(totalConIVA.toFixed(2))
     ) {
       throw new Error("El monto en tarjeta debe ser igual al total final");
+    }
+
+    if (
+      tipoPago === "transferencia" &&
+      Number(transferenciaN.toFixed(2)) !== Number(totalConIVA.toFixed(2))
+    ) {
+      throw new Error("El monto en transferencia debe ser igual al total final");
+    }
+
+    if (
+      tipoPago === "cheque" &&
+      Number(chequeN.toFixed(2)) !== Number(totalConIVA.toFixed(2))
+    ) {
+      throw new Error("El monto en cheque debe ser igual al total final");
     }
 
     if (!esCotizacionFinal && tipoPago === "efectivo") {
@@ -522,7 +563,7 @@ export const crearVenta = async (req, res) => {
 
       await conn.query(
         `UPDATE ventas
-         SET efectivo = ?, tarjeta = 0, recibido = ?, cambio = 0, abono_inicial = ?, saldo_pendiente = ?, fecha_deuda = ?, fecha_vencimiento = ?, observaciones_credito = ?
+         SET efectivo = ?, tarjeta = 0, transferencia = 0, cheque = 0, recibido = ?, cambio = 0, abono_inicial = ?, saldo_pendiente = ?, fecha_deuda = ?, fecha_vencimiento = ?, observaciones_credito = ?
          WHERE id = ?`,
         [
           abonoInicialN,
@@ -574,7 +615,6 @@ export const crearVenta = async (req, res) => {
     conn.release();
   }
 };
-
 // ==========================
 // GET /api/ventas/:id
 // ==========================
@@ -725,7 +765,6 @@ export const getTicketVenta = async (req, res) => {
     return res.status(500).json({ error: "Error en BD", message: err.message });
   }
 };
-
 // ==========================
 // PUT /api/ventas/:id
 // ==========================
@@ -737,6 +776,8 @@ export const editarVenta = async (req, res) => {
     tipoPago,
     efectivo = 0,
     tarjeta = 0,
+    transferencia = 0,
+    cheque = 0,
     recibido = 0,
     cambio = 0,
     requiere_factura = 0,
@@ -784,6 +825,8 @@ export const editarVenta = async (req, res) => {
   const cambioN = Number(cambio || 0);
   const efectivoN = Number(efectivo || 0);
   const tarjetaN = Number(tarjeta || 0);
+  const transferenciaN = Number(transferencia || 0);
+  const chequeN = Number(cheque || 0);
   const abonoInicialN = Number(abono_inicial || 0);
 
   if (!Number.isFinite(recibidoN) || recibidoN < 0) {
@@ -792,6 +835,22 @@ export const editarVenta = async (req, res) => {
 
   if (!Number.isFinite(cambioN) || cambioN < 0) {
     return res.status(400).json({ error: "Cambio inválido" });
+  }
+
+  if (!Number.isFinite(efectivoN) || efectivoN < 0) {
+    return res.status(400).json({ error: "Efectivo inválido" });
+  }
+
+  if (!Number.isFinite(tarjetaN) || tarjetaN < 0) {
+    return res.status(400).json({ error: "Tarjeta inválida" });
+  }
+
+  if (!Number.isFinite(transferenciaN) || transferenciaN < 0) {
+    return res.status(400).json({ error: "Transferencia inválida" });
+  }
+
+  if (!Number.isFinite(chequeN) || chequeN < 0) {
+    return res.status(400).json({ error: "Cheque inválido" });
   }
 
   if (!Number.isFinite(abonoInicialN) || abonoInicialN < 0) {
@@ -875,7 +934,7 @@ export const editarVenta = async (req, res) => {
 
     await conn.query(
       `UPDATE ventas
-       SET categoria = ?, cliente_id = ?, tipo_pago = ?, efectivo = ?, tarjeta = ?, recibido = ?, cambio = ?, es_cotizacion = ?, es_cotizacion_pedido = ?, requiere_factura = ?, abono_inicial = ?, saldo_pendiente = 0, fecha_deuda = ?, fecha_vencimiento = ?, observaciones_credito = ?
+       SET categoria = ?, cliente_id = ?, tipo_pago = ?, efectivo = ?, tarjeta = ?, transferencia = ?, cheque = ?, recibido = ?, cambio = ?, es_cotizacion = ?, es_cotizacion_pedido = ?, requiere_factura = ?, abono_inicial = ?, saldo_pendiente = 0, fecha_deuda = ?, fecha_vencimiento = ?, observaciones_credito = ?
        WHERE id = ?`,
       [
         categoria,
@@ -883,6 +942,8 @@ export const editarVenta = async (req, res) => {
         tipoPago,
         efectivoN,
         tarjetaN,
+        transferenciaN,
+        chequeN,
         recibidoN,
         cambioN,
         isCotizacion ? 1 : 0,
@@ -1032,12 +1093,15 @@ export const editarVenta = async (req, res) => {
     }
 
     if (tipoPago === "mixto") {
-      const suma = Number((efectivoN + tarjetaN).toFixed(2));
+      const suma = Number(
+        (efectivoN + tarjetaN + transferenciaN + chequeN).toFixed(2)
+      );
       const esperado = Number(totalConIVA.toFixed(2));
       if (suma !== esperado) {
         await conn.rollback();
         return res.status(400).json({
-          error: "En pago mixto: efectivo + tarjeta debe ser igual al total final.",
+          error:
+            "En pago mixto: efectivo + tarjeta + transferencia + cheque debe ser igual al total.",
         });
       }
     }
@@ -1049,6 +1113,28 @@ export const editarVenta = async (req, res) => {
         await conn.rollback();
         return res.status(400).json({
           error: "En pago con tarjeta: el monto debe ser igual al total final.",
+        });
+      }
+    }
+
+    if (tipoPago === "transferencia") {
+      const esperado = Number(totalConIVA.toFixed(2));
+      const t = Number(transferenciaN.toFixed(2));
+      if (t !== esperado) {
+        await conn.rollback();
+        return res.status(400).json({
+          error: "En pago con transferencia: el monto debe ser igual al total final.",
+        });
+      }
+    }
+
+    if (tipoPago === "cheque") {
+      const esperado = Number(totalConIVA.toFixed(2));
+      const t = Number(chequeN.toFixed(2));
+      if (t !== esperado) {
+        await conn.rollback();
+        return res.status(400).json({
+          error: "En pago con cheque: el monto debe ser igual al total final.",
         });
       }
     }
@@ -1125,7 +1211,7 @@ export const editarVenta = async (req, res) => {
 
       await conn.query(
         `UPDATE ventas
-         SET efectivo = ?, tarjeta = 0, recibido = ?, cambio = 0, abono_inicial = ?, saldo_pendiente = ?, fecha_deuda = ?, fecha_vencimiento = ?, observaciones_credito = ?
+         SET efectivo = ?, tarjeta = 0, transferencia = 0, cheque = 0, recibido = ?, cambio = 0, abono_inicial = ?, saldo_pendiente = ?, fecha_deuda = ?, fecha_vencimiento = ?, observaciones_credito = ?
          WHERE id = ?`,
         [
           abonoInicialN,
@@ -1182,7 +1268,6 @@ export const editarVenta = async (req, res) => {
     conn.release();
   }
 };
-
 // ==========================
 // POST /api/ventas/borrador
 // ==========================
@@ -1192,8 +1277,8 @@ export const crearBorrador = async (req, res) => {
 
     const [r] = await pool.query(
       `INSERT INTO ventas
-       (categoria, estado, cliente_id, tipo_pago, es_cotizacion, total, descuento, total_final, total_iva, efectivo, tarjeta, recibido, cambio)
-       VALUES (?, 'borrador', ?, 'efectivo', 0, 0, 0, 0, 0, 0, 0, 0, 0)`,
+       (categoria, estado, cliente_id, tipo_pago, es_cotizacion, total, descuento, total_final, total_iva, efectivo, tarjeta, transferencia, cheque, recibido, cambio)
+       VALUES (?, 'borrador', ?, 'efectivo', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)`,
       [categoria, cliente_id]
     );
 
