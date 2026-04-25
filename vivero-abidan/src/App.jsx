@@ -438,6 +438,107 @@ async function eliminarBorrador(id) {
   }
 }
 
+async function cargarBorradorEnFormulario(b) {
+  try {
+    setMessage("", "");
+
+    const id = Number(b?.id || 0);
+    if (!id) {
+      setMessage("error", "Borrador inválido.");
+      return;
+    }
+
+    const data = await apiFetch(`/ventas/${id}/ticket`, { cache: "no-store" });
+
+    const ventaData = data?.data?.venta || {};
+    const items = Array.isArray(data?.data?.items) ? data.data.items : [];
+
+    setBorradorActivo(id);
+    setEditandoVentaId(null);
+
+    const esCot = !!ventaData.es_cotizacion || !!ventaData.esCotizacion;
+    const esPedido =
+      !!ventaData.es_cotizacion_pedido || !!ventaData.esCotizacionPedido;
+
+    setEsCotizacionPedido(esPedido);
+
+    setForm((f) => ({
+      ...f,
+      categoria: normalizarCategoriaVenta(ventaData.categoria || b.categoria || "publico"),
+      tipoPago: ventaData.tipo_pago || ventaData.tipoPago || "efectivo",
+
+      efectivo: String(ventaData.efectivo ?? ""),
+      tarjeta: String(ventaData.tarjeta ?? ""),
+      transferencia: String(ventaData.transferencia ?? ""),
+      cheque: String(ventaData.cheque ?? ""),
+
+      recibido: String(ventaData.recibido ?? ""),
+      cambio: String(ventaData.cambio ?? ""),
+
+      esCotizacion: esCot,
+      esCotizacionPedido: esPedido,
+
+      fecha_vencimiento: ventaData.fecha_vencimiento || "",
+      observaciones_credito: ventaData.observaciones_credito || "",
+    }));
+
+    const clienteId = Number(ventaData.cliente_id || b.cliente_id || 0);
+    const clienteNombre = String(
+      ventaData.cliente_nombre || b.cliente_nombre || ""
+    ).trim();
+
+    if (clienteId > 0) {
+      try {
+        const cli = await apiFetch(`/clientes/${clienteId}`, { cache: "no-store" });
+        const clienteCompleto = cli?.data || null;
+
+        setClienteSeleccionado(clienteCompleto);
+        setClienteSearch(clienteCompleto?.nombre || clienteNombre || "");
+      } catch {
+        setClienteSeleccionado({
+          id: clienteId,
+          nombre: clienteNombre,
+          categoria_cliente: normalizarCategoriaVenta(
+            ventaData.categoria || b.categoria || "publico"
+          ),
+        });
+        setClienteSearch(clienteNombre || "");
+      }
+    } else {
+      setClienteSeleccionado(null);
+      setClienteSearch(clienteNombre || "");
+    }
+
+    setClienteSug([]);
+    setShowClienteSug(false);
+
+    setCarrito(
+      items.map((it, idx) => ({
+        producto_id: it.producto_id != null ? Number(it.producto_id) : null,
+        codigo: it.codigo || "",
+        nombre: it.nombre || it.producto_nombre || "",
+        precio_publico: Number(it.precio_publico ?? it.precio_unitario ?? it.precio ?? 0),
+        precio_mayoreo: Number(it.precio_mayoreo ?? it.precio_unitario ?? it.precio ?? 0),
+        precio_vivero: Number(it.precio_vivero ?? it.precio_unitario ?? it.precio ?? 0),
+        precio_especial: Number(it.precio_especial ?? it.precio_unitario ?? it.precio ?? 0),
+        precio: Number(it.precio ?? it.precio_unitario ?? 0),
+        precio_unitario: Number(it.precio_unitario ?? it.precio ?? 0),
+        cantidad: Number(it.cantidad || 1),
+        _rowId: `${it.producto_id ?? "manual"}-${idx}-${Date.now()}`
+      }))
+    );
+
+    setMostrarBorradores(false);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+
+    setMessage("success", `✅ Borrador #${id} cargado`);
+  } catch (err) {
+    console.error(err);
+    setMessage("error", err?.message || "No se pudo abrir el borrador.");
+  }
+}
+
+
 // ✅ BUSCAR SUGERENCIAS (CORREGIDO)
 async function buscarSugerenciasProductos(texto) {
   const q = String(texto || "").trim();
@@ -2408,6 +2509,7 @@ function onChangeMixtoCheque(e) {
     tipoPago: form.tipoPago,
     cliente_id: clienteSeleccionado?.id || null,
     esCotizacionPedido: !!esCotizacionPedido,
+    es_cotizacion_pedido: !!esCotizacionPedido,
     descuentoPct: 0,
 
     efectivo:
@@ -2433,7 +2535,8 @@ function onChangeMixtoCheque(e) {
     recibido: Number(form.recibido || 0),
     cambio: Number(cambioNum || 0),
 
-    esCotizacion: form.esCotizacion,
+    esCotizacion: !!form.esCotizacion,
+    es_cotizacion: !!form.esCotizacion,
     guardarSaldoFavor,
 
     abono_inicial: form.tipoPago === "a_cuenta" ? abonoInicialNum : 0,
@@ -2446,8 +2549,14 @@ function onChangeMixtoCheque(e) {
   try {
     setLoading(true);
 
-    const endpoint = editandoVentaId ? `/ventas/${editandoVentaId}` : "/ventas";
-    const method = editandoVentaId ? "PUT" : "POST";
+    const endpoint =
+      editandoVentaId
+        ? `/ventas/${editandoVentaId}`
+        : borradorActivo
+        ? `/ventas/${borradorActivo}`
+        : "/ventas";
+
+    const method = editandoVentaId || borradorActivo ? "PUT" : "POST";
 
     const data = await apiFetch(endpoint, {
       method,
@@ -2480,6 +2589,8 @@ function onChangeMixtoCheque(e) {
     setClienteSug([]);
     setShowClienteSug(false);
     setEsCotizacionPedido(false);
+    setBorradorActivo(null);
+    await cargarBorradores();
 
     await recargarTodo();
     if (view === "productos") {
