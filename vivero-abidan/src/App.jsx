@@ -1163,21 +1163,95 @@ async function eliminarProductoUI(id) {
 
 async function nuevaVentaBorrador() {
   try {
-    const data = await apiFetch("/ventas/borrador", {
-      method: "POST",
-      headers: authHeaders(),
-      body: JSON.stringify({ categoria: form.categoria }),
+    setMessage("", "");
+
+    const tieneNotaActual = carrito.length > 0 || clienteSeleccionado?.id || clienteSearch.trim();
+
+    if (tieneNotaActual) {
+      const ok = window.confirm(
+        "La nota actual se guardará en borradores antes de iniciar una nueva. ¿Continuar?"
+      );
+
+      if (!ok) return;
+    }
+
+    let idBorrador = borradorActivo;
+
+    if (!idBorrador) {
+      const data = await apiFetch("/ventas/borrador", {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({
+          categoria: normalizarCategoriaVenta(form.categoria || "publico"),
+          cliente_id: clienteSeleccionado?.id || null,
+        }),
+      });
+
+      idBorrador = data?.data?.id;
+
+      if (!idBorrador) {
+        setMessage("error", "No se pudo crear el borrador.");
+        return;
+      }
+    }
+
+    if (carrito.length > 0) {
+      const itemsBorrador = carrito.map((it) => ({
+        producto_id: it.producto_id,
+        producto_nombre: it.nombre || it.producto_nombre || "",
+        nombre: it.nombre || it.producto_nombre || "",
+        cantidad: Number(it.cantidad || 1),
+        precio_unitario: Number(it.precio_unitario || it.precio || 0),
+      }));
+
+      await apiFetch(`/ventas/${idBorrador}/items`, {
+        method: "PUT",
+        headers: authHeaders(),
+        body: JSON.stringify({
+          items: itemsBorrador,
+        }),
+      });
+    }
+
+    setBorradorActivo(null);
+    setEditandoVentaId(null);
+
+    setCarrito([]);
+    setProductos([]);
+    setSugerencias([]);
+    setSearch("");
+    setBusqueda("");
+    setCantidadAgregar("1");
+
+    setClienteSeleccionado(null);
+    setClienteSearch("");
+    setClienteSug([]);
+    setShowClienteSug(false);
+
+    setForm({
+      categoria: "publico",
+      tipoPago: "efectivo",
+      efectivo: "",
+      tarjeta: "",
+      transferencia: "",
+      cheque: "",
+      recibido: "",
+      cambio: "",
+      esCotizacion: false,
+      esCotizacionPedido: false,
+      fecha_vencimiento: "",
+      observaciones_credito: "",
     });
 
-    const id = data?.data?.id;
-    if (!id) return alert("No se pudo crear borrador");
+    setEsCotizacionPedido(false);
 
-    setBorradorActivo(id);
     await cargarBorradores();
-    alert("Borrador creado: #" + id);
+    await recargarTodo();
+
+    setMessage("success", `✅ Nota guardada en borradores #${idBorrador}. Nueva venta lista.`);
   } catch (e) {
     console.error(e);
-    alert(e?.message || "Error creando borrador");
+    setMessage("error", e?.message || "Error guardando la nota como borrador.");
   }
 }
 
@@ -2503,7 +2577,7 @@ function onChangeMixtoCheque(e) {
     cantidad: Number(it.cantidad),
     precio_unitario: Number(it.precio_unitario || it.precio || 0),
   }));
-
+const esDocumento = !!form.esCotizacion || !!esCotizacionPedido;
   const payload = {
     categoria: normalizarCategoriaVenta(form.categoria),
     tipoPago: form.tipoPago,
@@ -2532,10 +2606,24 @@ function onChangeMixtoCheque(e) {
         ? Number(form.cheque || totalFinalUI || 0)
         : Number(form.cheque || 0),
 
-    recibido: Number(form.recibido || 0),
-    cambio: Number(cambioNum || 0),
+    recibido: esDocumento
+  ? 0
+  : form.tipoPago === "efectivo"
+  ? Number(form.recibido || form.efectivo || totalFinalUI || 0)
+  : Number(form.recibido || 0),
 
-    esCotizacion: !!form.esCotizacion,
+cambio: esDocumento
+  ? 0
+  : form.tipoPago === "efectivo"
+  ? Math.max(
+      Number(form.recibido || form.efectivo || totalFinalUI || 0) -
+        Number(totalFinalUI || 0),
+      0
+    )
+  : Number(cambioNum || 0),
+
+esCotizacion: !!form.esCotizacion,
+esCotizacionPedido: !!esCotizacionPedido,
     es_cotizacion: !!form.esCotizacion,
     guardarSaldoFavor,
 
@@ -2597,10 +2685,9 @@ function onChangeMixtoCheque(e) {
       await buscarProductos("", "");
     }
 
-    if (!payload.esCotizacion && !payload.esCotizacionPedido && data?.data?.id) {
-      await verTicket(data.data.id);
-    }
-
+    if (data?.data?.id) {
+  await verTicket(data.data.id);
+}
     setEditandoVentaId(null);
   } catch (err) {
     console.error(err);
@@ -3870,8 +3957,16 @@ if (view === "movimientos") {
                   ? "Actualizando..."
                   : "Guardando..."
                 : editandoVentaId
-                ? "Actualizar venta"
-                : "Imprimir venta"}
+? esCotizacionPedido
+  ? "Actualizar pedido"
+  : form.esCotizacion
+  ? "Actualizar cotización"
+  : "Actualizar venta"
+: esCotizacionPedido
+? "Guardar pedido"
+: form.esCotizacion
+? "Guardar cotización"
+: "Imprimir venta"}
             </button>
 
             {editandoVentaId && (
