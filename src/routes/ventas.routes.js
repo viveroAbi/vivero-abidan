@@ -12,6 +12,8 @@ import {
   getBorradores,
   actualizarItemsBorrador,
   eliminarBorrador,
+  getCotizaciones,
+getPedidos,
 } from "../controllers/ventas.controller.js";
 
 const router = Router();
@@ -36,5 +38,7 @@ router.get("/:id/ticket", getTicketVenta);
 router.get("/:id", obtenerVenta);
 router.put("/:id", editarVenta);
 router.delete("/:id", eliminarVenta);
+router.get("/cotizaciones/lista", getCotizaciones);
+router.get("/pedidos/lista", getPedidos);
 
 export default router;

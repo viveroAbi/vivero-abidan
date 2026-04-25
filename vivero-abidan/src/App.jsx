@@ -222,6 +222,8 @@ const [nuevaCategoriaGasto, setNuevaCategoriaGasto] = useState("");
   // ===== DATA =====
  // ===== DATA =====
 const [ventas, setVentas] = useState([]);
+const [cotizaciones, setCotizaciones] = useState([]);
+const [pedidos, setPedidos] = useState([]);
 const [resumen, setResumen] = useState(null);
 
 // ✅ AGREGAR ESTOS 2 (movimientos)
@@ -1165,15 +1167,50 @@ async function nuevaVentaBorrador() {
   try {
     setMessage("", "");
 
-    const tieneNotaActual = carrito.length > 0 || clienteSeleccionado?.id || clienteSearch.trim();
+    const hayNotaPendiente =
+      carrito.length > 0 ||
+      !!clienteSeleccionado?.id ||
+      String(clienteSearch || "").trim().length > 0 ||
+      !!form.esCotizacion ||
+      !!esCotizacionPedido ||
+      String(form.observaciones_credito || "").trim().length > 0;
 
-    if (tieneNotaActual) {
-      const ok = window.confirm(
-        "La nota actual se guardará en borradores antes de iniciar una nueva. ¿Continuar?"
-      );
-
-      if (!ok) return;
+    if (!hayNotaPendiente) {
+      setBorradorActivo(null);
+      setEditandoVentaId(null);
+      setCarrito([]);
+      setProductos([]);
+      setSugerencias([]);
+      setSearch("");
+      setBusqueda("");
+      setCantidadAgregar("1");
+      setClienteSeleccionado(null);
+      setClienteSearch("");
+      setClienteSug([]);
+      setShowClienteSug(false);
+      setEsCotizacionPedido(false);
+      setForm({
+        categoria: "publico",
+        tipoPago: "efectivo",
+        efectivo: "",
+        tarjeta: "",
+        transferencia: "",
+        cheque: "",
+        recibido: "",
+        cambio: "",
+        esCotizacion: false,
+        esCotizacionPedido: false,
+        fecha_vencimiento: "",
+        observaciones_credito: "",
+      });
+      setMessage("success", "Nueva venta lista.");
+      return;
     }
+
+    const ok = window.confirm(
+      "La nota actual se guardará en borradores antes de iniciar una nueva venta. ¿Continuar?"
+    );
+    if (!ok) return;
 
     let idBorrador = borradorActivo;
 
@@ -1188,46 +1225,39 @@ async function nuevaVentaBorrador() {
       });
 
       idBorrador = data?.data?.id;
-
       if (!idBorrador) {
         setMessage("error", "No se pudo crear el borrador.");
         return;
       }
     }
 
-    if (carrito.length > 0) {
-      const itemsBorrador = carrito.map((it) => ({
-        producto_id: it.producto_id,
-        producto_nombre: it.nombre || it.producto_nombre || "",
-        nombre: it.nombre || it.producto_nombre || "",
-        cantidad: Number(it.cantidad || 1),
-        precio_unitario: Number(it.precio_unitario || it.precio || 0),
-      }));
+    const itemsBorrador = carrito.map((it) => ({
+      producto_id: it.producto_id || null,
+      producto_nombre: it.nombre || it.producto_nombre || "Producto manual",
+      nombre: it.nombre || it.producto_nombre || "Producto manual",
+      cantidad: Number(it.cantidad || 1),
+      precio_unitario: Number(it.precio_unitario || it.precio || 0),
+    }));
 
-      await apiFetch(`/ventas/${idBorrador}/items`, {
-        method: "PUT",
-        headers: authHeaders(),
-        body: JSON.stringify({
-          items: itemsBorrador,
-        }),
-      });
-    }
+    await apiFetch(`/ventas/${idBorrador}/items`, {
+      method: "PUT",
+      headers: authHeaders(),
+      body: JSON.stringify({ items: itemsBorrador }),
+    });
 
     setBorradorActivo(null);
     setEditandoVentaId(null);
-
     setCarrito([]);
     setProductos([]);
     setSugerencias([]);
     setSearch("");
     setBusqueda("");
     setCantidadAgregar("1");
-
     setClienteSeleccionado(null);
     setClienteSearch("");
     setClienteSug([]);
     setShowClienteSug(false);
-
+    setEsCotizacionPedido(false);
     setForm({
       categoria: "publico",
       tipoPago: "efectivo",
@@ -1243,12 +1273,13 @@ async function nuevaVentaBorrador() {
       observaciones_credito: "",
     });
 
-    setEsCotizacionPedido(false);
-
     await cargarBorradores();
     await recargarTodo();
 
-    setMessage("success", `✅ Nota guardada en borradores #${idBorrador}. Nueva venta lista.`);
+    setMessage(
+      "success",
+      `✅ Nota guardada en borradores #${idBorrador}. Nueva venta lista.`
+    );
   } catch (e) {
     console.error(e);
     setMessage("error", e?.message || "Error guardando la nota como borrador.");
@@ -1677,6 +1708,33 @@ async function iniciarCamaraYDeteccion() {
   async function cargarVentas() {
     const data = await apiFetch("/ventas");
     setVentas(Array.isArray(data.data) ? data.data : []);
+  }
+
+  async function cargarCotizaciones() {
+    try {
+      const data = await apiFetch("/ventas/cotizaciones/lista", { cache: "no-store" });
+      setCotizaciones(Array.isArray(data.data) ? data.data : []);
+    } catch (err) {
+      console.error(err);
+      setCotizaciones([]);
+      setMessage("error", err?.message || "No se pudieron cargar las cotizaciones.");
+    }
+  }
+
+  async function cargarPedidos() {
+    try {
+      const data = await apiFetch("/ventas/pedidos/lista", { cache: "no-store" });
+      setPedidos(Array.isArray(data.data) ? data.data : []);
+    } catch (err) {
+      console.error(err);
+      setPedidos([]);
+      setMessage("error", err?.message || "No se pudieron cargar los pedidos.");
+    }
+  }
+
+  async function cargarDocumentoVentaEnFormulario(v) {
+    await editarVentaDesdeTabla(v);
+    setView("ventas");
   }
 
   async function cargarResumen() {
@@ -2145,6 +2203,17 @@ useEffect(() => {
   }
   // eslint-disable-next-line react-hooks/exhaustive-deps
 }, [view, reporteTipo, reporteFecha]);
+
+useEffect(() => {
+  if (view === "cotizaciones") {
+    cargarCotizaciones();
+  }
+
+  if (view === "pedidos") {
+    cargarPedidos();
+  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [view]);
   
 // Carga inicial al entrar a la vista de movimientos
 useEffect(() => {
@@ -2577,7 +2646,9 @@ function onChangeMixtoCheque(e) {
     cantidad: Number(it.cantidad),
     precio_unitario: Number(it.precio_unitario || it.precio || 0),
   }));
-const esDocumento = !!form.esCotizacion || !!esCotizacionPedido;
+
+  const esDocumento = !!form.esCotizacion || !!esCotizacionPedido;
+
   const payload = {
     categoria: normalizarCategoriaVenta(form.categoria),
     tipoPago: form.tipoPago,
@@ -2607,23 +2678,22 @@ const esDocumento = !!form.esCotizacion || !!esCotizacionPedido;
         : Number(form.cheque || 0),
 
     recibido: esDocumento
-  ? 0
-  : form.tipoPago === "efectivo"
-  ? Number(form.recibido || form.efectivo || totalFinalUI || 0)
-  : Number(form.recibido || 0),
+      ? 0
+      : form.tipoPago === "efectivo"
+      ? Number(form.recibido || form.efectivo || totalFinalUI || 0)
+      : Number(form.recibido || 0),
 
-cambio: esDocumento
-  ? 0
-  : form.tipoPago === "efectivo"
-  ? Math.max(
-      Number(form.recibido || form.efectivo || totalFinalUI || 0) -
-        Number(totalFinalUI || 0),
-      0
-    )
-  : Number(cambioNum || 0),
+    cambio: esDocumento
+      ? 0
+      : form.tipoPago === "efectivo"
+      ? Math.max(
+          Number(form.recibido || form.efectivo || totalFinalUI || 0) -
+            Number(totalFinalUI || 0),
+          0
+        )
+      : Number(cambioNum || 0),
 
-esCotizacion: !!form.esCotizacion,
-esCotizacionPedido: !!esCotizacionPedido,
+    esCotizacion: !!form.esCotizacion,
     es_cotizacion: !!form.esCotizacion,
     guardarSaldoFavor,
 
@@ -2686,8 +2756,9 @@ esCotizacionPedido: !!esCotizacionPedido,
     }
 
     if (data?.data?.id) {
-  await verTicket(data.data.id);
-}
+      await verTicket(data.data.id);
+    }
+
     setEditandoVentaId(null);
   } catch (err) {
     console.error(err);
@@ -3019,6 +3090,22 @@ if (view === "movimientos") {
             style={btn("primary")}
           >
             + Nueva venta
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setView("cotizaciones")}
+            style={btn("ghost")}
+          >
+            📄 Cotizaciones
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setView("pedidos")}
+            style={btn("ghost")}
+          >
+            📦 Pedidos
           </button>
 
           <button
@@ -3953,20 +4040,20 @@ if (view === "movimientos") {
               }}
             >
               {loading
-                ? editandoVentaId
+                ? editandoVentaId || borradorActivo
                   ? "Actualizando..."
                   : "Guardando..."
-                : editandoVentaId
-? esCotizacionPedido
-  ? "Actualizar pedido"
-  : form.esCotizacion
-  ? "Actualizar cotización"
-  : "Actualizar venta"
-: esCotizacionPedido
-? "Guardar pedido"
-: form.esCotizacion
-? "Guardar cotización"
-: "Imprimir venta"}
+                : editandoVentaId || borradorActivo
+                ? esCotizacionPedido
+                  ? "Actualizar pedido"
+                  : form.esCotizacion
+                  ? "Actualizar cotización"
+                  : "Actualizar venta"
+                : esCotizacionPedido
+                ? "Guardar pedido"
+                : form.esCotizacion
+                ? "Guardar cotización"
+                : "Imprimir venta"}
             </button>
 
             {editandoVentaId && (
@@ -4104,6 +4191,161 @@ if (view === "movimientos") {
     </div>
   </div>
 )}
+
+{view === "cotizaciones" && (
+  <div style={{ ...cardStyle, padding: 16 }}>
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: isMobile ? "stretch" : "center",
+        flexDirection: isMobile ? "column" : "row",
+        gap: 10,
+        marginBottom: 12,
+      }}
+    >
+      <div>
+        <h2 style={{ margin: 0 }}>Cotizaciones</h2>
+        <p style={{ margin: "4px 0 0", color: theme.muted }}>
+          Aquí se muestran las notas marcadas como cotización.
+        </p>
+      </div>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <button type="button" onClick={() => setView("ventas")} style={btn("ghost")}>
+          ← Volver a ventas
+        </button>
+        <button type="button" onClick={cargarCotizaciones} style={btn("primary")}>
+          Recargar
+        </button>
+      </div>
+    </div>
+
+    <div style={{ overflowX: "auto", border: `1px solid ${theme.border}`, borderRadius: 12, background: "#fff" }}>
+      <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 980 }}>
+        <thead>
+          <tr>
+            <th style={thStyle}>Folio</th>
+            <th style={thStyle}>Cliente</th>
+            <th style={thStyle}>Categoría</th>
+            <th style={thStyle}>Productos</th>
+            <th style={thStyle}>Total</th>
+            <th style={thStyle}>Pago</th>
+            <th style={thStyle}>Fecha</th>
+            <th style={thStyle}>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {cotizaciones.map((v) => (
+            <tr key={v.id}>
+              <td style={tdStyle}>#{v.id}</td>
+              <td style={tdStyle}>{v.cliente_nombre || "Público general"}</td>
+              <td style={tdStyle}>{normalizarCategoriaVenta(v.categoria || "publico")}</td>
+              <td style={tdStyle}>{v.productos_resumen || Number(v.total_items || v.cantidad_items || 0)}</td>
+              <td style={tdStyle}><b>{money(v.total_final ?? v.total ?? 0)}</b></td>
+              <td style={tdStyle}>{v.tipo_pago || "—"}</td>
+              <td style={tdStyle}>{formatFechaLocal(v.created_at)}</td>
+              <td style={tdStyle}>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <button type="button" onClick={() => verTicket(v.id)} style={btn("primary")}>
+                    🧾 Ver
+                  </button>
+                  {isAdmin && (
+                    <button type="button" onClick={() => cargarDocumentoVentaEnFormulario(v)} style={btn("ghost")}>
+                      ✏️ Editar
+                    </button>
+                  )}
+                </div>
+              </td>
+            </tr>
+          ))}
+          {cotizaciones.length === 0 && (
+            <tr>
+              <td style={tdStyle} colSpan={8}>No hay cotizaciones registradas.</td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  </div>
+)}
+
+{view === "pedidos" && (
+  <div style={{ ...cardStyle, padding: 16 }}>
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: isMobile ? "stretch" : "center",
+        flexDirection: isMobile ? "column" : "row",
+        gap: 10,
+        marginBottom: 12,
+      }}
+    >
+      <div>
+        <h2 style={{ margin: 0 }}>Pedidos</h2>
+        <p style={{ margin: "4px 0 0", color: theme.muted }}>
+          Aquí se muestran las notas marcadas como pedido.
+        </p>
+      </div>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <button type="button" onClick={() => setView("ventas")} style={btn("ghost")}>
+          ← Volver a ventas
+        </button>
+        <button type="button" onClick={cargarPedidos} style={btn("primary")}>
+          Recargar
+        </button>
+      </div>
+    </div>
+
+    <div style={{ overflowX: "auto", border: `1px solid ${theme.border}`, borderRadius: 12, background: "#fff" }}>
+      <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 980 }}>
+        <thead>
+          <tr>
+            <th style={thStyle}>Folio</th>
+            <th style={thStyle}>Cliente</th>
+            <th style={thStyle}>Categoría</th>
+            <th style={thStyle}>Productos</th>
+            <th style={thStyle}>Total</th>
+            <th style={thStyle}>Pago</th>
+            <th style={thStyle}>Fecha</th>
+            <th style={thStyle}>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {pedidos.map((v) => (
+            <tr key={v.id}>
+              <td style={tdStyle}>#{v.id}</td>
+              <td style={tdStyle}>{v.cliente_nombre || "Público general"}</td>
+              <td style={tdStyle}>{normalizarCategoriaVenta(v.categoria || "publico")}</td>
+              <td style={tdStyle}>{v.productos_resumen || Number(v.total_items || v.cantidad_items || 0)}</td>
+              <td style={tdStyle}><b>{money(v.total_final ?? v.total ?? 0)}</b></td>
+              <td style={tdStyle}>{v.tipo_pago || "—"}</td>
+              <td style={tdStyle}>{formatFechaLocal(v.created_at)}</td>
+              <td style={tdStyle}>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <button type="button" onClick={() => verTicket(v.id)} style={btn("primary")}>
+                    🧾 Ver
+                  </button>
+                  {isAdmin && (
+                    <button type="button" onClick={() => cargarDocumentoVentaEnFormulario(v)} style={btn("ghost")}>
+                      ✏️ Editar
+                    </button>
+                  )}
+                </div>
+              </td>
+            </tr>
+          ))}
+          {pedidos.length === 0 && (
+            <tr>
+              <td style={tdStyle} colSpan={8}>No hay pedidos registrados.</td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  </div>
+)}
+
 {view === "reporte" && (
   <div style={{ ...cardStyle, padding: 16 }}>
     <h2 style={{ marginTop: 0 }}>Reporte</h2>

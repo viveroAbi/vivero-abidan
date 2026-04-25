@@ -1482,3 +1482,67 @@ export const eliminarVenta = async (req, res) => {
     conn.release();
   }
 };
+export const getCotizaciones = async (req, res) => {
+  try {
+    const [rows] = await pool.query(`
+      SELECT 
+        v.*,
+        c.nombre AS cliente_nombre,
+        COALESCE(
+          GROUP_CONCAT(CONCAT(vi.producto_nombre, ' x', vi.cantidad) SEPARATOR ', '),
+          ''
+        ) AS productos_resumen
+      FROM ventas v
+      LEFT JOIN ventas_items vi ON vi.venta_id = v.id
+      LEFT JOIN clientes c ON c.id = v.cliente_id
+      WHERE COALESCE(v.estado, '') <> 'borrador'
+        AND COALESCE(v.es_cotizacion, 0) = 1
+        AND COALESCE(v.es_cotizacion_pedido, 0) = 0
+      GROUP BY v.id, c.nombre
+      ORDER BY v.created_at DESC
+    `);
+
+    return res.json({
+      mensaje: "Listado de cotizaciones",
+      data: rows,
+    });
+  } catch (err) {
+    console.error("ERROR GET /ventas/cotizaciones/lista:", err);
+    return res.status(500).json({
+      error: "Error en BD",
+      message: err.sqlMessage || err.message,
+    });
+  }
+};
+
+export const getPedidos = async (req, res) => {
+  try {
+    const [rows] = await pool.query(`
+      SELECT 
+        v.*,
+        c.nombre AS cliente_nombre,
+        COALESCE(
+          GROUP_CONCAT(CONCAT(vi.producto_nombre, ' x', vi.cantidad) SEPARATOR ', '),
+          ''
+        ) AS productos_resumen
+      FROM ventas v
+      LEFT JOIN ventas_items vi ON vi.venta_id = v.id
+      LEFT JOIN clientes c ON c.id = v.cliente_id
+      WHERE COALESCE(v.estado, '') <> 'borrador'
+        AND COALESCE(v.es_cotizacion_pedido, 0) = 1
+      GROUP BY v.id, c.nombre
+      ORDER BY v.created_at DESC
+    `);
+
+    return res.json({
+      mensaje: "Listado de pedidos",
+      data: rows,
+    });
+  } catch (err) {
+    console.error("ERROR GET /ventas/pedidos/lista:", err);
+    return res.status(500).json({
+      error: "Error en BD",
+      message: err.sqlMessage || err.message,
+    });
+  }
+};
