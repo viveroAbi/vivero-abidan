@@ -946,7 +946,7 @@ export const editarVenta = async (req, res) => {
     await conn.query(
   `UPDATE ventas
    SET 
-     estado = NULL,
+     estado = pagada,
      categoria = ?, 
      cliente_id = ?, 
      tipo_pago = ?, 
