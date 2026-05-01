@@ -944,29 +944,47 @@ export const editarVenta = async (req, res) => {
     }
 
     await conn.query(
-      `UPDATE ventas
-       SET categoria = ?, cliente_id = ?, tipo_pago = ?, efectivo = ?, tarjeta = ?, transferencia = ?, cheque = ?, recibido = ?, cambio = ?, es_cotizacion = ?, es_cotizacion_pedido = ?, requiere_factura = ?, abono_inicial = ?, saldo_pendiente = 0, fecha_deuda = ?, fecha_vencimiento = ?, observaciones_credito = ?
-       WHERE id = ?`,
-      [
-        categoria,
-        clienteId,
-        tipoPago,
-        efectivoN,
-        tarjetaN,
-        transferenciaN,
-        chequeN,
-        recibidoN,
-        cambioN,
-        isCotizacion ? 1 : 0,
-        isCotizacionPedido ? 1 : 0,
-        requiereFactura ? 1 : 0,
-        abonoInicialN,
-        tipoPago === "a_cuenta" ? new Date() : null,
-        fecha_vencimiento || null,
-        String(observaciones_credito || "").trim() || null,
-        id,
-      ]
-    );
+  `UPDATE ventas
+   SET 
+     estado = NULL,
+     categoria = ?, 
+     cliente_id = ?, 
+     tipo_pago = ?, 
+     efectivo = ?, 
+     tarjeta = ?, 
+     transferencia = ?, 
+     cheque = ?, 
+     recibido = ?, 
+     cambio = ?, 
+     es_cotizacion = ?, 
+     es_cotizacion_pedido = ?, 
+     requiere_factura = ?, 
+     abono_inicial = ?, 
+     saldo_pendiente = 0, 
+     fecha_deuda = ?, 
+     fecha_vencimiento = ?, 
+     observaciones_credito = ?
+   WHERE id = ?`,
+  [
+    categoria,
+    clienteId,
+    tipoPago,
+    efectivoN,
+    tarjetaN,
+    transferenciaN,
+    chequeN,
+    recibidoN,
+    cambioN,
+    isCotizacion ? 1 : 0,
+    isCotizacionPedido ? 1 : 0,
+    requiereFactura ? 1 : 0,
+    abonoInicialN,
+    tipoPago === "a_cuenta" ? new Date() : null,
+    fecha_vencimiento || null,
+    String(observaciones_credito || "").trim() || null,
+    id,
+  ]
+);
 
     await conn.query(`DELETE FROM ventas_items WHERE venta_id = ?`, [id]);
 
