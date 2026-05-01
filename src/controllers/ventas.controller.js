@@ -39,7 +39,12 @@ const getTipoPagoLabel = (tipoPago) =>
 // ==========================
 export const getVentas = async (req, res) => {
   try {
-    const [rows] = await pool.query(`
+    const page = Math.max(Number(req.query.page || 1), 1);
+    const pageSize = Math.min(Math.max(Number(req.query.pageSize || 50), 10), 200);
+    const offset = (page - 1) * pageSize;
+
+    const [rows] = await pool.query(
+      `
       SELECT 
         v.*,
         c.nombre AS cliente_nombre,
@@ -55,14 +60,37 @@ export const getVentas = async (req, res) => {
         AND COALESCE(v.es_cotizacion_pedido, 0) = 0
       GROUP BY v.id, c.nombre
       ORDER BY v.created_at DESC
-    `);
+      LIMIT ? OFFSET ?
+      `,
+      [pageSize, offset]
+    );
 
-    return res.json({ mensaje: "Listado de ventas", data: rows });
+    const [[countResult]] = await pool.query(
+      `
+      SELECT COUNT(*) AS total
+      FROM ventas v
+      WHERE COALESCE(v.estado, '') <> 'borrador'
+        AND COALESCE(v.es_cotizacion, 0) = 0
+        AND COALESCE(v.es_cotizacion_pedido, 0) = 0
+      `
+    );
+
+    return res.json({
+      mensaje: "Listado de ventas",
+      data: rows,
+      pagination: {
+        page,
+        pageSize,
+        total: countResult.total,
+        totalPages: Math.ceil(countResult.total / pageSize),
+      },
+    });
   } catch (err) {
     console.error("ERROR GET /ventas:", err);
-    return res
-      .status(500)
-      .json({ error: "Error en BD", message: err.sqlMessage || err.message });
+    return res.status(500).json({
+      error: "Error en BD",
+      message: err.sqlMessage || err.message,
+    });
   }
 };
 

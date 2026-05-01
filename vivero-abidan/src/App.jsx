@@ -222,6 +222,9 @@ const [nuevaCategoriaGasto, setNuevaCategoriaGasto] = useState("");
   // ===== DATA =====
  // ===== DATA =====
 const [ventas, setVentas] = useState([]);
+const [paginaVentas, setPaginaVentas] = useState(1);
+const [totalPaginasVentas, setTotalPaginasVentas] = useState(1);
+
 const [cotizaciones, setCotizaciones] = useState([]);
 const [pedidos, setPedidos] = useState([]);
 const [resumen, setResumen] = useState(null);
@@ -1705,10 +1708,16 @@ async function iniciarCamaraYDeteccion() {
   setMessage("success", "Edición cancelada.");
 }
   // ====== CARGA DE DATOS ======
-  async function cargarVentas() {
-    const data = await apiFetch("/ventas");
-    setVentas(Array.isArray(data.data) ? data.data : []);
+  const cargarVentas = async () => {
+  try {
+    const data = await apiFetch(`/ventas?page=${paginaVentas}&pageSize=50`);
+
+    setVentas(data.data || []);
+    setTotalPaginasVentas(data.pagination?.totalPages || 1);
+  } catch (error) {
+    console.error("Error cargando ventas:", error);
   }
+};
 
   async function cargarCotizaciones() {
     try {
@@ -2166,15 +2175,15 @@ async function guardarGasto(e) {
 
 
   async function recargarTodo() {
-    try {
-      setMessage("", "");
-      await Promise.all([cargarVentas(), cargarResumen()]);
-    } catch (e) {
-      console.error(e);
-      setMessage("error", e.message || "Error al cargar datos");
-      if ((e.message || "").toLowerCase().includes("token")) logout();
-    }
+  try {
+    setMessage("", "");
+    await Promise.all([cargarVentas(paginaVentas), cargarResumen()]);
+  } catch (e) {
+    console.error(e);
+    setMessage("error", e.message || "Error al cargar datos");
+    if ((e.message || "").toLowerCase().includes("token")) logout();
   }
+}
 
   async function me() {
     const data = await apiFetch("/auth/me");
@@ -4123,7 +4132,46 @@ if (view === "movimientos") {
             <th style={thStyle}>Acciones</th>
           </tr>
         </thead>
+<div
+  style={{
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 12,
+    padding: 12,
+    borderTop: `1px solid ${theme.border}`,
+  }}
+>
+  <button
+    type="button"
+    disabled={paginaVentas <= 1}
+    onClick={async () => {
+      const nuevaPagina = Math.max(paginaVentas - 1, 1);
+      setPaginaVentas(nuevaPagina);
+      await cargarVentas(nuevaPagina);
+    }}
+    style={btn("ghost")}
+  >
+    Anterior
+  </button>
 
+  <span>
+    Página {paginaVentas} de {totalPaginasVentas}
+  </span>
+
+  <button
+    type="button"
+    disabled={paginaVentas >= totalPaginasVentas}
+    onClick={async () => {
+      const nuevaPagina = paginaVentas + 1;
+      setPaginaVentas(nuevaPagina);
+      await cargarVentas(nuevaPagina);
+    }}
+    style={btn("ghost")}
+  >
+    Siguiente
+  </button>
+</div>
         <tbody>
           {ventas.map((v) => (
             <tr key={v.id}>
