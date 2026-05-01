@@ -262,16 +262,7 @@ export const crearVenta = async (req, res) => {
     return res.status(400).json({ error: "La venta debe traer items" });
   }
 
-  if (
-    !esCotizacionFinal &&
-    categoria === "publico" &&
-    !["efectivo", "a_cuenta"].includes(tipoPago)
-  ) {
-    return res.status(400).json({
-      error: "Venta al público solo acepta efectivo o a cuenta",
-    });
-  }
-
+  
   const recibidoN = Number(recibido || 0);
   const cambioN = Number(cambio || 0);
   const efectivoN = Number(efectivo || 0);
@@ -839,15 +830,7 @@ export const editarVenta = async (req, res) => {
     return res.status(400).json({ error: "Debe traer items" });
   }
 
-  if (
-    !esCotizacionFinal &&
-    categoria === "publico" &&
-    !["efectivo", "a_cuenta"].includes(tipoPago)
-  ) {
-    return res.status(400).json({
-      error: "Venta al público solo acepta efectivo o a cuenta",
-    });
-  }
+  
 
   const recibidoN = Number(recibido || 0);
   const cambioN = Number(cambio || 0);

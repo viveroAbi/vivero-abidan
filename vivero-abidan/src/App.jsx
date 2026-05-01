@@ -2572,15 +2572,7 @@ function onChangeMixtoCheque(e) {
     return;
   }
 
-  if (
-    !form.esCotizacion &&
-    !esCotizacionPedido &&
-    form.categoria === "publico" &&
-    !["efectivo", "a_cuenta"].includes(form.tipoPago)
-  ) {
-    setMessage("error", "Venta al público solo acepta efectivo o a cuenta.");
-    return;
-  }
+  
 
   const sumaMixto = Number((efectivoNum + tarjetaNum + transferenciaNum + chequeNum).toFixed(2));
   const totalEsperado = Number(Number(totalFinalUI).toFixed(2));
