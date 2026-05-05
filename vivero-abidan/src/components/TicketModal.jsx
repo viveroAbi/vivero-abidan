@@ -56,7 +56,7 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
         }
 
         #ticket {
-          position: static !important;
+          position: relative !important;
           left: auto !important;
           top: auto !important;
           width: 76mm !important;
@@ -92,6 +92,18 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
           break-inside: auto !important;
           page-break-inside: auto !important;
           word-break: break-word !important;
+        }
+
+        #ticket-contenido {
+          position: relative !important;
+          min-height: 100% !important;
+        }
+
+        .marca-agua-ticket {
+          display: grid !important;
+          visibility: visible !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
         }
 
         pre {
@@ -137,6 +149,7 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
             }
 
             #ticket-print {
+              position: relative;
               width: 76mm;
               max-width: 76mm;
               min-width: 76mm;
@@ -167,6 +180,17 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
               break-inside: auto;
               page-break-inside: auto;
               word-break: break-word;
+            }
+
+            #ticket-contenido {
+              position: relative;
+              min-height: 100%;
+            }
+
+            .marca-agua-ticket {
+              display: grid !important;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
             }
 
             pre {
@@ -545,7 +569,7 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
         {printStyles}
 
         <div id="ticket" style={ticketBoxStyle}>
-          <div id="ticket-contenido">
+          <div id="ticket-contenido" style={{ position: "relative", minHeight: "100%" }}>
             <pre
               style={{
                 fontFamily: thermalFont,
@@ -583,8 +607,9 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
         {printStyles}
 
         <div id="ticket" style={ticketBoxStyle}>
-          <div id="ticket-contenido">
+          <div id="ticket-contenido" style={{ position: "relative", minHeight: "100%" }}>
             <div
+              className="marca-agua-ticket"
               style={{
                 position: "absolute",
                 inset: 0,
@@ -599,6 +624,11 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
                 zIndex: 0,
               }}
             >
+              PEDIDO
+              PEDIDO
+              PEDIDO
+              PEDIDO
+              PEDIDO
               PEDIDO
             </div>
 
@@ -725,9 +755,10 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
       {printStyles}
 
       <div id="ticket" style={ticketBoxStyle}>
-        <div id="ticket-contenido">
+        <div id="ticket-contenido" style={{ position: "relative", minHeight: "100%" }}>
           {esCotizacionNormal && (
             <div
+              className="marca-agua-ticket"
               style={{
                 position: "absolute",
                 inset: 0,
@@ -742,6 +773,11 @@ export default function TicketModal({ data, onClose, recibido = 0, cambio = 0 })
                 zIndex: 0,
               }}
             >
+              COTIZACION
+              COTIZACION
+              COTIZACION
+              COTIZACION
+              COTIZACION
               COTIZACION
             </div>
           )}
