@@ -581,20 +581,34 @@ export const crearVenta = async (req, res) => {
       );
 
       await conn.query(
-        `UPDATE ventas
-         SET efectivo = ?, tarjeta = 0, transferencia = 0, cheque = 0, recibido = ?, cambio = 0, abono_inicial = ?, saldo_pendiente = ?, fecha_deuda = ?, fecha_vencimiento = ?, observaciones_credito = ?
-         WHERE id = ?`,
-        [
-          abonoInicialN,
-          abonoInicialN,
-          abonoInicialN,
-          saldoPendiente,
-          new Date(),
-          fecha_vencimiento || null,
-          String(observaciones_credito || "").trim() || null,
-          ventaId,
-        ]
-      );
+  `UPDATE ventas
+   SET 
+     efectivo = ?, 
+     tarjeta = ?, 
+     transferencia = ?, 
+     cheque = ?, 
+     recibido = ?, 
+     cambio = 0, 
+     abono_inicial = ?, 
+     saldo_pendiente = ?, 
+     fecha_deuda = ?, 
+     fecha_vencimiento = ?, 
+     observaciones_credito = ?
+   WHERE id = ?`,
+  [
+    efectivoN,
+    tarjetaN,
+    transferenciaN,
+    chequeN,
+    abonoInicialN,
+    abonoInicialN,
+    saldoPendiente,
+    new Date(),
+    fecha_vencimiento || null,
+    String(observaciones_credito || "").trim() || null,
+    id,
+  ]
+);
     }
 
     await conn.query(
