@@ -40,7 +40,10 @@ const getTipoPagoLabel = (tipoPago) =>
 export const getVentas = async (req, res) => {
   try {
     const page = Math.max(Number(req.query.page || 1), 1);
-    const pageSize = Math.min(Math.max(Number(req.query.pageSize || 50), 10), 200);
+    const pageSize = Math.min(
+      Math.max(Number(req.query.pageSize || 50), 10),
+      200
+    );
     const offset = (page - 1) * pageSize;
 
     const [rows] = await pool.query(
@@ -136,12 +139,16 @@ export const getVentasHoy = async (req, res) => {
     return res.json({ mensaje: "Ventas de hoy", data: rows });
   } catch (err) {
     console.error("ERROR GET /ventas/hoy:", err);
-    return res
-      .status(500)
-      .json({ error: "Error en BD", message: err.sqlMessage || err.message });
+    return res.status(500).json({
+      error: "Error en BD",
+      message: err.sqlMessage || err.message,
+    });
   }
 };
 
+// ==========================
+// GET /api/ventas/resumen
+// ==========================
 export const getResumenVentas = async (req, res) => {
   try {
     const ahora = new Date();
@@ -211,11 +218,13 @@ export const getResumenVentas = async (req, res) => {
     });
   } catch (err) {
     console.error("ERROR GET /ventas/resumen:", err);
-    return res
-      .status(500)
-      .json({ error: "Error en BD", message: err.sqlMessage || err.message });
+    return res.status(500).json({
+      error: "Error en BD",
+      message: err.sqlMessage || err.message,
+    });
   }
 };
+
 // ==========================
 // POST /api/ventas
 // ==========================
@@ -262,7 +271,6 @@ export const crearVenta = async (req, res) => {
     return res.status(400).json({ error: "La venta debe traer items" });
   }
 
-  
   const recibidoN = Number(recibido || 0);
   const cambioN = Number(cambio || 0);
   const efectivoN = Number(efectivo || 0);
@@ -387,7 +395,9 @@ export const crearVenta = async (req, res) => {
         [productoId]
       );
 
-      if (!prods.length) throw new Error(`Producto no existe: ${productoId}`);
+      if (!prods.length) {
+        throw new Error(`Producto no existe: ${productoId}`);
+      }
 
       const p = prods[0];
 
@@ -429,10 +439,10 @@ export const crearVenta = async (req, res) => {
       );
 
       if (!esCotizacionFinal) {
-        await conn.query(
-          "UPDATE productos SET stock = stock - ? WHERE id = ?",
-          [cantidad, productoId]
-        );
+        await conn.query("UPDATE productos SET stock = stock - ? WHERE id = ?", [
+          cantidad,
+          productoId,
+        ]);
 
         await conn.query(
           `INSERT INTO inventario_movimientos
@@ -448,7 +458,9 @@ export const crearVenta = async (req, res) => {
       }
     }
 
-    if (total <= 0) throw new Error("El total debe ser mayor a 0");
+    if (total <= 0) {
+      throw new Error("El total debe ser mayor a 0");
+    }
 
     total = Number(total.toFixed(2));
     totalIVA = Number(totalIVA.toFixed(2));
@@ -486,6 +498,7 @@ export const crearVenta = async (req, res) => {
       const suma = Number(
         (efectivoN + tarjetaN + transferenciaN + chequeN).toFixed(2)
       );
+
       if (suma !== Number(totalConIVA.toFixed(2))) {
         throw new Error(
           "En pago mixto: efectivo + tarjeta + transferencia + cheque debe ser igual al total."
@@ -527,15 +540,16 @@ export const crearVenta = async (req, res) => {
           [cambioCalc, clienteId]
         );
 
-        await conn.query(
-          "UPDATE ventas SET cambio = 0, recibido = ? WHERE id = ?",
-          [recibidoN, ventaId]
-        );
+        await conn.query("UPDATE ventas SET cambio = 0, recibido = ? WHERE id = ?", [
+          recibidoN,
+          ventaId,
+        ]);
       } else {
-        await conn.query(
-          "UPDATE ventas SET cambio = ?, recibido = ? WHERE id = ?",
-          [cambioCalc, recibidoN, ventaId]
-        );
+        await conn.query("UPDATE ventas SET cambio = ?, recibido = ? WHERE id = ?", [
+          cambioCalc,
+          recibidoN,
+          ventaId,
+        ]);
       }
     }
 
@@ -561,7 +575,9 @@ export const crearVenta = async (req, res) => {
       }
 
       saldoPendiente = Number((totalConIVA - abonoInicialN).toFixed(2));
-      const nuevoSaldoCliente = Number((saldoActualCliente + saldoPendiente).toFixed(2));
+      const nuevoSaldoCliente = Number(
+        (saldoActualCliente + saldoPendiente).toFixed(2)
+      );
 
       if (nuevoSaldoCliente > deudaMaxima) {
         throw new Error(
@@ -581,34 +597,34 @@ export const crearVenta = async (req, res) => {
       );
 
       await conn.query(
-  `UPDATE ventas
-   SET 
-     efectivo = ?, 
-     tarjeta = ?, 
-     transferencia = ?, 
-     cheque = ?, 
-     recibido = ?, 
-     cambio = 0, 
-     abono_inicial = ?, 
-     saldo_pendiente = ?, 
-     fecha_deuda = ?, 
-     fecha_vencimiento = ?, 
-     observaciones_credito = ?
-   WHERE id = ?`,
-  [
-    efectivoN,
-    tarjetaN,
-    transferenciaN,
-    chequeN,
-    abonoInicialN,
-    abonoInicialN,
-    saldoPendiente,
-    new Date(),
-    fecha_vencimiento || null,
-    String(observaciones_credito || "").trim() || null,
-    id,
-  ]
-);
+        `UPDATE ventas
+         SET 
+           efectivo = ?, 
+           tarjeta = ?, 
+           transferencia = ?, 
+           cheque = ?, 
+           recibido = ?, 
+           cambio = 0, 
+           abono_inicial = ?, 
+           saldo_pendiente = ?, 
+           fecha_deuda = ?, 
+           fecha_vencimiento = ?, 
+           observaciones_credito = ?
+         WHERE id = ?`,
+        [
+          efectivoN,
+          tarjetaN,
+          transferenciaN,
+          chequeN,
+          abonoInicialN,
+          abonoInicialN,
+          saldoPendiente,
+          new Date(),
+          fecha_vencimiento || null,
+          String(observaciones_credito || "").trim() || null,
+          ventaId,
+        ]
+      );
     }
 
     await conn.query(
@@ -648,6 +664,7 @@ export const crearVenta = async (req, res) => {
     conn.release();
   }
 };
+
 // ==========================
 // GET /api/ventas/:id
 // ==========================
@@ -726,6 +743,7 @@ export const eliminarBorrador = async (req, res) => {
     });
   } catch (err) {
     if (conn) await conn.rollback();
+
     console.error("ERROR DELETE /ventas/borradores/:id:", err);
     return res.status(500).json({
       error: "Error al eliminar borrador",
@@ -764,7 +782,6 @@ export const getTicketVenta = async (req, res) => {
     }
 
     const venta = ventaRows[0];
-    console.log("VENTA TICKET:", venta);
 
     const [items] = await pool.query(
       `
@@ -795,9 +812,13 @@ export const getTicketVenta = async (req, res) => {
     });
   } catch (err) {
     console.error("ERROR GET /ventas/:id/ticket:", err);
-    return res.status(500).json({ error: "Error en BD", message: err.message });
+    return res.status(500).json({
+      error: "Error en BD",
+      message: err.message,
+    });
   }
 };
+
 // ==========================
 // PUT /api/ventas/:id
 // ==========================
@@ -843,8 +864,6 @@ export const editarVenta = async (req, res) => {
   if (!Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ error: "Debe traer items" });
   }
-
-  
 
   const recibidoN = Number(recibido || 0);
   const cambioN = Number(cambio || 0);
@@ -908,6 +927,7 @@ export const editarVenta = async (req, res) => {
     }
 
     const ventaAnterior = ventaRows[0];
+
     const ventaAnteriorEraCotizacion =
       Number(ventaAnterior.es_cotizacion) === 1 ||
       Number(ventaAnterior.es_cotizacion_pedido) === 1;
@@ -958,47 +978,47 @@ export const editarVenta = async (req, res) => {
     }
 
     await conn.query(
-  `UPDATE ventas
-   SET 
-     estado = 'pagada',
-     categoria = ?, 
-     cliente_id = ?, 
-     tipo_pago = ?, 
-     efectivo = ?, 
-     tarjeta = ?, 
-     transferencia = ?, 
-     cheque = ?, 
-     recibido = ?, 
-     cambio = ?, 
-     es_cotizacion = ?, 
-     es_cotizacion_pedido = ?, 
-     requiere_factura = ?, 
-     abono_inicial = ?, 
-     saldo_pendiente = 0, 
-     fecha_deuda = ?, 
-     fecha_vencimiento = ?, 
-     observaciones_credito = ?
-   WHERE id = ?`,
-  [
-    categoria,
-    clienteId,
-    tipoPago,
-    efectivoN,
-    tarjetaN,
-    transferenciaN,
-    chequeN,
-    recibidoN,
-    cambioN,
-    isCotizacion ? 1 : 0,
-    isCotizacionPedido ? 1 : 0,
-    requiereFactura ? 1 : 0,
-    abonoInicialN,
-    tipoPago === "a_cuenta" ? new Date() : null,
-    fecha_vencimiento || null,
-    String(observaciones_credito || "").trim() || null,
-    id,
-  ]
-);
+      `UPDATE ventas
+       SET 
+         estado = 'pagada',
+         categoria = ?, 
+         cliente_id = ?, 
+         tipo_pago = ?, 
+         efectivo = ?, 
+         tarjeta = ?, 
+         transferencia = ?, 
+         cheque = ?, 
+         recibido = ?, 
+         cambio = ?, 
+         es_cotizacion = ?, 
+         es_cotizacion_pedido = ?, 
+         requiere_factura = ?, 
+         abono_inicial = ?, 
+         saldo_pendiente = 0, 
+         fecha_deuda = ?, 
+         fecha_vencimiento = ?, 
+         observaciones_credito = ?
+       WHERE id = ?`,
+      [
+        categoria,
+        clienteId,
+        tipoPago,
+        efectivoN,
+        tarjetaN,
+        transferenciaN,
+        chequeN,
+        recibidoN,
+        cambioN,
+        isCotizacion ? 1 : 0,
+        isCotizacionPedido ? 1 : 0,
+        requiereFactura ? 1 : 0,
+        abonoInicialN,
+        tipoPago === "a_cuenta" ? new Date() : null,
+        fecha_vencimiento || null,
+        String(observaciones_credito || "").trim() || null,
+        id,
+      ]
+    );
 
     await conn.query(`DELETE FROM ventas_items WHERE venta_id = ?`, [id]);
 
@@ -1009,7 +1029,9 @@ export const editarVenta = async (req, res) => {
       const productoId = Number(
         it.producto_id ?? it.productoId ?? it.idProducto ?? it.id
       );
+
       const cantidad = Number(it.cantidad ?? it.qty ?? 0);
+
       const precioUnitario = Number(
         it.precio_unitario ??
           it.precioUnitario ??
@@ -1048,6 +1070,7 @@ export const editarVenta = async (req, res) => {
 
       if (!esCotizacionFinal) {
         const stockActual = Number(p.stock || 0);
+
         if (stockActual < cantidad) {
           throw new Error(
             `Stock insuficiente para ${p.codigo} - ${p.nombre}. Disponible: ${stockActual}, requerido: ${cantidad}`
@@ -1105,7 +1128,9 @@ export const editarVenta = async (req, res) => {
       }
     }
 
-    if (total <= 0) throw new Error("El total debe ser mayor a 0");
+    if (total <= 0) {
+      throw new Error("El total debe ser mayor a 0");
+    }
 
     total = Number(total.toFixed(2));
     totalIVA = Number(totalIVA.toFixed(2));
@@ -1140,6 +1165,7 @@ export const editarVenta = async (req, res) => {
         (efectivoN + tarjetaN + transferenciaN + chequeN).toFixed(2)
       );
       const esperado = Number(totalConIVA.toFixed(2));
+
       if (suma !== esperado) {
         await conn.rollback();
         return res.status(400).json({
@@ -1152,6 +1178,7 @@ export const editarVenta = async (req, res) => {
     if (tipoPago === "tarjeta_credito" || tipoPago === "tarjeta_debito") {
       const esperado = Number(totalConIVA.toFixed(2));
       const t = Number(tarjetaN.toFixed(2));
+
       if (t !== esperado) {
         await conn.rollback();
         return res.status(400).json({
@@ -1163,10 +1190,12 @@ export const editarVenta = async (req, res) => {
     if (tipoPago === "transferencia") {
       const esperado = Number(totalConIVA.toFixed(2));
       const t = Number(transferenciaN.toFixed(2));
+
       if (t !== esperado) {
         await conn.rollback();
         return res.status(400).json({
-          error: "En pago con transferencia: el monto debe ser igual al total final.",
+          error:
+            "En pago con transferencia: el monto debe ser igual al total final.",
         });
       }
     }
@@ -1174,6 +1203,7 @@ export const editarVenta = async (req, res) => {
     if (tipoPago === "cheque") {
       const esperado = Number(totalConIVA.toFixed(2));
       const t = Number(chequeN.toFixed(2));
+
       if (t !== esperado) {
         await conn.rollback();
         return res.status(400).json({
@@ -1198,15 +1228,16 @@ export const editarVenta = async (req, res) => {
           [cambioReal, clienteId]
         );
 
-        await conn.query(
-          `UPDATE ventas SET recibido = ?, cambio = 0 WHERE id = ?`,
-          [recibidoN, id]
-        );
+        await conn.query(`UPDATE ventas SET recibido = ?, cambio = 0 WHERE id = ?`, [
+          recibidoN,
+          id,
+        ]);
       } else {
-        await conn.query(
-          `UPDATE ventas SET recibido = ?, cambio = ? WHERE id = ?`,
-          [recibidoN, cambioReal, id]
-        );
+        await conn.query(`UPDATE ventas SET recibido = ?, cambio = ? WHERE id = ?`, [
+          recibidoN,
+          cambioReal,
+          id,
+        ]);
       }
     } else if (!esCotizacionFinal && tipoPago === "a_cuenta") {
       if (!clienteId) {
@@ -1233,7 +1264,9 @@ export const editarVenta = async (req, res) => {
       }
 
       saldoPendiente = Number((totalConIVA - abonoInicialN).toFixed(2));
-      const nuevoSaldoCliente = Number((saldoActualCliente + saldoPendiente).toFixed(2));
+      const nuevoSaldoCliente = Number(
+        (saldoActualCliente + saldoPendiente).toFixed(2)
+      );
 
       if (nuevoSaldoCliente > deudaMaxima) {
         throw new Error(
@@ -1254,10 +1287,24 @@ export const editarVenta = async (req, res) => {
 
       await conn.query(
         `UPDATE ventas
-         SET efectivo = ?, tarjeta = 0, transferencia = 0, cheque = 0, recibido = ?, cambio = 0, abono_inicial = ?, saldo_pendiente = ?, fecha_deuda = ?, fecha_vencimiento = ?, observaciones_credito = ?
+         SET 
+           efectivo = ?, 
+           tarjeta = ?, 
+           transferencia = ?, 
+           cheque = ?, 
+           recibido = ?, 
+           cambio = 0, 
+           abono_inicial = ?, 
+           saldo_pendiente = ?, 
+           fecha_deuda = ?, 
+           fecha_vencimiento = ?, 
+           observaciones_credito = ?
          WHERE id = ?`,
         [
-          abonoInicialN,
+          efectivoN,
+          tarjetaN,
+          transferenciaN,
+          chequeN,
           abonoInicialN,
           abonoInicialN,
           saldoPendiente,
@@ -1268,10 +1315,9 @@ export const editarVenta = async (req, res) => {
         ]
       );
     } else {
-      await conn.query(
-        `UPDATE ventas SET recibido = 0, cambio = 0 WHERE id = ?`,
-        [id]
-      );
+      await conn.query(`UPDATE ventas SET recibido = 0, cambio = 0 WHERE id = ?`, [
+        id,
+      ]);
     }
 
     await conn.query(
@@ -1311,6 +1357,7 @@ export const editarVenta = async (req, res) => {
     conn.release();
   }
 };
+
 // ==========================
 // POST /api/ventas/borrador
 // ==========================
@@ -1325,7 +1372,10 @@ export const crearBorrador = async (req, res) => {
       [categoria, cliente_id]
     );
 
-    return res.json({ mensaje: "Borrador creado", data: { id: r.insertId } });
+    return res.json({
+      mensaje: "Borrador creado",
+      data: { id: r.insertId },
+    });
   } catch (err) {
     console.error("ERROR crearBorrador:", err);
     return res.status(500).json({ error: err.message });
@@ -1383,7 +1433,9 @@ export const actualizarItemsBorrador = async (req, res) => {
 
     if (ventaRows[0].estado !== "borrador") {
       await conn.rollback();
-      return res.status(400).json({ error: "Solo se puede editar un borrador" });
+      return res.status(400).json({
+        error: "Solo se puede editar un borrador",
+      });
     }
 
     await conn.query(`DELETE FROM ventas_items WHERE venta_id = ?`, [id]);
@@ -1451,6 +1503,9 @@ export const actualizarItemsBorrador = async (req, res) => {
   }
 };
 
+// ==========================
+// DELETE /api/ventas/:id
+// ==========================
 export const eliminarVenta = async (req, res) => {
   const { id } = req.params;
   const conn = await pool.getConnection();
@@ -1472,6 +1527,7 @@ export const eliminarVenta = async (req, res) => {
     }
 
     const venta = ventaRows[0];
+
     const esCotizacionFinal =
       Number(venta.es_cotizacion) === 1 ||
       Number(venta.es_cotizacion_pedido) === 1;
@@ -1525,6 +1581,10 @@ export const eliminarVenta = async (req, res) => {
     conn.release();
   }
 };
+
+// ==========================
+// GET /api/ventas/cotizaciones/lista
+// ==========================
 export const getCotizaciones = async (req, res) => {
   try {
     const [rows] = await pool.query(`
@@ -1558,6 +1618,9 @@ export const getCotizaciones = async (req, res) => {
   }
 };
 
+// ==========================
+// GET /api/ventas/pedidos/lista
+// ==========================
 export const getPedidos = async (req, res) => {
   try {
     const [rows] = await pool.query(`
