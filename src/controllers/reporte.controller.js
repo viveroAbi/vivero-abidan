@@ -272,10 +272,11 @@ async function obtenerResumenPagos(fecha, periodo) {
   );
 
   return {
-    ventasPorPago,
-    totalAbonos: Number(totalAbonos.toFixed(2)),
-    efectivoCaja: Number(efectivoTotal.toFixed(2)),
-  };
+  ventasPorPago,
+  totalAbonos: Number(totalAbonos.toFixed(2)),
+  totalAbonadoACuenta: Number(aCuentaAbonado.toFixed(2)),
+  efectivoCaja: Number(efectivoTotal.toFixed(2)),
+};
 }
 
 // GET /api/reporte/diario?fecha=YYYY-MM-DD&periodo=diario|semanal|mensual|anual

@@ -176,8 +176,7 @@ async function seleccionarClienteVenta(c) {
   const [reporteTipo, setReporteTipo] = useState("diario");
   const [reporteFecha, setReporteFecha] = useState(hoyLocalInput());
   const [reporteData, setReporteData] = useState(null);
-  
-  const pagosFijos = [
+const pagosFijos = [
   "efectivo",
   "transferencia",
   "tarjeta_credito",
@@ -1756,15 +1755,21 @@ async function iniciarCamaraYDeteccion() {
     setResumen(data.data || null);
   }
   async function cargarReporteDiario(tipo = reporteTipo, fecha = reporteFecha) {
-  const q = new URLSearchParams();
-  q.set("periodo", tipo || "diario");
+  try {
+    const q = new URLSearchParams();
+    q.set("periodo", tipo || "diario");
 
-  if (fecha) {
-    q.set("fecha", fecha);
+    if (fecha) {
+      q.set("fecha", fecha);
+    }
+
+    const data = await apiFetch(`/reporte/diario?${q.toString()}`);
+    setReporteData(data.data || null);
+  } catch (err) {
+    console.error("Error cargando reporte:", err);
+    setReporteData(null);
+    setMessage("error", err?.message || "No se pudo cargar el reporte.");
   }
-
-  const data = await apiFetch(`/reporte/diario?${q.toString()}`);
-  setReporteData(data.data);
 }
 async function cargarMovimientos() {
   try {
@@ -4574,7 +4579,7 @@ if (view === "movimientos") {
 {pagosFijos.map((p) => {
   if (p === "a_cuenta") {
     return (
-      <div key={p} style={{ maxWidth: 420 }}>
+      <div key={p} style={{ maxWidth: 420, marginTop: 6 }}>
         <div style={{ display: "flex", justifyContent: "space-between" }}>
           <span>
             <b>a_cuenta</b>
@@ -4582,7 +4587,7 @@ if (view === "movimientos") {
           <b>{money(ventasPagoMap.a_cuenta || 0)}</b>
         </div>
 
-        <div style={{ paddingLeft: 22, marginTop: 4 }}>
+        <div style={{ paddingLeft: 22, marginTop: 4, fontSize: 14 }}>
           <div style={{ display: "flex", justifyContent: "space-between" }}>
             <span>efectivo</span>
             <b>{money(aCuentaDesglose.efectivo || 0)}</b>
@@ -4620,7 +4625,11 @@ if (view === "movimientos") {
   return (
     <div
       key={p}
-      style={{ display: "flex", justifyContent: "space-between", maxWidth: 420 }}
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        maxWidth: 420,
+      }}
     >
       <span>{p}</span>
       <b>{money(ventasPagoMap[p] || 0)}</b>
