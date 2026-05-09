@@ -202,9 +202,7 @@ const aCuentaDesglose = useMemo(() => {
   return aCuentaReporte?.desglose || {};
 }, [aCuentaReporte]);
 
-const aCuentaDesglose = useMemo(() => {
-  return aCuentaReporte?.desglose || {};
-}, [aCuentaReporte]);
+
 
   const [gastoForm, setGastoForm] = useState({
   categoria: "gasolina",
