@@ -182,14 +182,18 @@ async function seleccionarClienteVenta(c) {
   "transferencia",
   "tarjeta_credito",
   "tarjeta_debito",
+  "cheque",
   "a_cuenta",
-  "a_cuenta_pendiente",
 ];
 
-const ventasPagoMap = useMemo(() => {
+const aCuentaReporte = useMemo(() => {
   const arr = reporteData?.ventasPorPago || [];
-  return Object.fromEntries(arr.map((x) => [x.tipo_pago, Number(x.total)]));
+  return arr.find((x) => x.tipo_pago === "a_cuenta") || null;
 }, [reporteData]);
+
+const aCuentaDesglose = useMemo(() => {
+  return aCuentaReporte?.desglose || {};
+}, [aCuentaReporte]);
 
   const [gastoForm, setGastoForm] = useState({
   categoria: "gasolina",
@@ -4566,15 +4570,63 @@ if (view === "movimientos") {
       ) : (
         <>
           <h3>Reporte de pagos</h3>
-          {pagosFijos.map((p) => (
-            <div
-              key={p}
-              style={{ display: "flex", justifyContent: "space-between", maxWidth: 420 }}
-            >
-              <span>{p}</span>
-              <b>{money(ventasPagoMap[p] || 0)}</b>
-            </div>
-          ))}
+
+{pagosFijos.map((p) => {
+  if (p === "a_cuenta") {
+    return (
+      <div key={p} style={{ maxWidth: 420 }}>
+        <div style={{ display: "flex", justifyContent: "space-between" }}>
+          <span>
+            <b>a_cuenta</b>
+          </span>
+          <b>{money(ventasPagoMap.a_cuenta || 0)}</b>
+        </div>
+
+        <div style={{ paddingLeft: 22, marginTop: 4 }}>
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <span>efectivo</span>
+            <b>{money(aCuentaDesglose.efectivo || 0)}</b>
+          </div>
+
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <span>transferencia</span>
+            <b>{money(aCuentaDesglose.transferencia || 0)}</b>
+          </div>
+
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <span>tarjeta</span>
+            <b>{money(aCuentaDesglose.tarjeta || 0)}</b>
+          </div>
+
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <span>cheque</span>
+            <b>{money(aCuentaDesglose.cheque || 0)}</b>
+          </div>
+
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <span>abonado</span>
+            <b>{money(aCuentaDesglose.abonado || 0)}</b>
+          </div>
+
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <span>pendiente</span>
+            <b>{money(aCuentaDesglose.pendiente || 0)}</b>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      key={p}
+      style={{ display: "flex", justifyContent: "space-between", maxWidth: 420 }}
+    >
+      <span>{p}</span>
+      <b>{money(ventasPagoMap[p] || 0)}</b>
+    </div>
+  );
+})}
 
           <div
             style={{

@@ -126,50 +126,56 @@ async function obtenerResumenPagos(fecha, periodo) {
       COALESCE(SUM(cheque), 0) AS cheque,
 
       COALESCE(SUM(
-        CASE
-          WHEN tipo_pago = 'tarjeta_credito' THEN tarjeta
-          ELSE 0
-        END
+        CASE WHEN tipo_pago = 'tarjeta_credito' THEN tarjeta ELSE 0 END
       ), 0) AS tarjeta_credito,
 
       COALESCE(SUM(
-        CASE
-          WHEN tipo_pago = 'tarjeta_debito' THEN tarjeta
-          ELSE 0
-        END
+        CASE WHEN tipo_pago = 'tarjeta_debito' THEN tarjeta ELSE 0 END
       ), 0) AS tarjeta_debito,
 
-      -- Cuando una venta mixta trae tarjeta, no hay columna para distinguir crédito/débito.
-      -- Se manda a crédito por compatibilidad con el reporte actual.
       COALESCE(SUM(
-        CASE
-          WHEN tipo_pago = 'mixto' THEN tarjeta
-          ELSE 0
-        END
+        CASE WHEN tipo_pago = 'mixto' THEN tarjeta ELSE 0 END
       ), 0) AS tarjeta_mixto,
 
-      -- Total de ventas que fueron a cuenta/crédito.
       COALESCE(SUM(
-        CASE
-          WHEN tipo_pago = 'a_cuenta' THEN total_final
-          ELSE 0
-        END
-      ), 0) AS total_ventas_a_cuenta,
+        CASE WHEN tipo_pago = 'a_cuenta' THEN total_final ELSE 0 END
+      ), 0) AS a_cuenta_total,
 
-      -- Cantidad abonada al momento de crear/editar la venta a cuenta.
       COALESCE(SUM(
-        CASE
-          WHEN tipo_pago = 'a_cuenta' THEN abono_inicial
-          ELSE 0
-        END
-      ), 0) AS total_abonado_a_cuenta,
+        CASE WHEN tipo_pago = 'a_cuenta' THEN efectivo ELSE 0 END
+      ), 0) AS a_cuenta_efectivo,
 
-      -- Lo que todavía queda pendiente por cobrar.
       COALESCE(SUM(
-        CASE
-          WHEN tipo_pago = 'a_cuenta' THEN saldo_pendiente
-          ELSE 0
+        CASE WHEN tipo_pago = 'a_cuenta' THEN transferencia ELSE 0 END
+      ), 0) AS a_cuenta_transferencia,
+
+      COALESCE(SUM(
+        CASE 
+          WHEN tipo_pago = 'a_cuenta' 
+           AND tipo_pago IN ('tarjeta_credito', 'mixto') 
+          THEN tarjeta 
+          ELSE 0 
         END
+      ), 0) AS a_cuenta_tarjeta_credito,
+
+      COALESCE(SUM(
+        CASE 
+          WHEN tipo_pago = 'a_cuenta' 
+          THEN tarjeta 
+          ELSE 0 
+        END
+      ), 0) AS a_cuenta_tarjeta,
+
+      COALESCE(SUM(
+        CASE WHEN tipo_pago = 'a_cuenta' THEN cheque ELSE 0 END
+      ), 0) AS a_cuenta_cheque,
+
+      COALESCE(SUM(
+        CASE WHEN tipo_pago = 'a_cuenta' THEN abono_inicial ELSE 0 END
+      ), 0) AS a_cuenta_abonado,
+
+      COALESCE(SUM(
+        CASE WHEN tipo_pago = 'a_cuenta' THEN saldo_pendiente ELSE 0 END
       ), 0) AS a_cuenta_pendiente
     FROM ventas
     WHERE ${whereVentas}
@@ -180,8 +186,8 @@ async function obtenerResumenPagos(fecha, periodo) {
 
   const [abonosRows] = await pool.query(
     `
-    SELECT
-      metodo_pago,
+    SELECT 
+      metodo_pago, 
       COALESCE(SUM(monto), 0) AS total
     FROM ventas_abonos
     WHERE ${whereAbonos}
@@ -217,9 +223,13 @@ async function obtenerResumenPagos(fecha, periodo) {
   const chequeTotal =
     Number(ventasDirectas.cheque || 0) + Number(mapAbonos.cheque || 0);
 
-  const totalVentasACuenta = Number(ventasDirectas.total_ventas_a_cuenta || 0);
-  const totalAbonadoACuenta = Number(ventasDirectas.total_abonado_a_cuenta || 0);
-  const totalPendienteACuenta = Number(ventasDirectas.a_cuenta_pendiente || 0);
+  const aCuentaTotal = Number(ventasDirectas.a_cuenta_total || 0);
+  const aCuentaEfectivo = Number(ventasDirectas.a_cuenta_efectivo || 0);
+  const aCuentaTransferencia = Number(ventasDirectas.a_cuenta_transferencia || 0);
+  const aCuentaTarjeta = Number(ventasDirectas.a_cuenta_tarjeta || 0);
+  const aCuentaCheque = Number(ventasDirectas.a_cuenta_cheque || 0);
+  const aCuentaAbonado = Number(ventasDirectas.a_cuenta_abonado || 0);
+  const aCuentaPendiente = Number(ventasDirectas.a_cuenta_pendiente || 0);
 
   const ventasPorPago = [
     {
@@ -244,11 +254,15 @@ async function obtenerResumenPagos(fecha, periodo) {
     },
     {
       tipo_pago: "a_cuenta",
-      total: Number(totalVentasACuenta.toFixed(2)),
-    },
-    {
-      tipo_pago: "a_cuenta_pendiente",
-      total: Number(totalPendienteACuenta.toFixed(2)),
+      total: Number(aCuentaTotal.toFixed(2)),
+      desglose: {
+        efectivo: Number(aCuentaEfectivo.toFixed(2)),
+        transferencia: Number(aCuentaTransferencia.toFixed(2)),
+        tarjeta: Number(aCuentaTarjeta.toFixed(2)),
+        cheque: Number(aCuentaCheque.toFixed(2)),
+        abonado: Number(aCuentaAbonado.toFixed(2)),
+        pendiente: Number(aCuentaPendiente.toFixed(2)),
+      },
     },
   ];
 
@@ -260,7 +274,6 @@ async function obtenerResumenPagos(fecha, periodo) {
   return {
     ventasPorPago,
     totalAbonos: Number(totalAbonos.toFixed(2)),
-    totalAbonadoACuenta: Number(totalAbonadoACuenta.toFixed(2)),
     efectivoCaja: Number(efectivoTotal.toFixed(2)),
   };
 }
@@ -578,22 +591,37 @@ export const ticketCorteDiario = async (req, res) => {
     lines.push("REPORTE DE PAGOS");
 
     const pagosFijos = [
-      "efectivo",
-      "transferencia",
-      "tarjeta_credito",
-      "tarjeta_debito",
-      "cheque",
-      "a_cuenta",
-      "a_cuenta_pendiente",
-    ];
+  "efectivo",
+  "transferencia",
+  "tarjeta_credito",
+  "tarjeta_debito",
+  "cheque",
+  "a_cuenta",
+];
 
     const mapPago = Object.fromEntries(
       ventasPorPago.map((x) => [x.tipo_pago, Number(x.total || 0)])
     );
 
-    pagosFijos.forEach((p) => {
-      lines.push(`${p}: ${money(mapPago[p] || 0)}`);
-    });
+    const aCuentaRow = ventasPorPago.find((x) => x.tipo_pago === "a_cuenta");
+const aCuentaDesglose = aCuentaRow?.desglose || {};
+
+pagosFijos.forEach((p) => {
+  if (p === "a_cuenta_pendiente") return;
+
+  if (p === "a_cuenta") {
+    lines.push(`a_cuenta: ${money(mapPago.a_cuenta || 0)}`);
+    lines.push(`   efectivo: ${money(aCuentaDesglose.efectivo || 0)}`);
+    lines.push(`   transferencia: ${money(aCuentaDesglose.transferencia || 0)}`);
+    lines.push(`   tarjeta: ${money(aCuentaDesglose.tarjeta || 0)}`);
+    lines.push(`   cheque: ${money(aCuentaDesglose.cheque || 0)}`);
+    lines.push(`   abonado: ${money(aCuentaDesglose.abonado || 0)}`);
+    lines.push(`   pendiente: ${money(aCuentaDesglose.pendiente || 0)}`);
+    return;
+  }
+
+  lines.push(`${p}: ${money(mapPago[p] || 0)}`);
+});
 
     lines.push(`ABONADO A CUENTA: ${money(totalAbonadoACuenta)}`);
     lines.push(`TOTAL VENTAS: ${money(totalVentas.total)}`);
