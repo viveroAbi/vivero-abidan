@@ -87,19 +87,23 @@ const buildWhere = ({
 
 // Filtro común para ventas reales
 const filtroVentasRealesAliasV = `
-  v.es_cotizacion = 0
+  COALESCE(v.estado, '') <> 'borrador'
+  AND COALESCE(v.es_cotizacion, 0) = 0
   AND COALESCE(v.es_cotizacion_pedido, 0) = 0
 `;
+
 const filtroVentasReales = `
-  es_cotizacion = 0
+  COALESCE(estado, '') <> 'borrador'
+  AND COALESCE(es_cotizacion, 0) = 0
   AND COALESCE(es_cotizacion_pedido, 0) = 0
 `;
 
 /**
  * Devuelve el resumen de pagos del periodo:
- * - desglosa ventas mixtas por columnas
- * - suma abonos de adeudos del día/periodo
- * - calcula efectivo en caja correctamente
+ * - efectivo, transferencia, tarjeta y cheque = dinero que realmente entró
+ * - a_cuenta = total vendido a crédito/a cuenta
+ * - a_cuenta_pendiente = lo que todavía deben
+ * - abonos posteriores desde ventas_abonos también se suman al método real de pago
  */
 async function obtenerResumenPagos(fecha, periodo) {
   const { where: whereVentas, params: paramsVentas } = buildWhere({
@@ -121,24 +125,64 @@ async function obtenerResumenPagos(fecha, periodo) {
       COALESCE(SUM(transferencia), 0) AS transferencia,
       COALESCE(SUM(cheque), 0) AS cheque,
 
-      COALESCE(SUM(CASE WHEN tipo_pago = 'tarjeta_credito' THEN tarjeta ELSE 0 END), 0) AS tarjeta_credito,
-      COALESCE(SUM(CASE WHEN tipo_pago = 'tarjeta_debito' THEN tarjeta ELSE 0 END), 0) AS tarjeta_debito,
+      COALESCE(SUM(
+        CASE
+          WHEN tipo_pago = 'tarjeta_credito' THEN tarjeta
+          ELSE 0
+        END
+      ), 0) AS tarjeta_credito,
+
+      COALESCE(SUM(
+        CASE
+          WHEN tipo_pago = 'tarjeta_debito' THEN tarjeta
+          ELSE 0
+        END
+      ), 0) AS tarjeta_debito,
 
       -- Cuando una venta mixta trae tarjeta, no hay columna para distinguir crédito/débito.
       -- Se manda a crédito por compatibilidad con el reporte actual.
-      COALESCE(SUM(CASE WHEN tipo_pago = 'mixto' THEN tarjeta ELSE 0 END), 0) AS tarjeta_mixto,
+      COALESCE(SUM(
+        CASE
+          WHEN tipo_pago = 'mixto' THEN tarjeta
+          ELSE 0
+        END
+      ), 0) AS tarjeta_mixto,
 
-      COALESCE(SUM(CASE WHEN tipo_pago = 'a_cuenta' THEN abono_inicial ELSE 0 END), 0) AS a_cuenta,
-      COALESCE(SUM(CASE WHEN tipo_pago = 'a_cuenta' THEN saldo_pendiente ELSE 0 END), 0) AS a_cuenta_pendiente
+      -- Total de ventas que fueron a cuenta/crédito.
+      COALESCE(SUM(
+        CASE
+          WHEN tipo_pago = 'a_cuenta' THEN total_final
+          ELSE 0
+        END
+      ), 0) AS total_ventas_a_cuenta,
+
+      -- Cantidad abonada al momento de crear/editar la venta a cuenta.
+      COALESCE(SUM(
+        CASE
+          WHEN tipo_pago = 'a_cuenta' THEN abono_inicial
+          ELSE 0
+        END
+      ), 0) AS total_abonado_a_cuenta,
+
+      -- Lo que todavía queda pendiente por cobrar.
+      COALESCE(SUM(
+        CASE
+          WHEN tipo_pago = 'a_cuenta' THEN saldo_pendiente
+          ELSE 0
+        END
+      ), 0) AS a_cuenta_pendiente
     FROM ventas
-    WHERE ${whereVentas} AND ${filtroVentasReales}
+    WHERE ${whereVentas}
+      AND ${filtroVentasReales}
     `,
     paramsVentas
   );
 
   const [abonosRows] = await pool.query(
     `
-    SELECT metodo_pago, COALESCE(SUM(monto), 0) AS total
+    SELECT
+      metodo_pago,
+      COALESCE(SUM(monto), 0) AS total
     FROM ventas_abonos
     WHERE ${whereAbonos}
     GROUP BY metodo_pago
@@ -147,45 +191,64 @@ async function obtenerResumenPagos(fecha, periodo) {
   );
 
   const mapAbonos = Object.fromEntries(
-    abonosRows.map((x) => [String(x.metodo_pago || "").trim(), Number(x.total || 0)])
+    abonosRows.map((x) => [
+      String(x.metodo_pago || "").trim(),
+      Number(x.total || 0),
+    ])
   );
+
+  const efectivoTotal =
+    Number(ventasDirectas.efectivo || 0) + Number(mapAbonos.efectivo || 0);
+
+  const transferenciaTotal =
+    Number(ventasDirectas.transferencia || 0) +
+    Number(mapAbonos.transferencia || 0);
+
+  const tarjetaCreditoTotal =
+    Number(ventasDirectas.tarjeta_credito || 0) +
+    Number(ventasDirectas.tarjeta_mixto || 0) +
+    Number(mapAbonos.tarjeta_credito || 0) +
+    Number(mapAbonos.tarjeta || 0);
+
+  const tarjetaDebitoTotal =
+    Number(ventasDirectas.tarjeta_debito || 0) +
+    Number(mapAbonos.tarjeta_debito || 0);
+
+  const chequeTotal =
+    Number(ventasDirectas.cheque || 0) + Number(mapAbonos.cheque || 0);
+
+  const totalVentasACuenta = Number(ventasDirectas.total_ventas_a_cuenta || 0);
+  const totalAbonadoACuenta = Number(ventasDirectas.total_abonado_a_cuenta || 0);
+  const totalPendienteACuenta = Number(ventasDirectas.a_cuenta_pendiente || 0);
 
   const ventasPorPago = [
     {
       tipo_pago: "efectivo",
-      total: Number(ventasDirectas.efectivo || 0) + Number(mapAbonos.efectivo || 0),
+      total: Number(efectivoTotal.toFixed(2)),
     },
     {
       tipo_pago: "transferencia",
-      total:
-        Number(ventasDirectas.transferencia || 0) +
-        Number(mapAbonos.transferencia || 0),
+      total: Number(transferenciaTotal.toFixed(2)),
     },
     {
       tipo_pago: "tarjeta_credito",
-      total:
-        Number(ventasDirectas.tarjeta_credito || 0) +
-        Number(ventasDirectas.tarjeta_mixto || 0) +
-        Number(mapAbonos.tarjeta_credito || 0) +
-        Number(mapAbonos.tarjeta || 0),
+      total: Number(tarjetaCreditoTotal.toFixed(2)),
     },
     {
       tipo_pago: "tarjeta_debito",
-      total:
-        Number(ventasDirectas.tarjeta_debito || 0) +
-        Number(mapAbonos.tarjeta_debito || 0),
+      total: Number(tarjetaDebitoTotal.toFixed(2)),
     },
     {
       tipo_pago: "cheque",
-      total: Number(ventasDirectas.cheque || 0) + Number(mapAbonos.cheque || 0),
+      total: Number(chequeTotal.toFixed(2)),
     },
     {
       tipo_pago: "a_cuenta",
-      total: Number(ventasDirectas.a_cuenta || 0),
+      total: Number(totalVentasACuenta.toFixed(2)),
     },
     {
       tipo_pago: "a_cuenta_pendiente",
-      total: Number(ventasDirectas.a_cuenta_pendiente || 0),
+      total: Number(totalPendienteACuenta.toFixed(2)),
     },
   ];
 
@@ -194,13 +257,11 @@ async function obtenerResumenPagos(fecha, periodo) {
     0
   );
 
-  const efectivoCaja =
-    Number(ventasDirectas.efectivo || 0) + Number(mapAbonos.efectivo || 0);
-
   return {
     ventasPorPago,
     totalAbonos: Number(totalAbonos.toFixed(2)),
-    efectivoCaja: Number(efectivoCaja.toFixed(2)),
+    totalAbonadoACuenta: Number(totalAbonadoACuenta.toFixed(2)),
+    efectivoCaja: Number(efectivoTotal.toFixed(2)),
   };
 }
 
@@ -222,7 +283,7 @@ export const reporteDiario = async (req, res) => {
       columnaFecha: "g.created_at",
     });
 
-    const { ventasPorPago, totalAbonos, efectivoCaja } =
+    const { ventasPorPago, totalAbonos, totalAbonadoACuenta, efectivoCaja } =
       await obtenerResumenPagos(fecha, periodo);
 
     const [ventasPorCategoria] = await pool.query(
@@ -296,8 +357,12 @@ export const reporteDiario = async (req, res) => {
         ventasPorCategoria,
         totalVentas: Number(totalVentas.total || 0),
         totalAbonos,
+        totalAbonadoACuenta,
         totalCobrado: Number(
-          (Number(totalVentas.total || 0) + Number(totalAbonos || 0)).toFixed(2)
+          (
+            Number(totalVentas.total || 0) +
+            Number(totalAbonos || 0)
+          ).toFixed(2)
         ),
         gastosPorCategoria,
         gastosPorSub,
@@ -384,7 +449,7 @@ export const ticketCorteDiario = async (req, res) => {
     const baseDate = fecha ? new Date(`${fecha}T12:00:00`) : new Date();
     const now = new Date();
 
-    const { ventasPorPago, totalAbonos, efectivoCaja } =
+    const { ventasPorPago, totalAbonos, totalAbonadoACuenta, efectivoCaja } =
       await obtenerResumenPagos(fecha, periodo);
 
     const [ventasPorCategoria] = await pool.query(
@@ -530,10 +595,13 @@ export const ticketCorteDiario = async (req, res) => {
       lines.push(`${p}: ${money(mapPago[p] || 0)}`);
     });
 
+    lines.push(`ABONADO A CUENTA: ${money(totalAbonadoACuenta)}`);
     lines.push(`TOTAL VENTAS: ${money(totalVentas.total)}`);
     lines.push(`TOTAL ABONOS: ${money(totalAbonos)}`);
     lines.push(
-      `TOTAL COBRADO: ${money(Number(totalVentas.total || 0) + Number(totalAbonos || 0))}`
+      `TOTAL COBRADO: ${money(
+        Number(totalVentas.total || 0) + Number(totalAbonos || 0)
+      )}`
     );
     lines.push("------------------------------");
     lines.push("GASTOS / INSUMOS");
@@ -621,11 +689,6 @@ export const reporteProductosPorCategoriaPDF = async (req, res) => {
       columnaFecha: "v.created_at",
     });
 
-    const filtroVentasRealesAliasVLocal = `
-      v.es_cotizacion = 0
-      AND COALESCE(v.es_cotizacion_pedido, 0) = 0
-    `;
-
     const [rows] = await pool.query(
       `
       SELECT
@@ -639,7 +702,7 @@ export const reporteProductosPorCategoriaPDF = async (req, res) => {
       INNER JOIN ventas v ON v.id = vi.venta_id
       INNER JOIN productos p ON p.id = vi.producto_id
       WHERE ${whereVentasDetalle}
-        AND ${filtroVentasRealesAliasVLocal}
+        AND ${filtroVentasRealesAliasV}
       GROUP BY categoria_planta, p.id, p.codigo, p.nombre
       ORDER BY categoria_planta ASC, p.nombre ASC
       `,
@@ -784,8 +847,7 @@ export const reporteProductos = async (req, res) => {
       INNER JOIN ventas v ON v.id = vi.venta_id
       INNER JOIN productos p ON p.id = vi.producto_id
       WHERE DATE(${colMX}) BETWEEN ? AND ?
-        AND v.es_cotizacion = 0
-        AND COALESCE(v.es_cotizacion_pedido, 0) = 0
+        AND ${filtroVentasRealesAliasV}
       GROUP BY p.id, p.codigo, p.nombre
       ORDER BY cantidad_vendida DESC, importe_vendido DESC
       LIMIT 10
@@ -805,8 +867,7 @@ export const reporteProductos = async (req, res) => {
       INNER JOIN ventas v ON v.id = vi.venta_id
       INNER JOIN productos p ON p.id = vi.producto_id
       WHERE DATE(${colMX}) BETWEEN ? AND ?
-        AND v.es_cotizacion = 0
-        AND COALESCE(v.es_cotizacion_pedido, 0) = 0
+        AND ${filtroVentasRealesAliasV}
       GROUP BY p.id, p.codigo, p.nombre
       HAVING cantidad_vendida > 0
       ORDER BY cantidad_vendida ASC, importe_vendido ASC
@@ -824,8 +885,7 @@ export const reporteProductos = async (req, res) => {
       FROM ventas v
       INNER JOIN ventas_items vi ON vi.venta_id = v.id
       WHERE DATE(${colMX}) BETWEEN ? AND ?
-        AND v.es_cotizacion = 0
-        AND COALESCE(v.es_cotizacion_pedido, 0) = 0
+        AND ${filtroVentasRealesAliasV}
       GROUP BY DATE(${colMX})
       ORDER BY fecha ASC
       `,
@@ -841,8 +901,7 @@ export const reporteProductos = async (req, res) => {
       FROM ventas v
       INNER JOIN ventas_items vi ON vi.venta_id = v.id
       WHERE DATE(${colMX}) BETWEEN ? AND ?
-        AND v.es_cotizacion = 0
-        AND COALESCE(v.es_cotizacion_pedido, 0) = 0
+        AND ${filtroVentasRealesAliasV}
       `,
       [fechaInicio, fechaFin]
     );
