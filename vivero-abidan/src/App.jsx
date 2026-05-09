@@ -174,8 +174,9 @@ async function seleccionarClienteVenta(c) {
   }
 
   const [reporteTipo, setReporteTipo] = useState("diario");
-  const [reporteFecha, setReporteFecha] = useState(hoyLocalInput());
-  const [reporteData, setReporteData] = useState(null);
+const [reporteFecha, setReporteFecha] = useState(hoyLocalInput());
+const [reporteData, setReporteData] = useState(null);
+
 const pagosFijos = [
   "efectivo",
   "transferencia",
@@ -185,10 +186,21 @@ const pagosFijos = [
   "a_cuenta",
 ];
 
+const ventasPagoMap = useMemo(() => {
+  const arr = reporteData?.ventasPorPago || [];
+  return Object.fromEntries(
+    arr.map((x) => [x.tipo_pago, Number(x.total || 0)])
+  );
+}, [reporteData]);
+
 const aCuentaReporte = useMemo(() => {
   const arr = reporteData?.ventasPorPago || [];
   return arr.find((x) => x.tipo_pago === "a_cuenta") || null;
 }, [reporteData]);
+
+const aCuentaDesglose = useMemo(() => {
+  return aCuentaReporte?.desglose || {};
+}, [aCuentaReporte]);
 
 const aCuentaDesglose = useMemo(() => {
   return aCuentaReporte?.desglose || {};
