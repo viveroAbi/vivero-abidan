@@ -1089,12 +1089,9 @@ export const editarVenta = async (req, res) => {
 
       const totalFinalItem = Math.max(subtotal - descuentoItem, 0);
 
-      const ivaItem =
-        esTarjeta && Number(p.iva_tarjeta) === 1
-          ? Number((totalFinalItem * 0.16).toFixed(2))
-          : 0;
+      const ivaItem = 0;
 
-      totalIVA += ivaItem;
+totalIVA += ivaItem;
 
       await conn.query(
         `INSERT INTO ventas_items
