@@ -2980,7 +2980,8 @@ if (view === "movimientos") {
       </div>
     );
   }
-
+  // 🔒 MANTENIMIENTO: quita esta línea para reactivar el sistema
+if (true) return <div style={{padding:40,textAlign:"center",fontFamily:"Arial"}}><h2>🌱 S</h2><p>Vuelve en unos minutos.</p></div>;
   return (
     
       <div style={pageStyle}>
